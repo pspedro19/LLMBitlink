@@ -10,4 +10,4 @@ python-dotenv
 uvicorn
 fastapi
 mlflow
-openai
+openai==0.28.1
