@@ -82,7 +82,7 @@ services:
     environment:
       MLFLOW_TRACKING_URI: http://mlflow:5000
       HUGGINGFACE_TOKEN: "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"
-      OPENAI_API_KEY: "c4129d4dad0247a691ad29bd38db1260"
+      OPENAI_API_KEY: "sk-proj-tg5O6jMbQhSTLfR1TRjYT3BlbkFJNROgVB6NZj0i5Op1HSwx"
 
 
   airflow-webserver:

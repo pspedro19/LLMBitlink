@@ -1,13 +1,4 @@
-torch
-transformers
-numpy
-sentence-transformers==2.2.0
-langchain
-regex
-accelerate
-openai
-python-dotenv
-uvicorn
 fastapi
-mlflow
-openai==0.28.1
+uvicorn
+openai==0.28
+python-dotenv
