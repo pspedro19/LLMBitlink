@@ -3,7 +3,7 @@ FROM python:3.8-slim
 WORKDIR /app
 COPY . .
 COPY requirements.txt /requirements.txt
-ENV OPENAI_API_KEY=sk-proj-tg5O6jMbQhSTLfR1TRjYT3BlbkFJNROgVB6NZj0i5Op1HSwx
+#ENV OPENAI_API_KEY=
 
 RUN apt-get update && apt-get install -y curl
 RUN pip install --upgrade pip
