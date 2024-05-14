@@ -2,3 +2,7 @@ fastapi
 uvicorn
 openai==0.28
 python-dotenv
+torch
+pydantic
+transformers
+scikit-learn
