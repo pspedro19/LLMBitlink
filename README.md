@@ -1,3 +1,5 @@
+##########
+
 # Microservices Architecture for Language Model Project
 
 ## Overview
@@ -11,15 +13,24 @@ If MLflow is failing to connect because the database `mlflow_db` does not exist,
 ### Create the `mlflow_db` Database:
 
 1. Connect to your PostgreSQL server using a client like `psql` or any GUI tool.
-2. Create the database `mlflow_db`:
+    ```sql
+    docker exec -it postgres_airflow psql -U airflow;
+    ```
+
+3. Create the database `mlflow_db`:
     ```sql
     CREATE DATABASE mlflow_db;
     ```
-3. Ensure Correct Database Configuration: Verify that the MLflow configuration in your Docker Compose file or environment variables points to the correct database:
+4. Ensure Correct Database Configuration: Verify that the MLflow configuration in your Docker Compose file or environment variables points to the correct database:
     ```yaml
     environment:
       - MLFLOW_TRACKING_URI=postgresql://username:password@postgres/mlflow_db
     ```
+    ```sh
+    docker restart mlflow_tracking
+    ```
+    
+
 
 ## Full Steps
 
@@ -39,6 +50,23 @@ If MLflow is failing to connect because the database `mlflow_db` does not exist,
     docker-compose up -d
     ```
 
+4. In the root folder of this repository, execute:
+    ```sh
+    docker compose --profile all up
+    ```
+
+Once all the services are up and running (verify with the command docker ps -a that all services are healthy or check in Docker Desktop), you can access the various services through:
+
+   - Apache Airflow: http://localhost:8080
+   - MLflow: http://localhost:5000
+   - MinIO: http://localhost:9001 (Buckets Administration)
+   - API: http://localhost:8800/
+
+
+API Docs: http://localhost:8800/docs
+If you are using a server external to your work computer, replace localhost with its IP address (it can be a private IP if your server is on your LAN or a public IP otherwise; check firewalls or other rules that may prevent connections).
+
+All ports and other configurations can be modified in the .env file. You are encouraged to experiment and learn by trial and error; you can always re-clone this repository.
 ## Architecture Components
 
 1. **Chat**
@@ -77,7 +105,3 @@ The microservices architecture diagram visually represents the interconnections 
 - **Scalability:** Consider container orchestration solutions like Kubernetes for better scalability and management of services.
 - **Monitoring:** Integrate comprehensive monitoring tools like Prometheus and Grafana for better insight into service performance and health.
 - **Bidirectional Data Flow:** Review and ensure that bidirectional data flows are necessary and optimized for performance.
-ess to the services.
-- **Scalability**: Consider container orchestration solutions like Kubernetes for better scalability and management of services.
-- **Monitoring**: Integrate comprehensive monitoring tools like Prometheus and Grafana for better insight into service performance and health.
-- **Bidirectional Data Flow**: Review and ensure that bidirectional data flows are necessary and optimized for performance.
