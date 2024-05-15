@@ -1,14 +1,18 @@
 #!/bin/bash
-# Initialize the database
+
+# Crear directorios y establecer permisos
+mkdir -p /opt/airflow/logs/scheduler
+chown -R airflow:root /opt/airflow/logs
+
+# Inicializar la base de datos de Airflow
 airflow db init
 
-# Apply any necessary migrations
+# Aplicar cualquier migración necesaria
 airflow db upgrade
 
-# Start the Airflow webserver
+# Instalar pendulum y aplicar parche a settings.py si es necesario
+pip install --upgrade pendulum==2.1.2
+sed -i "s/TIMEZONE = pendulum.tz.timezone('UTC')/import pendulum\nTIMEZONE = pendulum.timezone('UTC')/g" /home/airflow/.local/lib/python3.9/site-packages/airflow/settings.py
+
+# Iniciar el servidor web de Airflow
 exec airflow webserver
-
-
-#Make sure to create the entrypoint.sh file with the content shown above and place it in the same directory as your Dockerfile before building the Docker image. Also, ensure your requirements.txt, dags, plugins, and config/airflow.cfg directories/files are properly structured in your project directory as referenced in the Dockerfile.
-
-#This setup encapsulates all the necessary steps to get your Airflow service up and running in a containerized environment, ensuring it is well-configured and ready for deployment. The use of the slim base image helps keep the image size down, while still providing a robust environment for running Airflow.#

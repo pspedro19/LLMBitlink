@@ -1,21 +1,27 @@
-# Dockerfile in ./airflow/Dockerfile
-# Example using Airflow version 2.9.1 with Python 3.9
-FROM apache/airflow:slim-2.9.1rc2-python3.9
+FROM apache/airflow:2.9.1-python3.9
+
+# Set user to root to install dependencies and create directories
+USER root
+
+# Crear los directorios y establecer permisos
+RUN mkdir -p /opt/airflow/logs/scheduler && \
+    chown -R airflow:root /opt/airflow/logs
+
+# Cambiar a usuario airflow para instalar paquetes
+USER airflow
 
 # Install required Python packages including psycopg2-binary for PostgreSQL integration
 COPY requirements.txt /requirements.txt
-RUN pip install --no-cache-dir -r /requirements.txt \
-    && pip install psycopg2-binary
+RUN pip install --no-cache-dir -r /requirements.txt && \
+    pip install psycopg2-binary
 
 # Set the working directory to Airflow home
 WORKDIR /opt/airflow
-
 
 # Copy DAGs, configuration files, and entrypoint script into the image
 COPY ./dags ./dags
 COPY airflow.cfg /opt/airflow/airflow.cfg
 COPY entrypoint.sh /entrypoint.sh
-COPY [^settings.py]* /home/airflow/.local/lib/python3.9/site-packages/airflow/
 
 # Set environment variables for Airflow configuration
 ENV AIRFLOW_HOME=/opt/airflow
@@ -23,12 +29,13 @@ ENV AIRFLOW__CORE__EXECUTOR=LocalExecutor
 ENV AIRFLOW__CORE__FERNET_KEY=base64encodedFernetKeyHere
 ENV AIRFLOW__CORE__LOAD_EXAMPLES=False
 ENV AIRFLOW__WEBSERVER__EXPOSE_CONFIG=True
+ENV AIRFLOW_PORT=8081
 
-# Ensure the user has adequate permissions to perform operations, especially useful if using a non-root user
+# Ensure the user has adequate permissions to perform operations
 USER root
 RUN chmod +x /entrypoint.sh
 USER airflow
 
 # Define the entry point and the command to run Airflow webserver
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["airflow", "webserver", "--port", "8080"]
+CMD ["airflow", "webserver", "--port", "8081"]
