@@ -11,18 +11,20 @@ $$$$$$$$$$$$$$$$$
 Using apt (Recommended)
 Update the package database:
 
-bash
+```bash
 sudo apt update
+```
 Install Docker Compose:
 
-bash
+```bash
 sudo apt install docker-compose
+```
 Using snap
 Install Docker using snap:
 
-bash
+```bash
 sudo snap install docker
-
+```
 After installing Docker Compose using either method, you should be able to run `docker-compose build`.
 
 
