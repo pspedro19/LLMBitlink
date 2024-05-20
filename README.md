@@ -70,6 +70,27 @@ sudo usermod -aG docker $USER
 docker-compose build
 ```
 
+
+Download the Docker Compose binary:
+
+```bash
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.12.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+```
+Apply executable permissions to the binary:
+
+```bash
+sudo chmod +x /usr/local/bin/docker-compose
+```
+Create a symbolic link to make Docker Compose available in the system's PATH:
+
+```bash
+sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+```
+Verify that Docker Compose is installed correctly:
+
+```bash
+docker-compose --version
+```
 After installing Docker Compose using either method, you should be able to run `docker-compose build`.
 
 
