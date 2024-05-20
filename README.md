@@ -6,6 +6,27 @@
 
 This project utilizes a microservices architecture to implement and manage a language model. The architecture is designed to facilitate inter-service communication, track machine learning experiments, manage model lifecycles, store artifacts, and monitor tasks. Below is a detailed explanation of each component and how they interact.
 
+$$$$$$$$$$$$$$$$$
+
+Using apt (Recommended)
+Update the package database:
+
+bash
+sudo apt update
+Install Docker Compose:
+
+bash
+sudo apt install docker-compose
+Using snap
+Install Docker using snap:
+
+bash
+sudo snap install docker
+
+After installing Docker Compose using either method, you should be able to run `docker-compose build`.
+
+
+
 ## MLflow CONFIG
 
 If MLflow is failing to connect because the database `mlflow_db` does not exist, you need to create this database in your PostgreSQL instance.
