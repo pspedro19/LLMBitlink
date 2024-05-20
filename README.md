@@ -12,19 +12,64 @@ Using apt (Recommended)
 Update the package database:
 
 ```bash
-sudo apt update
+sudo apt update -y
 ```
 Install Docker Compose:
 
 ```bash
-sudo apt install docker-compose
+sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
 ```
 Using snap
 Install Docker using snap:
 
 ```bash
-sudo snap install docker
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 ```
+
+```bash
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+```
+
+```bash
+sudo apt update -y
+```
+
+```bash
+sudo apt install -y docker-ce
+```
+```bash
+sudo systemctl start docker
+```
+
+```bash
+sudo systemctl enable docker
+```
+
+```bash
+sudo systemctl status docker
+```
+
+```bash
+sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+```
+
+
+```bash
+sudo chmod +x /usr/local/bin/docker-compose
+```
+
+```bash
+docker-compose --version
+```
+
+```bash
+sudo usermod -aG docker $USER
+```
+
+```bash
+docker-compose build
+```
+
 After installing Docker Compose using either method, you should be able to run `docker-compose build`.
 
 
