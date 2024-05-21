@@ -92,14 +92,14 @@ services:
 
 
   airflow-webserver:
+    env_file:
+      - .env
     build: 
       context: ./airflow
       dockerfile: Dockerfile
       args:
         AIRFLOW_UID: ${AIRFLOW_UID}
         AIRFLOW_GID: ${AIRFLOW_GID}
-    env_file:
-      - .env
     container_name: airflow_web_server
     depends_on:
       - postgres
