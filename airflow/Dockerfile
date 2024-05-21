@@ -3,11 +3,12 @@ FROM apache/airflow:2.9.1-python3.9
 # Set user to root to install dependencies and create directories
 USER root
 
-# Crear los directorios y establecer permisos
+# Create the necessary directories
 RUN mkdir -p /opt/airflow/logs/scheduler && \
-    chown -R airflow:root /opt/airflow/logs
+    chown -R airflow:root /opt/airflow/logs && \
+    chmod -R 775 /opt/airflow/logs
 
-# Cambiar a usuario airflow para instalar paquetes
+# Switch to user airflow to install packages
 USER airflow
 
 # Install required Python packages including psycopg2-binary for PostgreSQL integration
@@ -34,8 +35,8 @@ ENV AIRFLOW_PORT=8081
 # Ensure the user has adequate permissions to perform operations
 USER root
 RUN chmod +x /entrypoint.sh
-USER airflow
 
-# Define the entry point and the command to run Airflow webserver
+# Ensure the entrypoint script is executable and configure the container to start with it
+USER airflow
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["airflow", "webserver", "--port", "8081"]
