@@ -16,9 +16,9 @@ services:
     image: postgres:13
     container_name: postgres_airflow
     environment:
-      POSTGRES_USER: ${PG_USER:-airflow}
-      POSTGRES_PASSWORD: ${PG_PASSWORD:-airflow}
-      POSTGRES_DB: ${PG_DATABASE:-airflow}
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DATABASE}
       POSTGRES_MULTIPLE_DATABASES: 'airflow_db,mlflow_db,another_db'
     volumes:
       - ./create-multiple-postgresql-databases.sh:/docker-entrypoint-initdb.d/create-multiple-postgresql-databases.sh
@@ -56,6 +56,8 @@ services:
 
   mlflow:
     build: ./mlflow
+    env_file:
+      - .env
     container_name: mlflow_tracking
     depends_on:
       - postgres
@@ -74,6 +76,8 @@ services:
 
   fastapi:
     build: ./app
+    env_file:
+      - .env
     volumes:
       - ./data:/data  
     container_name: fastapi_server
@@ -91,6 +95,11 @@ services:
     build: 
       context: ./airflow
       dockerfile: Dockerfile
+      args:
+        AIRFLOW_UID: ${AIRFLOW_UID}
+        AIRFLOW_GID: ${AIRFLOW_GID}
+    env_file:
+      - .env
     container_name: airflow_web_server
     depends_on:
       - postgres
@@ -100,6 +109,9 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
     entrypoint: /entrypoint.sh
+    user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
+    environment:
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${PG_USER}:${PG_PASSWORD}@postgres/${PG_DATABASE}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s

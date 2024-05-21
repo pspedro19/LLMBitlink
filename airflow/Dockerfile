@@ -2,6 +2,20 @@ FROM apache/airflow:2.9.1-python3.9
 
 # Set user to root to install dependencies and create directories
 USER root
+ARG AIRFLOW_UID
+ARG AIRFLOW_GID
+
+# Create a user and group for Airf
+# Check if the group 'airflow' exists, and create if not
+RUN getent group ${AIRFLOW_GID} || groupadd -g ${AIRFLOW_GID} airflow
+
+# Check if the user 'airflow' exists, and create if not
+RUN id -u airflow &>/dev/null || useradd -u ${AIRFLOW_UID} -g ${AIRFLOW_GID} -m -s /bin/bash airflow
+
+# If the user exists, ensure the UID and GID are correct
+RUN usermod -u ${AIRFLOW_UID} airflow && groupmod -g ${AIRFLOW_GID} airflow
+
+
 
 # Create the necessary directories
 RUN mkdir -p /opt/airflow/logs/scheduler && \
