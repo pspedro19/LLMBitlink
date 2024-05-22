@@ -2,11 +2,8 @@ FROM apache/airflow:2.8.1
 
 USER root
 
-# Copy requirements file
+# Copy requirements file and scripts
 COPY requirements.txt /requirements.txt
-
-
-# Install required Python packages globally
 COPY wait-for-it.sh /wait-for-it.sh
 COPY entrypoint.sh /entrypoint.sh
 
@@ -18,6 +15,8 @@ RUN mkdir -p /opt/airflow/logs /opt/airflow/logs/scheduler && \
     chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
+# Install network utilities
+RUN apt-get update && apt-get install -y iputils-ping telnet
 
 
 # Ensure that the airflow user can write to the logs directory
