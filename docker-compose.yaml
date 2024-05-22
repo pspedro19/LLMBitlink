@@ -1,21 +1,21 @@
-version: '3.8'
+#version: '3.8'  # Optional based on your Docker Compose version
 
 services:
   postgres:
+    image: postgres:13
     restart: always
     build: './postgress'
-    image: postgres:13
     container_name: postgres_airflow
-    condition: service_healthy
-    profiles: 
+    profiles:
       - airflow
       - mlflow
       - all
     environment:
-      - POSTGRES_USER=${PG_USER:-airflow}
-      - POSTGRES_PASSWORD=${PG_PASSWORD:-airflow}
-      - POSTGRES_DATABASE=${PG_DATABASE:-airflow}
-      - POSTGRES_MULTIPLE_DATABASES=${PG_MULTIPLE_DATABASES:-mlflow_db}
+      - POSTGRES_HOST_AUTH_METHOD: trust
+      - POSTGRES_USER: airflow
+      - POSTGRES_PASSWORD: airflow
+      - POSTGRES_DB:  airflow
+      - POSTGRES_MULTIPLE_DATABASES: mlflow_db
     volumes:
       - ./postgress/create-multiple-postgresql-databases.sh:/docker-entrypoint-initdb.d/create-multiple-postgresql-databases.sh
       - postgres_data:/var/lib/postgresql/data
@@ -93,8 +93,7 @@ services:
     image: ${AIRFLOW_IMAGE_NAME:-extending_airflow:latest}
     container_name: airflow_web_server
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     entrypoint: /entrypoint.sh
     ports:
       - "8081:8081"
