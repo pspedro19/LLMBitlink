@@ -1,15 +1,42 @@
+version: '3.8'
+
 x-defaults: &default-env
   restart: always
   networks:
     - backend
 
-x-airflow-common-env: &airflow-common-env
-  AIRFLOW__CORE__EXECUTOR: LocalExecutor
-  AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
-  AIRFLOW__WEBSERVER__SECRET_KEY: base64encodedFernetKeyHere
-  AIRFLOW__WEBSERVER__PORT: 8081
-  AIRFLOW__CORE__DAG_CONCURRENCY: 16
-  AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: 16
+x-airflow-common: &airflow-common
+  build: './airflow'
+  image: ${AIRFLOW_IMAGE_NAME:-extending_airflow:latest}
+  environment: &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${PG_USER:-airflow}:${PG_PASSWORD:-airflow}@postgres:5432/airflow
+    AIRFLOW__WEBSERVER__SECRET_KEY: base64encodedFernetKeyHere
+    AIRFLOW__WEBSERVER__PORT: 8081
+    AIRFLOW__CORE__DAG_CONCURRENCY: 16
+    AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: 16
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.session'
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'True'
+    AIRFLOW__SECRETS__BACKEND: 'airflow.secrets.local_filesystem.LocalFilesystemBackend'
+    AIRFLOW__SECRETS__BACKEND_KWARGS: '{"variables_file_path": "/opt/secrets/variables.json"}'
+    AWS_ACCESS_KEY_ID: ${MINIO_ACCESS_KEY:-minio}
+    AWS_SECRET_ACCESS_KEY: ${MINIO_SECRET_ACCESS_KEY:-minio123}
+    AWS_ENDPOINT_URL_S3: http://s3:9000
+    MLFLOW_S3_ENDPOINT_URL: http://s3:9000
+  volumes:
+    - ${AIRFLOW_PROJ_DIR:-./airflow}/dags:/opt/airflow/dags
+    - ${AIRFLOW_PROJ_DIR:-./airflow}/logs:/opt/airflow/logs
+    - ${AIRFLOW_PROJ_DIR:-./airflow}/config:/opt/airflow/config
+    - ${AIRFLOW_PROJ_DIR:-./airflow}/plugins:/opt/airflow/plugins
+    - ${AIRFLOW_PROJ_DIR:-./airflow}/secrets:/opt/secrets
+    - ${AIRFLOW_PROJ_DIR:-./config}/airflow.cfg:/opt/airflow/airflow.cfg  # Mount the config file
+  networks:
+    - backend
+  depends_on:
+    - postgres
 
 services:
   postgres:
@@ -19,7 +46,7 @@ services:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
-      POSTGRES_MULTIPLE_DATABASES: 'airflow_db,mlflow_db,another_db'
+      POSTGRES_MULTIPLE_DATABASES: 'airflow_db,mlflow_db'
     volumes:
       - ./create-multiple-postgresql-databases.sh:/docker-entrypoint-initdb.d/create-multiple-postgresql-databases.sh
       - postgres_data:/var/lib/postgresql/data
@@ -30,11 +57,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 500M
 
   minio:
     image: minio/minio
@@ -79,7 +101,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./data:/data  
+      - ./data:/data
     container_name: fastapi_server
     depends_on:
       - mlflow
@@ -90,31 +112,15 @@ services:
       HUGGINGFACE_TOKEN: "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"
 
   airflow-webserver:
-    build: 
-      context: ./airflow
-      dockerfile: Dockerfile
-      args:
-        AIRFLOW_UID: 1000
-        AIRFLOW_GID: 1000
-    env_file:
-      - .env
+    <<: *airflow-common
     container_name: airflow_web_server
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    command: ["sh", "-c", "/wait-for-it.sh postgres:5432 -- airflow webserver"]
     ports:
-      - "8081:8080"
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./airflow/logs:/opt/airflow/logs
-    entrypoint: /entrypoint.sh
-    user: "1000:1000"
-    environment:
-      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      - "8081:8081"
+    user: "50000:0"
 
 networks:
   backend:
