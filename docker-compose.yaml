@@ -2,15 +2,22 @@ version: '3.8'
 
 services:
   postgres:
+    restart: always
+    build: './postgress'
     image: postgres:13
     container_name: postgres_airflow
+    condition: service_healthy
+    profiles: 
+      - airflow
+      - mlflow
+      - all
     environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
-      POSTGRES_MULTIPLE_DATABASES: 'airflow_db,mlflow_db'
+      - POSTGRES_USER=${PG_USER:-airflow}
+      - POSTGRES_PASSWORD=${PG_PASSWORD:-airflow}
+      - POSTGRES_DATABASE=${PG_DATABASE:-airflow}
+      - POSTGRES_MULTIPLE_DATABASES=${PG_MULTIPLE_DATABASES:-mlflow_db}
     volumes:
-      - ./create-multiple-postgresql-databases.sh:/docker-entrypoint-initdb.d/create-multiple-postgresql-databases.sh
+      - ./postgress/create-multiple-postgresql-databases.sh:/docker-entrypoint-initdb.d/create-multiple-postgresql-databases.sh
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
