@@ -5,14 +5,20 @@ USER root
 # Copy requirements file
 COPY requirements.txt /requirements.txt
 
+
 # Install required Python packages globally
 COPY wait-for-it.sh /wait-for-it.sh
+COPY entrypoint.sh /entrypoint.sh
 
 # Ensure necessary directories exist and set permissions
 RUN mkdir -p /opt/airflow/logs /opt/airflow/logs/scheduler && \
     chown -R airflow:root /opt/airflow/logs && \
     chmod -R 775 /opt/airflow/logs && \
-    chmod +x /wait-for-it.sh
+    chmod +x /wait-for-it.sh && \
+    chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+
 
 # Ensure that the airflow user can write to the logs directory
 RUN chmod -R 777 /opt/airflow/logs
