@@ -9,6 +9,7 @@ WORKDIR /mlflow
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev && \
+    curl && \
     # Clean up APT when done to reduce image size
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
