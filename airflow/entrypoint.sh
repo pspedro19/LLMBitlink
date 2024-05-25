@@ -1,8 +1,16 @@
 #!/bin/bash
 
-# Wait for PostgreSQL to be ready
-/wait-for-it.sh postgres:5432 --timeout=60 --strict -- echo "Postgres is up and running"
+# Espera hasta que PostgreSQL esté disponible
+until pg_isready -h postgres -p 5432 -U "airflow"; do
+    echo "Waiting for PostgreSQL to start..."
+    sleep 2
+done
 
+# Verifica si la base de datos necesita ser inicializada
+if [ -z "$(psql -Atqc "\\list airflow")" ]; then
+    echo "Database not found, initializing..."
+    airflow db init
+fi
 
-# Start the Airflow webserver
-airflow webserver
+# Inicia el servidor web de Airflow
+exec airflow webserver

@@ -5,10 +5,10 @@ FROM python:3.11-slim
 WORKDIR /mlflow
 
 # Install system dependencies
-# No need for wget if it's not being used specifically by MLflow
+# Ensure curl is correctly installed as part of the apt-get install command
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
-    libpq-dev && \
+    libpq-dev \
     curl && \
     # Clean up APT when done to reduce image size
     apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -19,7 +19,8 @@ COPY requirements.txt .
 # Install Python dependencies, include specific MLflow extras for additional features
 # Using extras like 'sqlalchemy' and 'google' for enhanced functionality if needed
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir mlflow[extras,sqlalchemy,google] psycopg2-binary boto3 cryptography pymysql -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir mlflow[extras,sqlalchemy,google] psycopg2-binary boto3 cryptography pymysql
 
 # Expose the port MLflow will run on
 EXPOSE 5000
@@ -30,3 +31,4 @@ CMD ["mlflow", "server", \
      "--default-artifact-root", "s3://minio:9000", \
      "--host", "0.0.0.0", \
      "--port", "5000"]
+

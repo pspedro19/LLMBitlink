@@ -6,6 +6,9 @@ USER root
 COPY requirements.txt /requirements.txt
 COPY wait-for-it.sh /wait-for-it.sh
 COPY entrypoint.sh /entrypoint.sh
+# Ensure wait-for-it.sh is executable
+RUN chmod +x /wait-for-it.sh
+
 
 # Ensure necessary directories exist and set permissions
 RUN mkdir -p /opt/airflow/logs /opt/airflow/logs/scheduler && \
