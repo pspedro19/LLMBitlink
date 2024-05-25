@@ -103,13 +103,13 @@ services:
         condition: service_healthy
     entrypoint: /entrypoint.sh
     ports:
-      - "8081:8081"
+      - "8081:8080"
     user: "50000:0"
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
-      - AIRFLOW__WEBSERVER__SECRET_KEY=base64encodedFernetKeyHere
-      - AIRFLOW__CORE__FERNET_KEY=base64encodedFernetKeyHere
+      - AIRFLOW__WEBSERVER__SECRET_KEY=tEfCEsmDia_9y6UZwGy-PzmMrYWaS4dcSeFDVpzHsoo=
+      - AIRFLOW__CORE__FERNET_KEY=tEfCEsmDia_9y6UZwGy-PzmMrYWaS4dcSeFDVpzHsoo=
       - AIRFLOW__API__AUTH_BACKENDS=airflow.api.auth.backend.default
       - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
       - AWS_ACCESS_KEY_ID=minio
