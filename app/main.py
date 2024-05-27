@@ -1,24 +1,21 @@
+
 import openai
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
 from dotenv import load_dotenv
 import os
-import json
+import psycopg2
+from psycopg2.extras import execute_values
 from memory import EnhancedVectorMemory
 
-# Specify the path to the .env file and load environment variables
-env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
-load_dotenv(dotenv_path=env_path)
+load_dotenv()
 
-# Initialize the FastAPI app
 app = FastAPI()
 
-# Set up OpenAI client configuration with environment variables
 openai.api_key = os.getenv("OPENAI_API_KEY")
 engine = 'gpt-3.5-turbo'
 
-# Define the Pydantic model for chat message input validation
 class ChatMessage(BaseModel):
     user_input: str
 
@@ -59,52 +56,41 @@ Proporcionar servicios de consultoría y asistencia de ventas de alto nivel a cl
 Question: {question}  Context: {context}
 """
 
-# Load memory from JSON file
-memory_dir = "/data"  # Ruta absoluta dentro del contenedor
-memory_path = os.path.join(memory_dir, 'memory.json')
-print(f"Memory directory path: {memory_dir}")  # Print the absolute path for debugging
-print(f"Memory file path: {memory_path}")  # Print the absolute path for debugging
+# Configuración de conexión a la base de datos PostgreSQL
+db_config = {
+    'dbname': os.getenv("DB_NAME", "postgres"),
+    'user': os.getenv("DB_USER", "postgres"),
+    'password': os.getenv("DB_PASSWORD", "password"),
+    'host': os.getenv("DB_HOST", "localhost"),
+    'port': os.getenv("DB_PORT", "5432"),
+}
 
-if not os.path.exists(memory_dir):
-    os.makedirs(memory_dir)
-    print(f"Created missing directory: {memory_dir}")
+# Inicializar la memoria mejorada con vector store
+memory = EnhancedVectorMemory(db_config)
 
-if not os.path.exists(memory_path):
-    # Create the file if it doesn't exist
-    with open(memory_path, 'w') as file:
-        json.dump([], file)
-    print(f"Created missing memory file at: {memory_path}")
-
-memory = EnhancedVectorMemory(memory_path)
-
-# Function to generate text completions using the OpenAI API
-def get_completion(user_input, engine="gpt-3.5-turbo"):
+def get_completion(user_input):
     memory_response = memory.get_closest_memory(user_input)
     enhanced_input = f"{memory_response} {user_input}" if memory_response else user_input
     prompt = prompt_template.format(question=enhanced_input, context="")
-    messages = [{"role": "user", "content": prompt}]
     response = openai.ChatCompletion.create(
         model=engine,
-        messages=messages,
-        temperature=0.5  # Controls the randomness of the model's output
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.5
     )
     return response.choices[0].message["content"]
 
-# Define a POST endpoint for the chat interaction
 @app.post("/chat/")
 async def chat_with_agent(chat_message: ChatMessage):
     try:
-        result = get_completion(chat_message.user_input, engine)
+        result = get_completion(chat_message.user_input)
         memory.add_to_memory(chat_message.user_input, result)
         return {"response": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Define a GET endpoint to verify server operation
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the FastAPI OpenAI Integration!"}
 
-# If the script is executed as the main script, run the server
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8800, reload=True)

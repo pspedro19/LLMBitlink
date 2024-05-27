@@ -2,6 +2,7 @@ fastapi
 uvicorn
 openai==0.28
 python-dotenv
+psycopg2-binary
 torch
 pydantic
 transformers
