@@ -1,6 +1,8 @@
 # Dockerfile.postgres
 FROM postgres:13
 
+COPY entrypoint.sh /entrypoint.sh
+
 # Set environment variables for default user and password
 ENV POSTGRES_USER=airflow
 ENV POSTGRES_PASSWORD=airflow
