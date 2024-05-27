@@ -15,9 +15,12 @@ RUN apt-get update && \
 RUN git clone https://github.com/pgvector/pgvector.git && \
     cd pgvector && \
     make && \
-    make install && \
-    cp ./pgvector.control /usr/share/postgresql/13/extension/ && \
-    cp ./sql/*.sql /usr/share/postgresql/13/extension/ && \
+    make install
+
+# Ensure the target directories exist for pgvector files
+RUN mkdir -p /usr/share/postgresql/13/extension/ && \
+    cp pgvector/pgvector.control /usr/share/postgresql/13/extension/ && \
+    cp pgvector/sql/*.sql /usr/share/postgresql/13/extension/ && \
     cd .. && \
     rm -rf pgvector
 
