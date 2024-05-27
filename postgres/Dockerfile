@@ -27,10 +27,10 @@ COPY ./entrypoint.sh /docker-entrypoint-initdb.d/
 COPY pg_hba.conf /var/lib/postgresql/data/pg_hba.conf
 
 # Make sure the scripts are executable
-RUN chmod +x /docker-entrypoint-initdb.d/10_init_pgvector.sh
-RUN chmod +x /docker-entrypoint-initdb.d/20_create_multiple_dbs.sh
-RUN chmod +x /var/lib/postgresql/data/pg_hba.conf
+RUN chmod +x /entrypoint.sh
 RUN chmod +x /docker-entrypoint-initdb.d/init_pgvector.sh
+RUN chmod +x /var/lib/postgresql/data/pg_hba.conf
+
 
 # Establece el entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
