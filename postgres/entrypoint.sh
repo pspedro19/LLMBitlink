@@ -1,27 +1,39 @@
 #!/bin/bash
 set -e
 
-# Ejecuta el script de entrada predeterminado de PostgreSQL para la inicialización
+# Start the PostgreSQL entrypoint script in the background
 docker-entrypoint.sh postgres &
 
-# Espera a que PostgreSQL inicie
+# Wait for PostgreSQL to start
 until pg_isready -h localhost -U "$POSTGRES_USER"; do
-  echo "Esperando a que PostgreSQL inicie..."
+  echo "Waiting for PostgreSQL to start..."
   sleep 2
 done
 
-# Ejecuta el script de creación de bases de datos
-if [ -n "$POSTGRES_MULTIPLE_DATABASES" ]; then
-  echo "Creación de múltiples bases de datos solicitada: $POSTGRES_MULTIPLE_DATABASES"
-  for db in $(echo $POSTGRES_MULTIPLE_DATABASES | tr ',' ' '); do
-    echo "Creando base de datos '$db'"
+# Function to create multiple databases if they do not exist
+function create_user_and_database() {
+    local database=$1
+    echo "Creating database '$database'"
     psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
-      SELECT 'CREATE DATABASE $db'
-      WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$db')\\gexec
+        SELECT 'CREATE DATABASE $database'
+        WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$database')\\gexec
 EOSQL
+}
+
+# Check if multiple databases need to be created
+if [ -n "$POSTGRES_MULTIPLE_DATABASES" ]; then
+  echo "Multiple databases creation requested: $POSTGRES_MULTIPLE_DATABASES"
+  for db in $(echo $POSTGRES_MULTIPLE_DATABASES | tr ',' ' '); do
+    create_user_and_database $db
   done
-  echo "Bases de datos creadas"
+  echo "Databases created"
 fi
 
-# Espera a que el proceso principal de PostgreSQL termine
+# Create pgvector extension if it does not exist
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    CREATE EXTENSION IF NOT EXISTS pgvector;
+EOSQL
+echo "pgvector extension created successfully."
+
+# Wait for the main PostgreSQL process to finish
 wait
