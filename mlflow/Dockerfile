@@ -4,8 +4,7 @@ FROM python:3.11-slim
 # Set the working directory in the container
 WORKDIR /mlflow
 
-# Install system dependencies
-# Ensure curl is correctly installed as part of the apt-get install command
+# Install system dependencies and ensure curl is correctly installed as part of the apt-get install command
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
@@ -28,7 +27,6 @@ EXPOSE 5000
 # Define the command to run the MLflow server with the standard port and configurations
 CMD ["mlflow", "server", \
      "--backend-store-uri", "postgresql+psycopg2://airflow:airflow@postgres/mlflow_db", \
-     "--default-artifact-root", "s3://minio:9000", \
+     "--default-artifact-root", "s3://minio:9000/mlflow", \
      "--host", "0.0.0.0", \
      "--port", "5000"]
-
