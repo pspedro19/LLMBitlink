@@ -13,11 +13,11 @@ COPY ./requirements.txt ./
 # Instalar dependencias de Python y actualizar pip
 RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
-# Verificar la instalación de Django
-RUN pip list | grep Django
-
 # Copiar el resto del proyecto Django al contenedor
 COPY . /app
+
+# Verificar la instalación de Django
+RUN pip list
 
 # Recopilar archivos estáticos
 RUN python manage.py collectstatic --noinput
