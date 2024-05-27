@@ -6,25 +6,24 @@ ENV POSTGRES_USER=airflow
 ENV POSTGRES_PASSWORD=airflow
 RUN apt-get update && apt-get install -y postgresql-13-pgvector
 
-# Install git separately to debug the issue
-RUN apt-get install -y git
-
+# Instala los paquetes necesarios
 RUN apt-get update && \
-    apt-get install -y postgresql-server-dev-13 build-essential && \
-    git clone https://github.com/pgvector/pgvector.git && \
+    apt-get install -y postgresql-server-dev-13 build-essential git
+
+# Clona e instala pgvector
+RUN git clone https://github.com/pgvector/pgvector.git && \
     cd pgvector && \
     make && \
     make install && \
     cd .. && \
     rm -rf pgvector && \
-    apt-get remove --purge -y postgresql-server-dev-13 build-essential && \
+    apt-get remove --purge -y postgresql-server-dev-13 build-essential git && \
     apt-get autoremove -y && \
     apt-get clean
 
-
 # Copy the database initialization and configuration scripts to the container
-COPY ./postgres/init_pgvector.sh /docker-entrypoint-initdb.d/
-COPY ./postgres/entrypoint.sh /docker-entrypoint-initdb.d/
+COPY ./init_pgvector.sh /docker-entrypoint-initdb.d/
+COPY ./entrypoint.sh /docker-entrypoint-initdb.d/
 COPY pg_hba.conf /var/lib/postgresql/data/pg_hba.conf
 
 # Make sure the scripts are executable
@@ -33,6 +32,8 @@ RUN chmod +x /docker-entrypoint-initdb.d/20_create_multiple_dbs.sh
 RUN chmod +x /var/lib/postgresql/data/pg_hba.conf
 RUN chmod +x /docker-entrypoint-initdb.d/init_pgvector.sh
 
+# Establece el entrypoint
+ENTRYPOINT ["/entrypoint.sh"]
 
 # Expose the default PostgreSQL port
 EXPOSE 5432
