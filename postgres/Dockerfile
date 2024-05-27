@@ -4,6 +4,8 @@ FROM postgres:13
 # Set environment variables for default user and password
 ENV POSTGRES_USER=airflow
 ENV POSTGRES_PASSWORD=airflow
+ENV POSTGRES_DB=airflow
+ENV POSTGRES_MULTIPLE_DATABASES=mlflow_db,airflow_db
 
 # Install necessary packages and pgvector extension
 RUN apt-get update && \
