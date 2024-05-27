@@ -6,6 +6,8 @@ ENV POSTGRES_USER=airflow
 ENV POSTGRES_PASSWORD=airflow
 RUN apt-get update && apt-get install -y postgresql-13-pgvector
 
+# Install git separately to debug the issue
+RUN apt-get install -y git
 
 RUN apt-get update && \
     apt-get install -y postgresql-server-dev-13 build-essential && \
@@ -15,7 +17,7 @@ RUN apt-get update && \
     make install && \
     cd .. && \
     rm -rf pgvector && \
-    apt-get remove --purge -y postgresql-server-dev-13 build-essential git && \
+    apt-get remove --purge -y postgresql-server-dev-13 build-essential && \
     apt-get autoremove -y && \
     apt-get clean
 
