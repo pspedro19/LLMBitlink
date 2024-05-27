@@ -10,9 +10,11 @@ RUN apt-get update && apt-get install -y libpq-dev gcc && rm -rf /var/lib/apt/li
 # Copiar el archivo de requerimientos primero, para aprovechar la caché de Docker
 COPY ./requirements.txt ./
 
-# Instalar dependencias de Python
-RUN pip install --no-cache-dir -r requirements.txt && pip list
+# Instalar dependencias de Python y actualizar pip
+RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
+# Verificar la instalación de Django
+RUN pip list | grep Django
 
 # Copiar el resto del proyecto Django al contenedor
 COPY . /app
@@ -22,7 +24,9 @@ RUN python manage.py collectstatic --noinput
 
 # Exponer el puerto donde se ejecutará el servidor web
 EXPOSE 8000
+
 # Define environment variable
 ENV NAME World
+
 # Comando para ejecutar la aplicación usando Gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "chatbot.wsgi:application"]
