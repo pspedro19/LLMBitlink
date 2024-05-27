@@ -35,6 +35,6 @@ RUN pip install --no-cache-dir -r /requirements.txt
 ENV PATH=$PATH:/home/airflow/.local/bin
 
 # Initialize the Airflow database
-RUN airflow db init
+RUN airflow db migrate
 
 CMD ["airflow", "webserver"]
