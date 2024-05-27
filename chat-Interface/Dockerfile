@@ -11,7 +11,8 @@ RUN apt-get update && apt-get install -y libpq-dev gcc && rm -rf /var/lib/apt/li
 COPY ./requirements.txt ./
 
 # Instalar dependencias de Python
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && pip list
+
 
 # Copiar el resto del proyecto Django al contenedor
 COPY . /app
