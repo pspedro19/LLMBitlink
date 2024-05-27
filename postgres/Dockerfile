@@ -21,14 +21,16 @@ RUN apt-get update && \
 
 
 # Copy the database initialization and configuration scripts to the container
-COPY init_pgvector.sh /docker-entrypoint-initdb.d/10_init_pgvector.sh
-COPY create-multiple-postgresql-databases.sh /docker-entrypoint-initdb.d/20_create_multiple_dbs.sh
+COPY ./postgres/init_pgvector.sh /docker-entrypoint-initdb.d/
+COPY ./postgres/entrypoint.sh /docker-entrypoint-initdb.d/
 COPY pg_hba.conf /var/lib/postgresql/data/pg_hba.conf
 
 # Make sure the scripts are executable
 RUN chmod +x /docker-entrypoint-initdb.d/10_init_pgvector.sh
 RUN chmod +x /docker-entrypoint-initdb.d/20_create_multiple_dbs.sh
 RUN chmod +x /var/lib/postgresql/data/pg_hba.conf
+RUN chmod +x /docker-entrypoint-initdb.d/init_pgvector.sh
+
 
 # Expose the default PostgreSQL port
 EXPOSE 5432
