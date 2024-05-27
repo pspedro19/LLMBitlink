@@ -16,6 +16,8 @@ RUN git clone https://github.com/pgvector/pgvector.git && \
     cd pgvector && \
     make && \
     make install && \
+    cp ./pgvector.control /usr/share/postgresql/13/extension/ && \
+    cp ./src/*.sql /usr/share/postgresql/13/extension/ && \
     cd .. && \
     rm -rf pgvector
 
