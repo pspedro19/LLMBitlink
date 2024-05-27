@@ -1,22 +1,24 @@
-# postgres/Dockerfile
-FROM postgres:latest
+# Dockerfile.postgres
+FROM postgres:13
 
 # Set environment variables for default user and password
 ENV POSTGRES_USER=airflow
 ENV POSTGRES_PASSWORD=airflow
 RUN apt-get update && apt-get install -y postgresql-13-pgvector
 
-# Install pgvector extension
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends wget ca-certificates build-essential postgresql-server-dev-all libpq-dev \
-    && wget https://github.com/pgvector/pgvector/archive/refs/tags/v0.2.1.tar.gz \
-    && tar -xzf v0.2.1.tar.gz \
-    && cd pgvector-0.2.1 && make && make install \
-    && cd .. && rm -rf pgvector-0.2.1 v0.2.1.tar.gz \
-    && apt-get remove -y wget ca-certificates build-essential postgresql-server-dev-all \
-    && apt-get autoremove -y \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && \
+    apt-get install -y postgresql-server-dev-13 build-essential && \
+    git clone https://github.com/pgvector/pgvector.git && \
+    cd pgvector && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf pgvector && \
+    apt-get remove --purge -y postgresql-server-dev-13 build-essential && \
+    apt-get autoremove -y && \
+    apt-get clean
+
 
 # Copy the database initialization and configuration scripts to the container
 COPY init_pgvector.sh /docker-entrypoint-initdb.d/10_init_pgvector.sh

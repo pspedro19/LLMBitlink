@@ -2,6 +2,9 @@ version: '3.8'
 
 services:
   postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
     image: postgres:13
     restart: always
     container_name: postgres_airflow
