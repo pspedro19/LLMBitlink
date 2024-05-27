@@ -1,25 +1,24 @@
 # Dockerfile.postgres
 FROM postgres:13
 
-COPY entrypoint.sh /entrypoint.sh
-
 # Set environment variables for default user and password
 ENV POSTGRES_USER=airflow
 ENV POSTGRES_PASSWORD=airflow
-RUN apt-get update && apt-get install -y postgresql-13-pgvector
 
-# Instala los paquetes necesarios
+# Install necessary packages and pgvector extension
 RUN apt-get update && \
     apt-get install -y postgresql-server-dev-13 build-essential git
 
-# Clona e instala pgvector
+# Clone, compile, and install pgvector
 RUN git clone https://github.com/pgvector/pgvector.git && \
     cd pgvector && \
     make && \
     make install && \
     cd .. && \
-    rm -rf pgvector && \
-    apt-get remove --purge -y postgresql-server-dev-13 build-essential git && \
+    rm -rf pgvector
+
+# Clean up unnecessary packages to reduce image size
+RUN apt-get remove --purge -y build-essential git && \
     apt-get autoremove -y && \
     apt-get clean
 
@@ -29,13 +28,11 @@ COPY ./entrypoint.sh /docker-entrypoint-initdb.d/
 COPY pg_hba.conf /var/lib/postgresql/data/pg_hba.conf
 
 # Make sure the scripts are executable
-RUN chmod +x /entrypoint.sh
 RUN chmod +x /docker-entrypoint-initdb.d/init_pgvector.sh
-RUN chmod +x /var/lib/postgresql/data/pg_hba.conf
+RUN chmod +x /docker-entrypoint-initdb.d/entrypoint.sh
 
-
-# Establece el entrypoint
-ENTRYPOINT ["/entrypoint.sh"]
+# Establish the entrypoint
+ENTRYPOINT ["/docker-entrypoint-initdb.d/entrypoint.sh"]
 
 # Expose the default PostgreSQL port
 EXPOSE 5432
