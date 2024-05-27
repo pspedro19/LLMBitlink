@@ -7,9 +7,9 @@ ENV POSTGRES_PASSWORD=airflow
 ENV POSTGRES_DB=airflow
 ENV POSTGRES_MULTIPLE_DATABASES=mlflow_db,airflow_db
 
-# Install necessary packages and pgvector extension
+# Install necessary packages
 RUN apt-get update && \
-    apt-get install -y postgresql-server-dev-13 build-essential git
+    apt-get install -y postgresql-server-dev-13 build-essential git llvm-16
 
 # Clone, compile, and install pgvector
 RUN git clone https://github.com/pgvector/pgvector.git && \
@@ -17,12 +17,13 @@ RUN git clone https://github.com/pgvector/pgvector.git && \
     make && \
     make install
 
+# Check the contents of the pgvector directory after building
+RUN ls -la pgvector/
+
 # Ensure the target directories exist for pgvector files
 RUN mkdir -p /usr/share/postgresql/13/extension/ && \
     cp pgvector/pgvector.control /usr/share/postgresql/13/extension/ && \
-    cp pgvector/sql/*.sql /usr/share/postgresql/13/extension/ && \
-    cd .. && \
-    rm -rf pgvector
+    cp pgvector/sql/*.sql /usr/share/postgresql/13/extension/
 
 # Clean up unnecessary packages to reduce image size
 RUN apt-get remove --purge -y build-essential git && \
