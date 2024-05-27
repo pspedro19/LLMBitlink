@@ -1,47 +1,52 @@
-# memory.py
-
-import json
-import torch
+import psycopg2
+from psycopg2.extras import execute_values
 from transformers import BertTokenizer, BertModel
-from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 class EnhancedVectorMemory:
-    def __init__(self, memory_file):
-        self.memory_file = memory_file
-        self.memory = self.load_memory()
+    def __init__(self, db_config):
+        self.conn = psycopg2.connect(**db_config)
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         self.model = BertModel.from_pretrained('bert-base-uncased')
+        self.setup_database()
 
-    def load_memory(self):
-        memory = []
-        try:
-            with open(self.memory_file, 'r') as file:
-                memory = json.load(file)
-        except FileNotFoundError:
-            pass
-        return memory
-
-    def save_memory(self):
-        with open(self.memory_file, 'w') as file:
-            json.dump(self.memory, file, indent=4)
+    def setup_database(self):
+        # Ensure the pgvector extension and table are setup properly
+        with self.conn.cursor() as cursor:
+            cursor.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS conversation_vectors (
+                    id SERIAL PRIMARY KEY,
+                    question TEXT NOT NULL,
+                    answer TEXT NOT NULL,
+                    vector float4[]
+                );
+                CREATE INDEX IF NOT EXISTS idx_vector ON conversation_vectors USING ivfflat (vector);
+            """)
+            self.conn.commit()
 
     def add_to_memory(self, question, answer):
-        self.memory.append({"Pregunta": question, "Respuesta": answer})
-        self.save_memory()
+        tokens = self.tokenizer(question, return_tensors="pt")
+        vector = self.model(**tokens).last_hidden_state.mean(dim=1).detach().numpy()[0]
+        vector_list = vector.tolist()
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO conversation_vectors (question, answer, vector) VALUES (%s, %s, %s)",
+                (question, answer, vector_list)
+            )
+            self.conn.commit()
 
     def get_closest_memory(self, query):
-        query_tokens = self.tokenizer(query, return_tensors='pt', truncation=True, max_length=512)
-        with torch.no_grad():
-            query_embedding = self.model(**query_tokens).last_hidden_state.mean(dim=1)
-        
-        highest_similarity = -1
-        closest = None
-        for entry in self.memory:
-            entry_tokens = self.tokenizer(entry["Pregunta"], return_tensors='pt', truncation=True, max_length=512)
-            with torch.no_grad():
-                entry_embedding = self.model(**entry_tokens).last_hidden_state.mean(dim=1)
-            similarity = cosine_similarity(query_embedding, entry_embedding)
-            if similarity > highest_similarity:
-                highest_similarity = similarity
-                closest = entry
-        return closest["Respuesta"] if closest else None
+        tokens = self.tokenizer(query, return_tensors="pt")
+        query_vector = self.model(**tokens).last_hidden_state.mean(dim=1).detach().numpy()[0]
+        query_list = query_vector.tolist()
+        with self.conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT answer FROM conversation_vectors ORDER BY vector <-> %s LIMIT 1",
+                (query_list,)
+            )
+            result = cursor.fetchone()
+        return result[0] if result else None
+
+    def __del__(self):
+        self.conn.close()

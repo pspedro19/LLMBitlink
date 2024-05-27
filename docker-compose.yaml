@@ -13,6 +13,7 @@ services:
       - POSTGRES_MULTIPLE_DATABASES=mlflow_db,airflow_db
     volumes:
       - ./postgres/entrypoint.sh:/entrypoint.sh
+      - ./postgres/init_pgvector.sh:/docker-entrypoint-initdb.d/init_pgvector.sh
       - ./postgres/create-multiple-postgresql-databases.sh:/docker-entrypoint-initdb.d/create-multiple-postgresql-databases.sh
       - postgres_data:/var/lib/postgresql/data
     ports:
