@@ -17,13 +17,19 @@ RUN git clone https://github.com/pgvector/pgvector.git && \
     make && \
     make install
 
+# Set the working directory to pgvector directory to avoid path issues
+WORKDIR /pgvector
+
 # Check the contents of the pgvector directory after building
-RUN ls -la pgvector/
+RUN ls -la
 
 # Ensure the target directories exist for pgvector files
 RUN mkdir -p /usr/share/postgresql/13/extension/ && \
-    cp pgvector/pgvector.control /usr/share/postgresql/13/extension/ && \
-    cp pgvector/sql/*.sql /usr/share/postgresql/13/extension/
+    cp pgvector.control /usr/share/postgresql/13/extension/ && \
+    cp sql/*.sql /usr/share/postgresql/13/extension/
+
+# Reset the working directory to root
+WORKDIR /
 
 # Clean up unnecessary packages to reduce image size
 RUN apt-get remove --purge -y build-essential git && \
