@@ -3,6 +3,10 @@ set -e
 # Define the full path to the PostgreSQL binary
 POSTGRES_BIN="/usr/lib/postgresql/13/bin/postgres"
 
+# Adjust permissions for PostgreSQL data directory
+chown -R postgres:postgres /var/lib/postgresql/data
+chmod -R 0700 /var/lib/postgresql/data
+
 # Check if the data directory is empty
 if [ -z "$(ls -A /var/lib/postgresql/data)" ]; then
     echo "No data found in /var/lib/postgresql/data, initializing database."
