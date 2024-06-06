@@ -43,6 +43,10 @@ COPY ./init_pgvector.sh /docker-entrypoint-initdb.d/
 COPY ./entrypoint.sh /docker-entrypoint-initdb.d/
 COPY pg_hba.conf /var/lib/postgresql/data/pg_hba.conf
 
+# Copy your custom postgresql.conf file
+COPY ./postgresql.conf /var/lib/postgresql/data/pga_hba.conf
+
+
 # Make sure the scripts are executable
 RUN chmod +x /docker-entrypoint-initdb.d/init_pgvector.sh
 RUN chmod +x /docker-entrypoint-initdb.d/entrypoint.sh
