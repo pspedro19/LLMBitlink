@@ -4,12 +4,12 @@ set -e
 # Check if the data directory is empty
 if [ -z "$(ls -A /var/lib/postgresql/data)" ]; then
     echo "No data found in /var/lib/postgresql/data, initializing database."
-    # If no data, proceed to initialize the database
-    docker-entrypoint.sh postgres &
+    # Start as the postgres user if the data directory is empty
+    su - postgres -c "docker-entrypoint.sh postgres &"
 else
     echo "Data found in /var/lib/postgresql/data, using existing data."
-    # If data exists, start the PostgreSQL without initialization
-    postgres -D /var/lib/postgresql/data &
+    # Start PostgreSQL using the postgres user if data exists
+    su - postgres -c "postgres -D /var/lib/postgresql/data &"
 fi
 
 # Wait for PostgreSQL to be ready
