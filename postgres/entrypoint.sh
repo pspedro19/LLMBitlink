@@ -1,5 +1,7 @@
 #!/bin/bash
 set -e
+# Define the full path to the PostgreSQL binary
+POSTGRES_BIN="/usr/lib/postgresql/13/bin/postgres"
 
 # Check if the data directory is empty
 if [ -z "$(ls -A /var/lib/postgresql/data)" ]; then
@@ -8,8 +10,8 @@ if [ -z "$(ls -A /var/lib/postgresql/data)" ]; then
     su - postgres -c "docker-entrypoint.sh postgres &"
 else
     echo "Data found in /var/lib/postgresql/data, using existing data."
-    # Start PostgreSQL using the postgres user if data exists
-    su - postgres -c "postgres -D /var/lib/postgresql/data &"
+    # Start PostgreSQL using the postgres user with full path to the binary if data exists
+    su - postgres -c "$POSTGRES_BIN -D /var/lib/postgresql/data &"
 fi
 
 # Wait for PostgreSQL to be ready
