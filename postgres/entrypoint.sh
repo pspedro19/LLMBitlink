@@ -8,18 +8,15 @@ POSTGRES_BIN="/usr/lib/postgresql/13/bin/postgres"
 chown -R postgres:postgres /var/lib/postgresql/data
 chmod -R 0700 /var/lib/postgresql/data
 
-# Check if the data directory is empty
-if [ -z "$(ls -A /var/lib/postgresql/data)" ]; then
-    echo "No data found in /var/lib/postgresql/data, initializing database."
+# Check if the data directory is valid
+if [ ! -f /var/lib/postgresql/data/PG_VERSION ]; then
+    echo "No valid data found in /var/lib/postgresql/data, initializing database."
     # Initialize the database
     su - postgres -c "initdb -D /var/lib/postgresql/data"
-    # Start as the postgres user if the data directory is empty
-    su - postgres -c "docker-entrypoint.sh postgres &"
-else
-    echo "Data found in /var/lib/postgresql/data, using existing data."
-    # Start PostgreSQL using the postgres user with full path to the binary if data exists
-    su - postgres -c "$POSTGRES_BIN -D /var/lib/postgresql/data &"
 fi
+
+# Start PostgreSQL using the postgres user with full path to the binary
+su - postgres -c "$POSTGRES_BIN -D /var/lib/postgresql/data &"
 
 # Wait for PostgreSQL to be ready
 until pg_isready -h localhost -U "$POSTGRES_USER"; do
