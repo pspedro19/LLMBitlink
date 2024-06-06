@@ -1,5 +1,3 @@
-# postgres/init_pgvector.sh
-
 #!/bin/bash
 set -e
 
