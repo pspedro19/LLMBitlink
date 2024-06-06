@@ -26,18 +26,32 @@ fi
 su - postgres -c "$POSTGRES_BIN -D /var/lib/postgresql/data/pgdata &"
 
 # Wait for PostgreSQL to be ready
-until pg_isready -h localhost -U "$POSTGRES_USER"; do
+until pg_isready -h localhost -U postgres; do
   echo "Waiting for PostgreSQL to start..."
   sleep 2
 done
 echo "PostgreSQL started successfully."
 
+# Create the airflow role and database if they do not exist
+su - postgres -c "psql -v ON_ERROR_STOP=1 <<-EOSQL
+    DO \$\$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${PG_USER}') THEN
+            CREATE ROLE ${PG_USER} WITH LOGIN PASSWORD '${PG_PASSWORD}';
+        END IF;
+        IF NOT EXISTS (SELECT FROM pg_database WHERE datname = '${PG_DATABASE}') THEN
+            CREATE DATABASE ${PG_DATABASE} OWNER ${PG_USER};
+        END IF;
+    END
+    \$\$;
+EOSQL"
+
 # Create multiple databases if they do not exist
-if [ -n "$POSTGRES_MULTIPLE_DATABASES" ]; then
-  echo "Multiple databases creation requested: $POSTGRES_MULTIPLE_DATABASES"
-  for db in $(echo $POSTGRES_MULTIPLE_DATABASES | tr ',' ' '); do
+if [ -n "$PG_MULTIPLE_DATABASES" ]; then
+  echo "Multiple databases creation requested: $PG_MULTIPLE_DATABASES"
+  for db in $(echo $PG_MULTIPLE_DATABASES | tr ',' ' '); do
     echo "Creating database '$db' if it does not exist."
-    su - postgres -c "psql -v ON_ERROR_STOP=1 --username \"$POSTGRES_USER\" --dbname \"$POSTGRES_DB\" <<-EOSQL
+    su - postgres -c "psql -v ON_ERROR_STOP=1 --username \"$PG_USER\" --dbname \"$PG_DATABASE\" <<-EOSQL
         SELECT 'CREATE DATABASE $db'
         WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$db')\\gexec
 EOSQL"
@@ -46,7 +60,7 @@ EOSQL"
 fi
 
 # Ensure the pgvector extension is created
-su - postgres -c "psql -v ON_ERROR_STOP=1 --username \"$POSTGRES_USER\" --dbname \"$POSTGRES_DB\" <<-EOSQL
+su - postgres -c "psql -v ON_ERROR_STOP=1 --username \"$PG_USER\" --dbname \"$PG_DATABASE\" <<-EOSQL
     CREATE EXTENSION IF NOT EXISTS pgvector;
 EOSQL"
 echo "pgvector extension ensured."
