@@ -12,13 +12,16 @@ COPY postgresql.conf /etc/postgresql/postgresql.conf
 RUN chmod +x /docker-entrypoint-initdb.d/init_pgvector.sh \
     && chmod +x /entrypoint.sh
 
-# Install network utilities
-RUN apt-get update && apt-get install -y git iputils-ping telnet build-essential
-# Remove the directory if it exists and clone the pgvector repository
-RUN rm -rf /pgvector && git clone https://github.com/pgvector/pgvector.git /pgvector
-
-# Build and install the pgvector extension
-RUN cd /pgvector && make && make install
+RUN apt-get update && \
+    apt-get install -y git iputils-ping telnet build-essential postgresql-server-dev-13 && \
+    rm -rf /pgvector && \
+    git clone https://github.com/pgvector/pgvector.git /pgvector && \
+    cd /pgvector && \
+    make && \
+    make install && \
+    apt-get remove --purge -y build-essential git postgresql-server-dev-13 && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy pgvector control file to the appropriate directory
 RUN mkdir -p /usr/share/postgresql/13/extension/ \
