@@ -51,5 +51,4 @@ su - postgres -c "psql -v ON_ERROR_STOP=1 --username \"$POSTGRES_USER\" --dbname
 EOSQL"
 echo "pgvector extension ensured."
 
-# Wait for the main PostgreSQL process to finish
-wait
+# Wait for the main 
