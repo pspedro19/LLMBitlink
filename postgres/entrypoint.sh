@@ -37,10 +37,10 @@ su - postgres -c "psql -v ON_ERROR_STOP=1 <<-EOSQL
     DO \$\$
     BEGIN
         IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${PG_USER}') THEN
-            CREATE ROLE ${PG_USER} WITH LOGIN PASSWORD '${PG_PASSWORD}';
+            EXECUTE format('CREATE ROLE %I WITH LOGIN PASSWORD %L', '${PG_USER}', '${PG_PASSWORD}');
         END IF;
         IF NOT EXISTS (SELECT FROM pg_database WHERE datname = '${PG_DATABASE}') THEN
-            CREATE DATABASE ${PG_DATABASE} OWNER ${PG_USER};
+            EXECUTE format('CREATE DATABASE %I OWNER %I', '${PG_DATABASE}', '${PG_USER}');
         END IF;
     END
     \$\$;
@@ -67,4 +67,3 @@ echo "pgvector extension ensured."
 
 # Wait for the main process to start
 wait
-
