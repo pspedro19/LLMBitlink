@@ -12,13 +12,21 @@ COPY postgresql.conf /var/lib/postgresql/data/postgresql.conf
 RUN chmod +x /docker-entrypoint-initdb.d/init_pgvector.sh \
     && chmod +x /entrypoint.sh
 
-# Clone the pgvector repository and set up the extension
-RUN apt-get update && apt-get install -y postgresql-server-dev-13 build-essential git \
-    && git clone https://github.com/pgvector/pgvector.git /pgvector \
-    && cd /pgvector && make && make install \
-    && mkdir -p /usr/share/postgresql/13/extension/ \
-    && cp vector.control /usr/share/postgresql/13/extension/ \
-    && cd / && rm -rf /pgvector \
+# Update and install necessary packages
+RUN apt-get update && apt-get install -y postgresql-server-dev-13 build-essential git
+
+# Clone the pgvector repository
+RUN git clone https://github.com/pgvector/pgvector.git /pgvector
+
+# Build and install the pgvector extension
+RUN cd /pgvector && make && make install
+
+# Copy pgvector control file to the appropriate directory
+RUN mkdir -p /usr/share/postgresql/13/extension/ \
+    && cp /pgvector/vector.control /usr/share/postgresql/13/extension/
+
+# Cleanup
+RUN rm -rf /pgvector \
     && apt-get remove --purge -y build-essential git \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
