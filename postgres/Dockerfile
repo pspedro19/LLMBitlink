@@ -46,8 +46,10 @@ COPY ./postgresql.conf /var/lib/postgresql/data/postgresql.conf
 RUN chmod +x /docker-entrypoint-initdb.d/init_pgvector.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Establish the entrypoint
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+
 
 # Expose the default PostgreSQL port
 EXPOSE 5432
