@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+
 # Define the full path to the PostgreSQL binary
 POSTGRES_BIN="/usr/lib/postgresql/13/bin/postgres"
 
@@ -10,6 +11,8 @@ chmod -R 0700 /var/lib/postgresql/data
 # Check if the data directory is empty
 if [ -z "$(ls -A /var/lib/postgresql/data)" ]; then
     echo "No data found in /var/lib/postgresql/data, initializing database."
+    # Initialize the database
+    su - postgres -c "initdb -D /var/lib/postgresql/data"
     # Start as the postgres user if the data directory is empty
     su - postgres -c "docker-entrypoint.sh postgres &"
 else
