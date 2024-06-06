@@ -12,10 +12,14 @@ chmod -R 0700 /var/lib/postgresql/data
 # Check if the data directory is valid
 if [ ! -f /var/lib/postgresql/data/PG_VERSION ]; then
     echo "No valid data found in /var/lib/postgresql/data, initializing database."
-    # Remove all contents if the directory is not empty but not valid
-    rm -rf /var/lib/postgresql/data/*
-    # Initialize the database
-    su - postgres -c "$INITDB_BIN -D /var/lib/postgresql/data"
+    # Check if the directory is empty or only contains non-essential files
+    if [ -z "$(ls -A /var/lib/postgresql/data | grep -vE 'pg_hba.conf|postgresql.conf')" ]; then
+        # Initialize the database
+        su - postgres -c "$INITDB_BIN -D /var/lib/postgresql/data"
+    else
+        echo "Error: /var/lib/postgresql/data is not empty and does not contain a valid PostgreSQL data directory."
+        exit 1
+    fi
 fi
 
 # Start PostgreSQL using the postgres user with full path to the binary
