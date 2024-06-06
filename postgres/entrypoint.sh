@@ -5,6 +5,18 @@ set -e
 POSTGRES_BIN="/usr/lib/postgresql/13/bin/postgres"
 INITDB_BIN="/usr/lib/postgresql/13/bin/initdb"
 
+# Ensure environment variables are set
+if [ -z "$PG_USER" ] || [ -z "$PG_PASSWORD" ] || [ -z "$PG_DATABASE" ]; then
+  echo "PG_USER, PG_PASSWORD, and PG_DATABASE must be set"
+  exit 1
+fi
+
+# Assign environment variables to local variables
+pg_user=$PG_USER
+pg_password=$PG_PASSWORD
+pg_database=$PG_DATABASE
+pg_multiple_databases=$PG_MULTIPLE_DATABASES
+
 # Adjust permissions for PostgreSQL data directory
 chown -R postgres:postgres /var/lib/postgresql/data
 chmod -R 0700 /var/lib/postgresql/data
@@ -36,22 +48,22 @@ echo "PostgreSQL started successfully."
 su - postgres -c "psql -v ON_ERROR_STOP=1 <<-EOSQL
     DO \$\$
     BEGIN
-        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${PG_USER}') THEN
-            EXECUTE format('CREATE ROLE %I WITH LOGIN PASSWORD %L', '${PG_USER}', '${PG_PASSWORD}');
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '$pg_user') THEN
+            EXECUTE format('CREATE ROLE %I WITH LOGIN PASSWORD %L', '$pg_user', '$pg_password');
         END IF;
-        IF NOT EXISTS (SELECT FROM pg_database WHERE datname = '${PG_DATABASE}') THEN
-            EXECUTE format('CREATE DATABASE %I OWNER %I', '${PG_DATABASE}', '${PG_USER}');
+        IF NOT EXISTS (SELECT FROM pg_database WHERE datname = '$pg_database') THEN
+            EXECUTE format('CREATE DATABASE %I OWNER %I', '$pg_database', '$pg_user');
         END IF;
     END
     \$\$;
 EOSQL"
 
 # Create multiple databases if they do not exist
-if [ -n "$PG_MULTIPLE_DATABASES" ]; then
-  echo "Multiple databases creation requested: $PG_MULTIPLE_DATABASES"
-  for db in $(echo $PG_MULTIPLE_DATABASES | tr ',' ' '); do
+if [ -n "$pg_multiple_databases" ]; then
+  echo "Multiple databases creation requested: $pg_multiple_databases"
+  for db in $(echo $pg_multiple_databases | tr ',' ' '); do
     echo "Creating database '$db' if it does not exist."
-    su - postgres -c "psql -v ON_ERROR_STOP=1 --username \"$PG_USER\" --dbname \"$PG_DATABASE\" <<-EOSQL
+    su - postgres -c "psql -v ON_ERROR_STOP=1 --username \"$pg_user\" --dbname \"$pg_database\" <<-EOSQL
         SELECT 'CREATE DATABASE $db'
         WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$db')\\gexec
 EOSQL"
@@ -60,7 +72,7 @@ EOSQL"
 fi
 
 # Ensure the pgvector extension is created
-su - postgres -c "psql -v ON_ERROR_STOP=1 --username \"$PG_USER\" --dbname \"$PG_DATABASE\" <<-EOSQL
+su - postgres -c "psql -v ON_ERROR_STOP=1 --username \"$pg_user\" --dbname \"$pg_database\" <<-EOSQL
     CREATE EXTENSION IF NOT EXISTS pgvector;
 EOSQL"
 echo "pgvector extension ensured."
