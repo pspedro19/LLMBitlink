@@ -34,7 +34,14 @@ echo "PostgreSQL started successfully."
 
 # Crea el rol airflow si no existe
 su - postgres -c "psql -v ON_ERROR_STOP=1 <<-EOSQL
-    CREATE ROLE airflow WITH LOGIN PASSWORD 'airflow' NOCREATEDB NOCREATEROLE NOINHERIT;
+    DO
+    \$\$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'airflow') THEN
+            CREATE ROLE airflow WITH LOGIN PASSWORD 'airflow' NOCREATEDB NOCREATEROLE NOINHERIT;
+        END IF;
+    END
+    \$\$
 EOSQL"
 
 # Crea la base de datos airflow si no existe
@@ -48,6 +55,11 @@ su - postgres -c "psql -v ON_ERROR_STOP=1 <<-EOSQL
 EOSQL"
 
 # Asegura que la extensión pgvector se haya creado
+if [ ! -f /usr/share/postgresql/13/extension/pgvector.control ]; then
+    echo "pgvector control file not found. Make sure pgvector is installed correctly."
+    exit 1
+fi
+
 su - postgres -c "psql -v ON_ERROR_STOP=1 --username airflow --dbname airflow <<-EOSQL
     CREATE EXTENSION IF NOT EXISTS pgvector;
 EOSQL"
