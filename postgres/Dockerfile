@@ -17,6 +17,7 @@ RUN rm -rf /pgvector && \
     cd /pgvector && \
     make && \
     make install
+
 # Set the working directory to pgvector directory to avoid path issues
 WORKDIR /pgvector
 
@@ -38,16 +39,16 @@ RUN apt-get remove --purge -y build-essential git && \
 
 # Copy the database initialization and configuration scripts to the container
 COPY ./init_pgvector.sh /docker-entrypoint-initdb.d/
-COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh  # Changed location
+COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY pg_hba.conf /var/lib/postgresql/data/pg_hba.conf
 COPY ./postgresql.conf /var/lib/postgresql/data/postgresql.conf
 
 # Set executable permissions
 RUN chmod +x /docker-entrypoint-initdb.d/init_pgvector.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh  # Update permissions for the new location
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Establish the entrypoint
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]  # Updated entrypoint location
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # Expose the default PostgreSQL port
 EXPOSE 5432
