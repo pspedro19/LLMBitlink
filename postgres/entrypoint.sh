@@ -67,3 +67,4 @@ echo "pgvector extension ensured."
 
 # Wait for the main process to start
 wait
+
