@@ -17,7 +17,8 @@ services:
       - PGDATA=/var/lib/postgresql/data/pgdata  # Use a subdirectory for PGDATA
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres/pg_hba.conf:/var/lib/postgresql/data/pg_hba.conf
+      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf
       - ./postgres/entrypoint.sh:/docker-entrypoint-initdb.d/entrypoint.sh
       - ./postgres/init_pgvector.sh:/docker-entrypoint-initdb.d/init_pgvector.sh
     ports:
