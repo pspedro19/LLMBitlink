@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+
+if [ "$(ls -A /var/lib/postgresql/data)" ]; then
+     echo "Limpiando el directorio de datos..."
+     rm -rf /var/lib/postgresql/data/*
+fi
+
+
 # Start the PostgreSQL entrypoint script in the background
 docker-entrypoint.sh postgres &
 

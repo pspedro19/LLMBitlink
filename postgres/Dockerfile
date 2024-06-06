@@ -12,11 +12,13 @@ RUN apt-get update && \
     apt-get install -y postgresql-server-dev-13 build-essential git llvm-16
 
 # Clone, compile, and install pgvector
-RUN git clone https://github.com/pgvector/pgvector.git && \
-    cd pgvector && \
+# Clone and install pgvector
+# Ensure the directory is empty or does not exist before cloning
+RUN rm -rf /pgvector && \
+    git clone https://github.com/pgvector/pgvector.git /pgvector && \
+    cd /pgvector && \
     make && \
     make install
-
 # Set the working directory to pgvector directory to avoid path issues
 WORKDIR /pgvector
 
