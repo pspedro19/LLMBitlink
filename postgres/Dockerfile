@@ -1,4 +1,3 @@
-# Dockerfile.postgres
 FROM postgres:13
 
 # Set environment variables for default user and password
@@ -46,10 +45,9 @@ COPY ./postgresql.conf /var/lib/postgresql/data/postgresql.conf
 # Set executable permissions
 RUN chmod +x /docker-entrypoint-initdb.d/init_pgvector.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
-RUN chmod +x /entrypoint.sh
-RUN chmod +x /init_pgvector.sh
+
 # Establish the entrypoint
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # Expose the default PostgreSQL port
 EXPOSE 5432
