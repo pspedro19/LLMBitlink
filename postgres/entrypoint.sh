@@ -22,6 +22,9 @@ fi
 
 # Start PostgreSQL
 su - postgres -c "$POSTGRES_BIN -D /var/lib/postgresql/data/pgdata &"
+sleep 5  # Wait for server to start
+
+
 
 # Wait for PostgreSQL to be ready
 until pg_isready -h localhost -U postgres; do
@@ -30,8 +33,8 @@ until pg_isready -h localhost -U postgres; do
 done
 echo "PostgreSQL started successfully."
 
-# Create the 'airflow' role if it doesn't exist
-su - postgres -c "psql -v ON_ERROR_STOP=1 --command=\"DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'airflow') THEN CREATE ROLE airflow WITH LOGIN PASSWORD 'airflow' NOCREATEDB NOCREATEROLE NOINHERIT; END IF; END \$\$;\""
+# Execute SQL commands
+su - postgres -c "psql -v ON_ERROR_STOP=1 --command=\"DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'airflow') THEN CREATE ROLE airflow WITH LOGIN PASSWORD 'airflow' NOCREATEDB NOCREATEROLE NOINHERIT; END IF; END \$\$;\""
 
 # Create 'airflow' database if it doesn't exist
 su - postgres -c "psql -v ON_ERROR_STOP=1 --command='CREATE DATABASE airflow OWNER airflow;'"
