@@ -44,3 +44,4 @@ EXPOSE 5432
 
 # Command to run the PostgreSQL server
 CMD ["postgres"]
+
