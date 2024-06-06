@@ -34,15 +34,15 @@ echo "PostgreSQL started successfully."
 
 # Crea el rol airflow si no existe
 su - postgres -c "psql -v ON_ERROR_STOP=1 <<-EOSQL
-    DO
-    \$\$
+    DO \$\$
     BEGIN
         IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'airflow') THEN
             CREATE ROLE airflow WITH LOGIN PASSWORD 'airflow' NOCREATEDB NOCREATEROLE NOINHERIT;
         END IF;
-    END
-    \$\$
+    END;
+    \$\$;
 EOSQL"
+
 
 # Crea la base de datos airflow si no existe
 su - postgres -c "psql -v ON_ERROR_STOP=1 <<-EOSQL
