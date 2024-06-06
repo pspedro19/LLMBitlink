@@ -12,10 +12,8 @@ COPY postgresql.conf /etc/postgresql/postgresql.conf
 RUN chmod +x /docker-entrypoint-initdb.d/init_pgvector.sh \
     && chmod +x /entrypoint.sh
 
-# Update and install necessary packages
-RUN apt-get update 
-
-RUN apt-get install -y postgresql-server-dev-13 build-essential git
+# Install network utilities
+RUN apt-get update && apt-get install -y iputils-ping telnet
 
 # Remove the directory if it exists and clone the pgvector repository
 RUN rm -rf /pgvector && git clone https://github.com/pgvector/pgvector.git /pgvector
