@@ -67,3 +67,4 @@ echo "pgvector extension ensured."
 
 # Espera a que el proceso principal inicie
 wait
+
