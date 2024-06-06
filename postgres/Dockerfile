@@ -32,8 +32,10 @@ RUN rm -rf /pgvector \
     && rm -rf /var/lib/apt/lists/*
 
 # Set permissions for configuration files
+# Set permissions for configuration files
 RUN chmod -R 777 /var/lib/postgresql/data/pg_hba.conf \
-    && chmod -R 777 /var/lib/postgresql/data/postgresql.conf
+    && chmod -R 777 /var/lib/postgresql/data/postgresql.conf \
+    && chmod -R 0700 /var/lib/postgresql/data
 
 # Set custom entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
