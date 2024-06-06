@@ -5,8 +5,8 @@ USER root
 # Copy requirements file and scripts
 COPY init_pgvector.sh /docker-entrypoint-initdb.d/init_pgvector.sh
 COPY entrypoint.sh /entrypoint.sh
-COPY pg_hba.conf /var/lib/postgresql/data/pg_hba.conf
-COPY postgresql.conf /var/lib/postgresql/data/postgresql.conf
+COPY pg_hba.conf /etc/postgresql/pg_hba.conf
+COPY postgresql.conf /etc/postgresql/postgresql.conf
 
 # Ensure necessary scripts are executable
 RUN chmod +x /docker-entrypoint-initdb.d/init_pgvector.sh \
@@ -32,9 +32,8 @@ RUN rm -rf /pgvector \
     && rm -rf /var/lib/apt/lists/*
 
 # Set permissions for configuration files
-# Set permissions for configuration files
-RUN chmod -R 777 /var/lib/postgresql/data/pg_hba.conf \
-    && chmod -R 777 /var/lib/postgresql/data/postgresql.conf \
+RUN chmod -R 777 /etc/postgresql/pg_hba.conf \
+    && chmod -R 777 /etc/postgresql/postgresql.conf \
     && chmod -R 0700 /var/lib/postgresql/data
 
 # Set custom entrypoint
