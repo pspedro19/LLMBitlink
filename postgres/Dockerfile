@@ -13,8 +13,7 @@ RUN chmod +x /docker-entrypoint-initdb.d/init_pgvector.sh \
     && chmod +x /entrypoint.sh
 
 # Install network utilities
-RUN apt-get update && apt-get install -y git iputils-ping telnet
-
+RUN apt-get update && apt-get install -y git iputils-ping telnet build-essential
 # Remove the directory if it exists and clone the pgvector repository
 RUN rm -rf /pgvector && git clone https://github.com/pgvector/pgvector.git /pgvector
 
