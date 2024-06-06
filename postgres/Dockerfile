@@ -12,8 +12,6 @@ RUN apt-get update && \
     apt-get install -y postgresql-server-dev-13 build-essential git llvm-16
 
 # Clone, compile, and install pgvector
-# Clone and install pgvector
-# Ensure the directory is empty or does not exist before cloning
 RUN rm -rf /pgvector && \
     git clone https://github.com/pgvector/pgvector.git /pgvector && \
     cd /pgvector && \
@@ -30,7 +28,7 @@ RUN mkdir -p /usr/share/postgresql/13/extension/ && \
     cp vector.control /usr/share/postgresql/13/extension/ && \
     cp sql/*.sql /usr/share/postgresql/13/extension/
 
-# Reset the working directory to root (optional if more commands follow that need the root directory)
+# Reset the working directory to root
 WORKDIR /
 
 # Clean up unnecessary packages to reduce image size
@@ -40,20 +38,16 @@ RUN apt-get remove --purge -y build-essential git && \
 
 # Copy the database initialization and configuration scripts to the container
 COPY ./init_pgvector.sh /docker-entrypoint-initdb.d/
-COPY ./entrypoint.sh /docker-entrypoint-initdb.d/
+COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh  # Changed location
 COPY pg_hba.conf /var/lib/postgresql/data/pg_hba.conf
-
-# Copy your custom postgresql.conf file
 COPY ./postgresql.conf /var/lib/postgresql/data/postgresql.conf
 
-
-
-# Make sure the scripts are executable
+# Set executable permissions
 RUN chmod +x /docker-entrypoint-initdb.d/init_pgvector.sh
-RUN chmod +x /docker-entrypoint-initdb.d/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh  # Update permissions for the new location
 
 # Establish the entrypoint
-ENTRYPOINT ["/docker-entrypoint-initdb.d/entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]  # Updated entrypoint location
 
 # Expose the default PostgreSQL port
 EXPOSE 5432
