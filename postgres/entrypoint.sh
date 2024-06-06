@@ -53,4 +53,3 @@ echo "pgvector extension ensured."
 
 # Wait for the main PostgreSQL process to finish
 wait
-
