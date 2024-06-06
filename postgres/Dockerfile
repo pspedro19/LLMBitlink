@@ -44,7 +44,8 @@ COPY ./entrypoint.sh /docker-entrypoint-initdb.d/
 COPY pg_hba.conf /var/lib/postgresql/data/pg_hba.conf
 
 # Copy your custom postgresql.conf file
-COPY ./postgresql.conf /var/lib/postgresql/data/pga_hba.conf
+COPY ./postgresql.conf /var/lib/postgresql/data/postgresql.conf
+
 
 
 # Make sure the scripts are executable
