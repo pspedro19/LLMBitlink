@@ -21,7 +21,7 @@ services:
       - ./postgres/init_pgvector.sh:/docker-entrypoint-initdb.d/init_pgvector.sh
     ports:
       - "5432:5432"
-    entrypoint: ["/entrypoint.sh"]
+    entrypoint: /entrypoint.sh
     networks:
       - backend
     healthcheck:
