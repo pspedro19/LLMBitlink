@@ -1,8 +1,9 @@
 #!/bin/bash
 set -e
 
-# Define the full path to the PostgreSQL binary
+# Define the full path to the PostgreSQL binaries
 POSTGRES_BIN="/usr/lib/postgresql/13/bin/postgres"
+INITDB_BIN="/usr/lib/postgresql/13/bin/initdb"
 
 # Adjust permissions for PostgreSQL data directory
 chown -R postgres:postgres /var/lib/postgresql/data
@@ -12,7 +13,7 @@ chmod -R 0700 /var/lib/postgresql/data
 if [ ! -f /var/lib/postgresql/data/PG_VERSION ]; then
     echo "No valid data found in /var/lib/postgresql/data, initializing database."
     # Initialize the database
-    su - postgres -c "initdb -D /var/lib/postgresql/data"
+    su - postgres -c "$INITDB_BIN -D /var/lib/postgresql/data"
 fi
 
 # Start PostgreSQL using the postgres user with full path to the binary
