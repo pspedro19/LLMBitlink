@@ -2,6 +2,11 @@ FROM postgres:13
 
 USER root
 
+# Instalar Python
+RUN apt-get update && apt-get install -y python3 python3-pip
+COPY setup_db.py /setup_db.py
+
+
 # Copy configuration files and scripts
 COPY init_pgvector.sh /docker-entrypoint-initdb.d/init_pgvector.sh
 COPY entrypoint.sh /entrypoint.sh
