@@ -1,28 +1,20 @@
 version: '3.8'
 
 services:
+
+
   postgres:
-    build:
-      context: ./postgres
-      dockerfile: Dockerfile
-    image: postgres:13
-    restart: always
+    image: ankane/pgvector
     container_name: postgres_airflow
-    entrypoint: /entrypoint.sh
     environment:
-      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+      - PG_HOST_AUTH_METHOD=scram-sha-256
       - POSTGRES_USER=airflow
       - POSTGRES_PASSWORD=airflow
       - POSTGRES_DB=airflow
-      - PGDATA=/var/lib/postgresql/data/pgdata  # Use a subdirectory for PGDATA
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf
-      - ./postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf
-      - ./postgres/entrypoint.sh:/docker-entrypoint-initdb.d/entrypoint.sh
-      - ./postgres/init_pgvector.sh:/docker-entrypoint-initdb.d/init_pgvector.sh
     ports:
       - "5432:5432"
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
     networks:
       - backend
     healthcheck:
@@ -31,6 +23,38 @@ services:
       timeout: 5s
       retries: 5
       start_period: 5s
+
+  
+  #postgres:
+  #  build:
+  #    context: ./postgres
+  #    dockerfile: Dockerfile
+  #  image: postgres:13
+  #  restart: always
+  #  container_name: postgres_airflow
+  #  entrypoint: /entrypoint.sh
+  #  environment:
+  #    - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+  #    - POSTGRES_USER=airflow
+  #    - POSTGRES_PASSWORD=airflow
+  #    - POSTGRES_DB=airflow
+  #    - PGDATA=/var/lib/postgresql/data/pgdata  # Use a subdirectory for PGDATA
+  #  volumes:
+  #    - postgres_data:/var/lib/postgresql/data
+  #    - ./postgres/postgresql.conf:/var/lib/postgresql/data/postgresql.conf
+  #    - ./postgres/pg_hba.conf:/var/lib/postgresql/data/pg_hba.conf
+  #    - ./postgres/entrypoint.sh:/entrypoint.sh
+  #    - ./postgres/init_pgvector.sh:/docker-entrypoint-initdb.d/init_pgvector.sh
+  #  ports:
+  #    - "5432:5432"
+  #  networks:
+  #    - backend
+  #  healthcheck:
+  #    test: ["CMD-SHELL", "pg_isready -h localhost -U airflow"]
+  #    interval: 10s
+  #    timeout: 5s
+  #    retries: 5
+  #    start_period: 5s
 
   minio:
     image: minio/minio
@@ -146,5 +170,5 @@ networks:
     driver: bridge
 
 volumes:
-  postgres_data:
+  pgvector_data:
   minio_data:

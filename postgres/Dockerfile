@@ -1,50 +1,26 @@
 FROM postgres:13
 
-USER root
-
-# Instalar Python
-RUN apt-get update && apt-get install -y python3 python3-pip
-COPY setup_db.py /setup_db.py
-
-
-# Copy configuration files and scripts
-COPY init_pgvector.sh /docker-entrypoint-initdb.d/init_pgvector.sh
-COPY entrypoint.sh /entrypoint.sh
-COPY pg_hba.conf /etc/postgresql/pg_hba.conf
-COPY postgresql.conf /etc/postgresql/postgresql.conf
-
-# Ensure necessary scripts are executable
-RUN chmod +x /docker-entrypoint-initdb.d/init_pgvector.sh && \
-    chmod +x /entrypoint.sh
-
-# Install necessary tools and build pgvector
+# Instalar paquetes necesarios
 RUN apt-get update && \
-    apt-get install -y git iputils-ping telnet build-essential postgresql-server-dev-13 && \
-    rm -rf /pgvector && \
-    git clone https://github.com/pgvector/pgvector.git /pgvector && \
-    cd /pgvector && \
-    make && \
-    make install 
+    apt-get install -y wget gnupg lsb-release software-properties-common && \
+    wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && \
+    sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' && \
+    apt-get update && \
+    apt-get install -y postgresql-server-dev-13 build-essential git
 
-# Copy pgvector control file to the appropriate directory
-RUN mkdir -p /usr/share/postgresql/13/extension/ && \
-    cp /pgvector/vector.control /usr/share/postgresql/13/extension/
+# Copiar configuraciones y scripts
+COPY ./init-db.sql /docker-entrypoint-initdb.d/
+COPY ./pg_hba.conf /etc/postgresql/13/main/
+COPY ./postgresql.conf /etc/postgresql/13/main/
+COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
 
-# Cleanup
-RUN apt-get remove --purge -y build-essential git postgresql-server-dev-13 && \
-    apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/* /pgvector
+# Asegurar permisos adecuados
+RUN chown -R postgres:postgres /etc/postgresql/13/main && \
+    chmod 755 /docker-entrypoint-initdb.d/init-db.sql /usr/local/bin/entrypoint.sh
 
-# Set permissions for configuration files
-RUN chmod 644 /etc/postgresql/pg_hba.conf && \
-    chmod 644 /etc/postgresql/postgresql.conf && \
-    chmod 700 /var/lib/postgresql/data
+# Establecer el script de entrada personalizado
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-# Set custom entrypoint
-ENTRYPOINT ["/entrypoint.sh"]
-
-# Expose the default PostgreSQL port
-EXPOSE 5432
-
-# Command to run the PostgreSQL server
 CMD ["postgres"]
+
+EXPOSE 5432
