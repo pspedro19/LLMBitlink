@@ -18,6 +18,10 @@ COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chown -R postgres:postgres /etc/postgresql/13/main && \
     chmod 755 /docker-entrypoint-initdb.d/init-db.sql /usr/local/bin/entrypoint.sh
 
+
+
+
+    
 # Establecer el script de entrada personalizado
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 

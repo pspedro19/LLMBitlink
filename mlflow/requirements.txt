@@ -6,3 +6,4 @@ torch==2.1.0
 wandb
 huggingface_hub
 apache-airflow==2.3.0  # Adjust the version based on your specific installation
+

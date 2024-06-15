@@ -1,13 +1,9 @@
-
 import openai
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
 from dotenv import load_dotenv
 import os
-import psycopg2
-from psycopg2.extras import execute_values
-from memory import EnhancedVectorMemory
 
 load_dotenv()
 
@@ -56,22 +52,8 @@ Proporcionar servicios de consultoría y asistencia de ventas de alto nivel a cl
 Question: {question}  Context: {context}
 """
 
-# Configuración de conexión a la base de datos PostgreSQL
-db_config = {
-    'dbname': os.getenv("DB_NAME", "postgres"),
-    'user': os.getenv("DB_USER", "postgres"),
-    'password': os.getenv("DB_PASSWORD", "password"),
-    'host': os.getenv("DB_HOST", "localhost"),
-    'port': os.getenv("DB_PORT", "5432"),
-}
-
-# Inicializar la memoria mejorada con vector store
-memory = EnhancedVectorMemory(db_config)
-
 def get_completion(user_input):
-    memory_response = memory.get_closest_memory(user_input)
-    enhanced_input = f"{memory_response} {user_input}" if memory_response else user_input
-    prompt = prompt_template.format(question=enhanced_input, context="")
+    prompt = prompt_template.format(question=user_input, context="")
     response = openai.ChatCompletion.create(
         model=engine,
         messages=[{"role": "user", "content": prompt}],
@@ -83,7 +65,6 @@ def get_completion(user_input):
 async def chat_with_agent(chat_message: ChatMessage):
     try:
         result = get_completion(chat_message.user_input)
-        memory.add_to_memory(chat_message.user_input, result)
         return {"response": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

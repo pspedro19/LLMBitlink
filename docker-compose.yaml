@@ -24,37 +24,6 @@ services:
       retries: 5
       start_period: 5s
 
-  
-  #postgres:
-  #  build:
-  #    context: ./postgres
-  #    dockerfile: Dockerfile
-  #  image: postgres:13
-  #  restart: always
-  #  container_name: postgres_airflow
-  #  entrypoint: /entrypoint.sh
-  #  environment:
-  #    - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
-  #    - POSTGRES_USER=airflow
-  #    - POSTGRES_PASSWORD=airflow
-  #    - POSTGRES_DB=airflow
-  #    - PGDATA=/var/lib/postgresql/data/pgdata  # Use a subdirectory for PGDATA
-  #  volumes:
-  #    - postgres_data:/var/lib/postgresql/data
-  #    - ./postgres/postgresql.conf:/var/lib/postgresql/data/postgresql.conf
-  #    - ./postgres/pg_hba.conf:/var/lib/postgresql/data/pg_hba.conf
-  #    - ./postgres/entrypoint.sh:/entrypoint.sh
-  #    - ./postgres/init_pgvector.sh:/docker-entrypoint-initdb.d/init_pgvector.sh
-  #  ports:
-  #    - "5432:5432"
-  #  networks:
-  #    - backend
-  #  healthcheck:
-  #    test: ["CMD-SHELL", "pg_isready -h localhost -U airflow"]
-  #    interval: 10s
-  #    timeout: 5s
-  #    retries: 5
-  #    start_period: 5s
 
   minio:
     image: minio/minio
@@ -115,6 +84,11 @@ services:
       - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
       - AWS_ACCESS_KEY_ID=minio
       - AWS_SECRET_ACCESS_KEY=minio123
+      - POSTGRES_HOST=postgres_airflow
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=mlflow_db
     networks:
       - backend
     healthcheck:
@@ -132,15 +106,29 @@ services:
       - ./data:/data
     container_name: fastapi_server
     depends_on:
+      postgres:
+        condition: service_healthy
       mlflow:
         condition: service_healthy
     ports:
-      - "8800:8000"
+      - "8800:8800" 
     networks:
       - backend
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
       - HUGGINGFACE_TOKEN=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
+      - DB_NAME=airflow
+      - DB_USER=airflow
+      - DB_PASSWORD=airflow
+      - DB_HOST=postgres
+      - DB_PORT=5432
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8800/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
 
   airflow-webserver:
     build: './airflow'
