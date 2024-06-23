@@ -13,4 +13,5 @@ if [ -z "$(psql -Atqc "\\list airflow")" ]; then
 fi
 
 # Inicia el servidor web de Airflow
-exec airflow webserver
+# Run in compose
+# exec airflow webserver
