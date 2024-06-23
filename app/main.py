@@ -4,7 +4,6 @@ from pydantic import BaseModel
 import uvicorn
 from dotenv import load_dotenv
 import os
-from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
@@ -12,13 +11,7 @@ load_dotenv()
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Adjust for your specific allowed domains
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 engine = 'gpt-3.5-turbo'
