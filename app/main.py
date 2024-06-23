@@ -4,6 +4,15 @@ from pydantic import BaseModel
 import uvicorn
 from dotenv import load_dotenv
 import os
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # En un entorno de producción, debes especificar los dominios permitidos en lugar de '*'
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 load_dotenv()
 
