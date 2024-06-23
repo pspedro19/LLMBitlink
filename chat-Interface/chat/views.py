@@ -1,3 +1,4 @@
+import requests  # Añade esto al inicio para hacer solicitudes HTTP
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth import authenticate, login, logout
@@ -11,15 +12,16 @@ def index(request):
 
 # API para recibir mensajes y responder
 @csrf_exempt
-def api_view(request, mensaje):
+def api_view(request):
     if request.method == "POST":
-        user = request.user
-        user_input = mensaje
-        # Simula la respuesta del asistente (integra tu lógica de modelo aquí)
-        response_text = f"Respondido: {mensaje}"
-        # Guardar en la base de datos
-        Conversation.objects.create(user=user, input=user_input, output=response_text)
-        return JsonResponse({'mensaje': response_text})
+        user_input = request.POST.get('mensaje', '')  # Asegúrate de enviar el mensaje como 'mensaje' en la solicitud POST desde el frontend
+        # Hacer una solicitud al servicio FastAPI
+        response = requests.post('http://localhost:8800/chat/', json={'user_input': user_input})
+        if response.status_code == 200:
+            response_data = response.json()
+            return JsonResponse({'mensaje': response_data['response']})
+        else:
+            return JsonResponse({'error': 'Error con el servicio de chat'}, status=500)
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 # Registro de usuarios
