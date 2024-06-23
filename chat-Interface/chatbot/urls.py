@@ -21,5 +21,6 @@ from chat import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.index, name='index'),
-    path('api/<str:mensaje>/', views.api_view, name='api'),
+    # Asegúrate de que esta ruta acepta peticiones POST y no requiere el parámetro en la URL
+    path('api/', views.api_view, name='api'),
 ]
