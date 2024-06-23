@@ -104,7 +104,7 @@ services:
     volumes:
       - ./chat-Interface:/app
     ports:
-      - "8000:8000"
+      - "8800:8800"
     depends_on:
       postgres:
         condition: service_healthy
@@ -156,7 +156,7 @@ services:
       mlflow:
         condition: service_healthy
     ports:
-      - "8800:8800" 
+      - "8000:8000" 
     networks:
       - backend
     environment:
