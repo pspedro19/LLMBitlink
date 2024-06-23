@@ -29,4 +29,4 @@ EXPOSE 8000
 ENV NAME World
 
 # Comando para ejecutar la aplicación usando Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "chatbot.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8800", "chatbot.wsgi:application"]
