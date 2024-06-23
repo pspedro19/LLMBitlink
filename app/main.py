@@ -12,7 +12,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://yourproductionwebsite.com"],  # Adjust for your specific allowed domains
+    allow_origins=["*"],  # Adjust for your specific allowed domains
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
