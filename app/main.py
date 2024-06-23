@@ -5,7 +5,9 @@ import uvicorn
 from dotenv import load_dotenv
 import os
 from fastapi.middleware.cors import CORSMiddleware
+import logging
 
+logging.basicConfig(level=logging.DEBUG)
 load_dotenv()
 
 app = FastAPI()
@@ -72,10 +74,13 @@ def get_completion(user_input):
 
 @app.post("/chat/")
 async def chat_with_agent(chat_message: ChatMessage):
+    logging.debug(f"Received message: {chat_message.user_input}")
     try:
         result = get_completion(chat_message.user_input)
+        logging.debug(f"API response: {result}")
         return {"response": result}
     except Exception as e:
+        logging.error(f"Error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/")
