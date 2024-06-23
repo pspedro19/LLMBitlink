@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>Chat</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
@@ -34,17 +35,27 @@
     </div>
 
     <script>
+        function getCSRFToken() {
+            return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        }
+
         function enviarMensaje() {
             var mensaje = document.getElementById('mensajeInput').value;
             if (mensaje.trim() !== '') {
-                // Realizar la solicitud a la API
-                fetch('/api/' + mensaje + '/')
-                    .then(response => response.json())
-                    .then(data => {
-                        agregarMensaje('Tú:', mensaje);
-                        agregarMensaje('Asistente Virtual:', data.mensaje);
-                    })
-                    .catch(error => console.error('Error al enviar mensaje:', error));
+                fetch('/api/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken() // Utiliza la función para obtener el CSRF token
+                    },
+                    body: JSON.stringify({mensaje: mensaje})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    agregarMensaje('Tú:', mensaje);
+                    agregarMensaje('Asistente Virtual:', data.mensaje);
+                })
+                .catch(error => console.error('Error al enviar mensaje:', error));
 
                 // Limpiar el campo de entrada después de enviar el mensaje
                 document.getElementById('mensajeInput').value = '';
@@ -59,9 +70,7 @@
                 </div>
             `;
             chatMessages.innerHTML += mensajeHTML;
-
-            // Hacer scroll al último mensaje agregado
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            chatMessages.scrollTop = chatMessages.scrollHeight; // Hacer scroll al último mensaje agregado
         }
     </script>
 </body>
