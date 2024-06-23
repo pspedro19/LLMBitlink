@@ -23,10 +23,10 @@ RUN pip list
 RUN python manage.py collectstatic --noinput
 
 # Exponer el puerto donde se ejecutará el servidor web
-EXPOSE 8000
+EXPOSE 8800  # Updated to match the Gunicorn bind port
 
 # Define environment variable
 ENV NAME World
 
-# Comando para ejecutar la aplicación usando Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8800", "chatbot.wsgi:application"]
+# Comando para ejecutar la aplicación usando Gunicorn with increased timeout
+CMD ["gunicorn", "--timeout", "120", "--bind", "0.0.0.0:8800", "chatbot.wsgi:application"]
