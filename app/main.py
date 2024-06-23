@@ -6,17 +6,17 @@ from dotenv import load_dotenv
 import os
 from fastapi.middleware.cors import CORSMiddleware
 
+load_dotenv()
+
+app = FastAPI()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En un entorno de producción, debes especificar los dominios permitidos en lugar de '*'
+    allow_origins=["http://yourproductionwebsite.com"],  # Adjust for your specific allowed domains
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-load_dotenv()
-
-app = FastAPI()
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 engine = 'gpt-3.5-turbo'
