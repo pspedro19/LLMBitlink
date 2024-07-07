@@ -8,6 +8,15 @@ This project utilizes a microservices architecture to implement and manage a lan
 
 $$$$$$$$$$$$$$$$$
 
+
+# Microservices Architecture for Language Model Project
+
+## Overview
+
+This project utilizes a microservices architecture to implement and manage a language model. The architecture is designed to facilitate inter-service communication, track machine learning experiments, manage model lifecycles, store artifacts, and monitor tasks. Below is a detailed explanation of each component and how they interact.
+
+$$$$$$$$$$$$$$$$$
+
 Using apt (Recommended)
 Update the package database:
 
