@@ -12,6 +12,28 @@ logger = logging.getLogger(__name__)
 def index(request):
     return render(request, 'index.html')
 
+@csrf_protect  # Protección CSRF habilitada
+def api_view(request):
+    if request.method == "POST":
+        user_input = request.POST.get('mensaje', '')
+        try:
+            response = requests.post('http://localhost:8800/chat/', json={'user_input': user_input})
+            if response.status_code == 200:
+                response_data = response.json()
+                if 'response' in response_data:
+                    return JsonResponse({'mensaje': response_data['response']})
+                else:
+                    logger.error('Respuesta inesperada desde FastAPI: %s', response_data)
+                    return JsonResponse({'error': 'Respuesta inesperada desde el servicio de chat'}, status=500)
+            else:
+                logger.error('Error de estado desde FastAPI: %s', response.status_code)
+                return JsonResponse({'error': 'Error con el servicio de chat'}, status=response.status_code)
+        except requests.exceptions.RequestException as e:
+            logger.error('Excepción al conectar con FastAPI: %s', e)
+            return JsonResponse({'error': 'Error de conexión con el servicio de chat'}, status=500)
+    else:
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
 @csrf_protect
 def register(request):
     if request.method == 'POST':
