@@ -19,7 +19,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 COPY init_db.sh .
 
-RUN chmod +x init_db.sh
+# Fix line endings and make the script executable
+RUN sed -i 's/\r$//' init_db.sh && \
+    chmod +x init_db.sh
 
 # Install Python dependencies along with MLflow and psycopg2 for PostgreSQL interaction
 RUN pip install --no-cache-dir --upgrade pip && \
