@@ -2,8 +2,8 @@ import requests
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.contrib.auth import authenticate, login, logout
-from django.views.decorators.csrf import csrf_protect  # Cambio de csrf_exempt a csrf_protect
-from .models import Conversation, User
+from django.views.decorators.csrf import csrf_protect, csrf_exempt  # Cambio de csrf_exempt a csrf_protect
+from .models import Chunk  # Asegúrate de importar Chunk
 import json
 import logging
 
@@ -67,3 +67,22 @@ def user_login(request):
 def user_logout(request):
     logout(request)
     return JsonResponse({'status': 'success', 'message': 'Sesión cerrada exitosamente.'})
+
+@csrf_exempt
+def save_vectorization(request):
+    if request.method == 'POST':
+        try:
+            logger.info(f"Request body: {request.body}")
+            data = json.loads(request.body)
+            logger.info(f"Data received: {data}")
+            for item in data:
+                Chunk.objects.create(
+                    document_id=item['document_id'],
+                    content=item['content'],
+                    embedding=item['embedding']
+                )
+            return JsonResponse({"status": "success"})
+        except Exception as e:
+            logger.error(f"Error processing data: {e}")
+            return JsonResponse({"status": "fail", "error": str(e)}, status=400)
+    return JsonResponse({"status": "fail"}, status=400)

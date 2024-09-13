@@ -1,13 +1,15 @@
 FROM python:3.8-slim
 
 WORKDIR /app
-COPY . .
-COPY requirements.txt /requirements.txt
-ENV OPENAI_API_KEY=sk-proj-XVAE4QMHvn69ktcWGIFnT3BlbkFJ5Gmqq3cFWkgMF6gCW1f7
 
-RUN apt-get update && apt-get install -y curl
+# Copiamos solo el archivo de requisitos primero y lo instalamos
+COPY requirements.txt /app/requirements.txt
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r /requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-EXPOSE 8800
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Ahora copiamos el resto del código
+COPY . .
+
+EXPOSE 8000
+CMD ["uvicorn", "Vectorize:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
