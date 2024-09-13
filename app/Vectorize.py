@@ -8,13 +8,21 @@ import pandas as pd
 import os
 import fitz  # PyMuPDF for reading PDFs
 import logging
+from dotenv import load_dotenv
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+# Load environment variables
+load_dotenv()
 
 app = FastAPI()
 
-# Configuración de MinIO
-MINIO_URL = "localhost:9000"
-MINIO_ACCESS_KEY = "minio"
-MINIO_SECRET_KEY = "minio123"
+# MinIO configuration
+MINIO_URL = os.getenv("MINIO_URL", "minio:9000")
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minio")
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minio123")
 
 client = Minio(
     MINIO_URL,
@@ -48,29 +56,30 @@ def vectorize_and_store():
 
         result_df = pd.concat(all_vectors, ignore_index=True)
 
-        # Guardar el DataFrame en un archivo CSV (opcional)
+        # Save the DataFrame to a CSV file (optional)
         result_df.to_csv("vectorized_data.csv", index=False)
 
         vectorized_data = result_df.to_dict(orient='records')
-        logging.info(f"Data to be sent: {vectorized_data}")
+        logger.info(f"Data to be sent: {vectorized_data}")
 
-        # Enviar los datos vectorizados a Django
-        response = requests.post("http://localhost:8001/save_vectorization/", json=vectorized_data)  # Cambiado a 8001
+        # Send vectorized data to Django
+        django_url = os.getenv("DJANGO_URL", "http://django_chat_interface:8800")
+        response = requests.post(f"{django_url}/save_vectorization/", json=vectorized_data)
         if response.status_code == 200:
             return {"status": "Success", "data": vectorized_data}
         else:
-            raise HTTPException(status_code=500, detail=f"Error al enviar datos a Django: {response.status_code}, {response.text}")
+            raise HTTPException(status_code=500, detail=f"Error sending data to Django: {response.status_code}, {response.text}")
 
     except requests.exceptions.RequestException as e:
-        logging.error(f"RequestException: {e}")
+        logger.error(f"RequestException: {e}")
         raise HTTPException(status_code=500, detail=f"RequestException: {e}")
     except Exception as e:
-        logging.error(f"General Exception: {e}")
+        logger.error(f"General Exception: {e}")
         raise HTTPException(status_code=500, detail=f"General Exception: {e}")
 
 def split_into_chunks(file_path):
     chunks = []
-    document_id = 1  # Esto debería ser dinámico, pero usaremos un valor de ejemplo
+    document_id = 1  # This should be dynamic, but we'll use an example value
     if file_path.endswith('.pdf'):
         doc = fitz.open(file_path)
         for page_num in range(doc.page_count):
@@ -80,9 +89,18 @@ def split_into_chunks(file_path):
     elif file_path.endswith('.txt') or file_path.endswith('.md'):
         with open(file_path, "r") as file:
             text = file.read()
-            # Dividir el texto en chunks (puedes ajustar esta lógica según sea necesario)
+            # Split the text into chunks (you can adjust this logic as needed)
             text_chunks = [text[i:i + 1000] for i in range(0, len(text), 1000)]
             for idx, chunk in enumerate(text_chunks):
                 chunks.append({"document_id": document_id, "content": chunk})
-    os.remove(file_path)  # Limpiar después de procesar
+    os.remove(file_path)  # Clean up after processing
     return chunks
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("FASTAPI_PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port, reload=True)

@@ -6,20 +6,26 @@ from dotenv import load_dotenv
 import os
 import logging
 
+# Configure logging
 logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+# Load environment variables
 load_dotenv()
 
 app = FastAPI()
 
-
-
+# Initialize OpenAI API
 openai.api_key = os.getenv("OPENAI_API_KEY")
+if not openai.api_key:
+    raise ValueError("OPENAI_API_KEY environment variable is not set")
+
 engine = 'gpt-3.5-turbo'
 
 class ChatMessage(BaseModel):
     user_input: str
 
-# Prompt for the AI model
+# Prompt template (unchanged)
 prompt_template = """
 # Rol
 Eres un experto en ventas inmobiliarias llamado Max. Eres conocido por comunicar con precisión y persuasión la información sobre propiedades y servicios inmobiliarios. Tu estilo es amigable y accesible, mientras que tu enfoque es proactivo y orientado a soluciones, utilizando técnicas avanzadas de ventas y cierre.
@@ -56,29 +62,38 @@ Proporcionar servicios de consultoría y asistencia de ventas de alto nivel a cl
 Question: {question}  Context: {context}
 """
 
-def get_completion(user_input):
-    prompt = prompt_template.format(question=user_input, context="")
-    response = openai.ChatCompletion.create(
-        model=engine,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.5
-    )
-    return response.choices[0].message["content"]
+def get_completion(user_input: str) -> str:
+    try:
+        prompt = prompt_template.format(question=user_input, context="")
+        response = openai.ChatCompletion.create(
+            model=engine,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.5
+        )
+        return response.choices[0].message["content"]
+    except openai.error.OpenAIError as e:
+        logger.error(f"OpenAI API error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error in OpenAI API call")
 
 @app.post("/chat/")
 async def chat_with_agent(chat_message: ChatMessage):
-    logging.debug(f"Received message: {chat_message.user_input}")
+    logger.debug(f"Received message: {chat_message.user_input}")
     try:
         result = get_completion(chat_message.user_input)
-        logging.debug(f"API response: {result}")
+        logger.debug(f"API response: {result}")
         return {"response": result}
     except Exception as e:
-        logging.error(f"Error: {str(e)}", exc_info=True)
+        logger.error(f"Error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the FastAPI OpenAI Integration!"}
 
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8800, reload=True)
+    port = int(os.getenv("FASTAPI_PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port, reload=True)

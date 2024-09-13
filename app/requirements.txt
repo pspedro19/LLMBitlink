@@ -7,3 +7,8 @@ torch
 pydantic
 transformers
 scikit-learn
+minio
+sentence_transformers
+pandas
+PyMuPDF
+requests
