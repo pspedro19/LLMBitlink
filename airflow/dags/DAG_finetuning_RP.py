@@ -21,8 +21,6 @@ def load_model_and_tokenizer(model_name, bnb_config):
         model_name,
         quantization_config=bnb_config,
         torch_dtype=torch.bfloat16,
-        load_in_8bit=True,  # Cuantización en 8 bits
-        load_in_8bit_fp32_cpu_offload=True,  # Offload de 32 bits en CPU si es necesario
         device_map="auto",  # Mapa de dispositivos automático
         trust_remote_code=True,
     )
