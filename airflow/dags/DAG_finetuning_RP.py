@@ -17,12 +17,19 @@ def ensure_dir(directory):
 def load_model_and_tokenizer(model_name, bnb_config):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.pad_token = tokenizer.eos_token
+    device_map = {
+        "transformer.h": "cuda",  # Asignar las capas de transformador a la GPU
+        "lm_head": "cpu",         # Asignar la capa de salida a la CPU para ahorrar memoria
+        "model.embed_tokens": "cuda", # Embeddings en la GPU
+        "default": "cpu"          # Cualquier módulo adicional va a la CPU
+    } 
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
-        quantization_config=bnb_config,
-        torch_dtype=torch.bfloat16,
-        device_map="auto",  # Mapa de dispositivos automático
-        trust_remote_code=True,
+        quantization_config=bnb_config,  # Mantener quantization_config
+        torch_dtype=torch.bfloat16,      # Opción de tipo de datos
+        device_map=device_map,           # Mapa de dispositivos personalizado
+        load_in_8bit_fp32_cpu_offload=True,  # Mantener precisión FP32 en la CPU
+        trust_remote_code=True,          # Confiar en el código remoto si es necesario
     )
     return model, tokenizer
 
