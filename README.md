@@ -157,9 +157,10 @@ Once all the services are up and running (verify with the command docker ps -a t
 
    - Apache Airflow: http://localhost:8080
    - MLflow: http://localhost:5000
-   - MinIO: http://localhost:9001 (Buckets Administration)
-   - API: http://localhost:8800/
-
+   - MinIO (service): http://localhost:9000 
+   - MinIO (Buckets Administration): http://localhost:9001
+   - Django Chat Interface: http://localhost:8800
+   - FastAPI: http://localhost:8000
 
 API Docs: http://localhost:8800/docs
 If you are using a server external to your work computer, replace localhost with its IP address (it can be a private IP if your server is on your LAN or a public IP otherwise; check firewalls or other rules that may prevent connections).
