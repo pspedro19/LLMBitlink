@@ -338,10 +338,6 @@ airflow/dags/__pycache__/
 airflow/logs/
 airflow/secrets/
 
-# Docker
-.dockerignore
-docker-compose.yaml
-Dockerfile
 
 # Database
 *.sqlite3
@@ -357,7 +353,6 @@ minio/
 
 # mlflow
 mlflow/init_db.sh
-mlflow/Dockerfile
 
 # Chat-Interface
 chat-Interface/chat/__pycache__/
