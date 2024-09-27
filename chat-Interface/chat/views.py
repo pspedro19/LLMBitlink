@@ -3,9 +3,12 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.contrib.auth import authenticate, login, logout
 from django.views.decorators.csrf import csrf_protect, csrf_exempt  # Cambio de csrf_exempt a csrf_protect
-from .models import Chunk  # Asegúrate de importar Chunk
+from django.utils.decorators import method_decorator
+from .models import VectorChunk
 import json
 import logging
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -70,19 +73,23 @@ def user_logout(request):
 
 @csrf_exempt
 def save_vectorization(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         try:
-            logger.info(f"Request body: {request.body}")
-            data = json.loads(request.body)
-            logger.info(f"Data received: {data}")
-            for item in data:
-                Chunk.objects.create(
-                    document_id=item['document_id'],
-                    content=item['content'],
-                    embedding=item['embedding']
+            print(f"Raw request body: {request.body}")  # Verificar lo que Django recibe
+            
+            data = json.loads(request.body)  # Verificar si se puede decodificar
+            print(f"Parsed data: {data}")  # Verificar los datos procesados
+
+            for chunk in data:
+                VectorChunk.objects.create(
+                    document_id=chunk['document_id'],
+                    content=chunk['content'],
+                    embedding=chunk['embedding']
                 )
-            return JsonResponse({"status": "success"})
+            return JsonResponse({'status': 'Success', 'message': 'Data saved successfully!'}, status=200)
+        except json.JSONDecodeError as json_error:
+            print(f"JSON Decode Error: {json_error}")
+            return JsonResponse({'status': 'Error', 'message': f'Invalid JSON format: {str(json_error)}'}, status=400)
         except Exception as e:
-            logger.error(f"Error processing data: {e}")
-            return JsonResponse({"status": "fail", "error": str(e)}, status=400)
-    return JsonResponse({"status": "fail"}, status=400)
+            print(f"General Error: {e}")
+            return JsonResponse({'status': 'Error', 'message': str(e)}, status=500)

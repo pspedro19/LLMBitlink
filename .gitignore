@@ -376,3 +376,5 @@ node_modules/
 
 # System files
 Thumbs.db
+
+app/vectorized_data.csv

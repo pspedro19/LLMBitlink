@@ -149,6 +149,7 @@ services:
       - .env
     volumes:
       - ./data:/data
+      - ./app:/app
     container_name: fastapi_server
     depends_on:
       postgres:

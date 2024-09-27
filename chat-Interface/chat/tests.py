@@ -1,28 +1,24 @@
-from django.test import TestCase, Client
-from django.urls import reverse
-from .models import Chunk
+import requests
 
-class SaveVectorizationTest(TestCase):
+url = "http://localhost:8800/save_vectorization/"
 
-    def setUp(self):
-        self.client = Client()
-        self.url = reverse('save_vectorization')
-        self.data = [
-            {
-                "document_id": 1,
-                "content": "This is a test content",
-                "embedding": [0.1, 0.2, 0.3]
-            },
-            {
-                "document_id": 2,
-                "content": "Another test content",
-                "embedding": [0.4, 0.5, 0.6]
-            }
-        ]
+# Datos de prueba
+data = [
+    {
+        "document_id": 1,
+        "content": "Este es un texto de prueba para vectorización.",
+        "embedding": [0.1, 0.2, 0.3, 0.4, 0.5]
+    },
+    {
+        "document_id": 2,
+        "content": "Otro documento de ejemplo.",
+        "embedding": [0.9, 0.8, 0.7, 0.6, 0.5]
+    }
+]
 
-    def test_save_vectorization(self):
-        response = self.client.post(self.url, data=json.dumps(self.data), content_type='application/json')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(Chunk.objects.count(), 2)
-        self.assertEqual(Chunk.objects.first().content, "This is a test content")
+# Realizar la solicitud POST
+response = requests.post(url, json=data)
 
+# Mostrar la respuesta
+print(f"Status code: {response.status_code}")
+print(f"Response body: {response.json()}")

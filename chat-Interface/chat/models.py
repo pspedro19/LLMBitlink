@@ -11,10 +11,11 @@ class Conversation(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
 
-class Chunk(models.Model):
+class VectorChunk(models.Model):
     document_id = models.IntegerField()
     content = models.TextField()
     embedding = models.JSONField()
 
     def __str__(self):
-        return f"Document {self.document_id}: {self.content[:50]}"
+        return f"Document ID: {self.document_id}, Content: {self.content[:50]}..."
+

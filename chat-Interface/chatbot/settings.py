@@ -70,7 +70,7 @@ DATABASES = {
         'NAME': 'airflow',
         'USER': 'airflow',
         'PASSWORD': 'airflow',
-        'HOST': 'localhost',
+        'HOST': 'postgres',
         'PORT': '5432',
     }
 }
