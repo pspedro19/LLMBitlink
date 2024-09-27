@@ -348,8 +348,6 @@ postgres/*.pid
 postgres/pg_hba.conf
 postgres/postgresql.conf
 
-# Minio
-minio/
 
 # mlflow
 mlflow/init_db.sh
