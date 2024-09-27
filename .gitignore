@@ -176,14 +176,6 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
 
 # Spyder project settings
 .spyderproject
@@ -309,3 +301,85 @@ poetry.toml
 pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/django,python
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+*.pyd
+*.pyo
+*.pyc
+
+# Logs
+*.log
+debug.log
+logs/
+*.log.*
+
+# Virtual environments
+myenv/
+app/venv/
+chat-Interface/venv/
+
+# Python environment folders
+myenv/
+myenv/bin/
+myenv/lib/
+myenv/lib64/
+myenv/pyvenv.cfg
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Airflow
+airflow/dags/__pycache__/
+airflow/logs/
+airflow/secrets/
+
+# Docker
+.dockerignore
+docker-compose.yaml
+Dockerfile
+
+# Database
+*.sqlite3
+*.db
+
+# PostgreSQL
+postgres/*.pid
+postgres/pg_hba.conf
+postgres/postgresql.conf
+
+# Minio
+minio/
+
+# mlflow
+mlflow/init_db.sh
+mlflow/Dockerfile
+
+# Chat-Interface
+chat-Interface/chat/__pycache__/
+chat-Interface/chat/migrations/
+chat-Interface/chatbot/__pycache__/
+chat-Interface/debug.log
+
+# Django
+chat-Interface/chat/migrations/
+chat-Interface/chatbot/migrations/
+
+# Node
+node_modules/
+
+# MacOS
+.DS_Store
+
+# Backup files
+*.bak
+*.swp
+*.swo
+*~
+
+# System files
+Thumbs.db
