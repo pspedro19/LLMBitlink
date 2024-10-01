@@ -67,6 +67,7 @@ def train_model(model, train_dataset, eval_dataset, tokenizer, training_argument
     model.config.use_cache = False
 
     sft_config = SFTConfig(
+        output_dir=output_dir,
         max_seq_length=1024,
         dataset_text_field="text",
         packing=False
