@@ -116,7 +116,7 @@ def main():
     wandb.login(key=wb_token)
 
     model_name = "Andyrasika/fine-tuning-llama"
-    dataset_name = "pspedroelias96/chat_asesor"
+    dataset_name = "pspedroelias96/chat2"
     new_model_name = "pspedroelias96/LLMBk"  # Change 'YourHuggingFaceUsername' to your HF username
     output_dir = "./DnlModel"  # Save the model in the current directory, adjust if needed
     ensure_dir(output_dir)
