@@ -119,6 +119,7 @@ def preprocess_function(examples):
     # Ajusta esto según la estructura real de tu conjunto de datos
     return {
         "text": examples["input"] + " " + examples["output"]
+    }
 
 def main():
     # Get Hugging Face and W&B tokens from environment variables
