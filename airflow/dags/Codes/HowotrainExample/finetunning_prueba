@@ -28,6 +28,8 @@ def load_model_and_tokenizer(model_name, bnb_config):
     return model, tokenizer
 
 # Add LoRA adapter to the mode
+from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
+
 def add_adopter_to_model(model):
     model = prepare_model_for_kbit_training(model)
     peft_config = LoraConfig(
@@ -62,7 +64,7 @@ def set_hyperparameters(output_dir):
         report_to="wandb",
     )
 
-def train_model(model, train_dataset, eval_dataset, tokenizer, training_arguments, output_dir):
+def train_model(model, train_dataset, eval_dataset, tokenizer, training_arguments, peft_config):
     tokenizer.padding_side = 'right'
     model.config.use_cache = False
 
@@ -79,7 +81,9 @@ def train_model(model, train_dataset, eval_dataset, tokenizer, training_argument
         eval_dataset=eval_dataset,
         tokenizer=tokenizer,
         args=training_arguments,
-        peft_config=sft_config
+        peft_config=peft_config,  # Usamos peft_config en lugar de SFTConfig
+        dataset_text_field="text",
+        max_seq_length=1024
     )
     trainer.train()
     return trainer
@@ -147,7 +151,7 @@ def main():
         training_arguments = set_hyperparameters(output_dir)
 
         # Train the model
-        trainer = train_model(model, train_dataset, eval_dataset, tokenizer, training_arguments, output_dir)
+        trainer = train_model(model, train_dataset, eval_dataset, tokenizer, training_arguments, peft_config)
 
         # Evaluate the model
         eval_results = trainer.evaluate()
