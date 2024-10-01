@@ -4,7 +4,7 @@ import torch
 import wandb
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, BitsAndBytesConfig
 from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
-from trl import SFTTrainer
+from trl import SFTTrainer, SFTConfig
 from datasets import load_dataset
 from huggingface_hub import HfFolder, login
 
@@ -16,7 +16,8 @@ def ensure_dir(directory):
 # Load model and tokenizer
 def load_model_and_tokenizer(model_name, bnb_config):
     tokenizer = AutoTokenizer.from_pretrained(model_name, legacy=False)  # Set legacy=False to avoid the warning
-    tokenizer.pad_token = tokenizer.eos_token
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=bnb_config,
@@ -65,15 +66,19 @@ def train_model(model, train_dataset, eval_dataset, tokenizer, training_argument
     tokenizer.padding_side = 'right'
     model.config.use_cache = False
 
+    sft_config = SFTConfig(
+        max_seq_length=1024,
+        dataset_text_field="text",
+        packing=False
+    )
+
     trainer = SFTTrainer(
         model=model,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         tokenizer=tokenizer,
         args=training_arguments,
-        max_seq_length=1024,
-        dataset_text_field="text",
-        packing=False
+        peft_config=sft_config
     )
     trainer.train()
     return trainer
@@ -111,6 +116,9 @@ def main():
     # Get Hugging Face and W&B tokens from environment variables
     hf_token = os.environ.get('HF_TOKEN')  # Set your Hugging Face token in this environment variable
     wb_token = os.environ.get('WANDB_TOKEN')  # Set your Weights & Biases token in this environment variable
+
+    if not hf_token or not wb_token:
+        raise ValueError("Please set HF_TOKEN and WANDB_TOKEN environment variables")
 
     # Login to Weights & Biases
     wandb.login(key=wb_token)
