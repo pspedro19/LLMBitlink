@@ -64,7 +64,7 @@ def set_hyperparameters(output_dir):
         report_to="wandb",
     )
 
-def train_model(model, train_dataset, eval_dataset, tokenizer, training_arguments, peft_config):
+def train_model(model, train_dataset, eval_dataset, tokenizer, training_arguments, peft_config, output_dir):
     tokenizer.padding_side = 'right'
     model.config.use_cache = False
 
@@ -151,7 +151,7 @@ def main():
         training_arguments = set_hyperparameters(output_dir)
 
         # Train the model
-        trainer = train_model(model, train_dataset, eval_dataset, tokenizer, training_arguments, peft_config)
+        trainer = train_model(model, train_dataset, eval_dataset, tokenizer, training_arguments, peft_config,output_dir)
 
         # Evaluate the model
         eval_results = trainer.evaluate()
