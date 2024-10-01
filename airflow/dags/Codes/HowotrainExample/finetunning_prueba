@@ -69,7 +69,6 @@ def train_model(model, train_dataset, eval_dataset, tokenizer, training_argument
     model.config.use_cache = False
 
     sft_config = SFTConfig(
-        output_dir=output_dir,
         max_seq_length=1024,
         dataset_text_field="text",
         packing=False
@@ -82,8 +81,7 @@ def train_model(model, train_dataset, eval_dataset, tokenizer, training_argument
         tokenizer=tokenizer,
         args=training_arguments,
         peft_config=peft_config,  # Usamos peft_config en lugar de SFTConfig
-        dataset_text_field="text",
-        max_seq_length=1024
+        config=sft_config
     )
     trainer.train()
     return trainer
@@ -117,6 +115,11 @@ def save_model(trainer, model_name, output_dir, hf_token):
         print(f"Failed to save or push model: {e}")
 
 # Main training and save process
+def preprocess_function(examples):
+    # Ajusta esto según la estructura real de tu conjunto de datos
+    return {
+        "text": examples["input"] + " " + examples["output"]
+
 def main():
     # Get Hugging Face and W&B tokens from environment variables
     hf_token = os.environ.get('HF_TOKEN')  # Set your Hugging Face token in this environment variable
@@ -141,8 +144,11 @@ def main():
 
     # Load dataset
     dataset = load_dataset(dataset_name)
-    train_dataset = dataset['train'].train_test_split(test_size=0.1)['train']
-    eval_dataset = dataset['train'].train_test_split(test_size=0.1)['test']
+    print("Dataset structure:", dataset)
+    print("First example:", dataset['train'][0])
+    processed_dataset = dataset.map(preprocess_function)
+    train_dataset = processed_dataset['train'].train_test_split(test_size=0.1)['train']
+    eval_dataset = processed_dataset['train'].train_test_split(test_size=0.1)['test']
 
     try:
         # Load and prepare the model
