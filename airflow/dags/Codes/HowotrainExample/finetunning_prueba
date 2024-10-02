@@ -115,9 +115,9 @@ def main():
     # Login to Weights & Biases
     wandb.login(key=wb_token)
 
-    model_name = "TheBloke/guanaco-7B-HF"
-    dataset_name = "mlabonne/guanaco-llama2-1k"
-    new_model_name = "pspedroelias96/LLMBitlink"  # Change 'YourHuggingFaceUsername' to your HF username
+    model_name = "fbanespo/Llama2-7b-qlora-chat-support-bot-faq"
+    dataset_name = "pspedroelias96/chat2"
+    new_model_name = "pspedroelias96/LLMBitlink_2"  # Change 'YourHuggingFaceUsername' to your HF username
     output_dir = "./DnlModel"  # Save the model in the current directory, adjust if needed
     ensure_dir(output_dir)
 
