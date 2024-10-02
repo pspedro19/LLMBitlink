@@ -4,7 +4,7 @@ import torch
 import wandb
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, BitsAndBytesConfig
 from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
-from trl import SFTTrainer, SFTConfig
+from trl import SFTTrainer
 from datasets import load_dataset
 from huggingface_hub import HfFolder, login
 
@@ -16,8 +16,7 @@ def ensure_dir(directory):
 # Load model and tokenizer
 def load_model_and_tokenizer(model_name, bnb_config):
     tokenizer = AutoTokenizer.from_pretrained(model_name, legacy=False)  # Set legacy=False to avoid the warning
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.pad_token = tokenizer.eos_token
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=bnb_config,
@@ -28,8 +27,6 @@ def load_model_and_tokenizer(model_name, bnb_config):
     return model, tokenizer
 
 # Add LoRA adapter to the mode
-from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
-
 def add_adopter_to_model(model):
     model = prepare_model_for_kbit_training(model)
     peft_config = LoraConfig(
@@ -64,15 +61,9 @@ def set_hyperparameters(output_dir):
         report_to="wandb",
     )
 
-def train_model(model, train_dataset, eval_dataset, tokenizer, training_arguments, peft_config, output_dir):
+def train_model(model, train_dataset, eval_dataset, tokenizer, training_arguments, output_dir):
     tokenizer.padding_side = 'right'
     model.config.use_cache = False
-
-    sft_config = SFTConfig(
-        max_seq_length=1024,
-        dataset_text_field="text",
-        packing=False
-    )
 
     trainer = SFTTrainer(
         model=model,
@@ -80,8 +71,9 @@ def train_model(model, train_dataset, eval_dataset, tokenizer, training_argument
         eval_dataset=eval_dataset,
         tokenizer=tokenizer,
         args=training_arguments,
-        peft_config=peft_config,  # Usamos peft_config en lugar de SFTConfig
-        config=sft_config
+        max_seq_length=1024,
+        dataset_text_field="text",
+        packing=False
     )
     trainer.train()
     return trainer
@@ -115,26 +107,17 @@ def save_model(trainer, model_name, output_dir, hf_token):
         print(f"Failed to save or push model: {e}")
 
 # Main training and save process
-def preprocess_function(examples):
-    # Ajusta esto según la estructura real de tu conjunto de datos
-    return {
-        "text": examples["input"] + " " + examples["output"]
-    }
-
 def main():
     # Get Hugging Face and W&B tokens from environment variables
     hf_token = os.environ.get('HF_TOKEN')  # Set your Hugging Face token in this environment variable
     wb_token = os.environ.get('WANDB_TOKEN')  # Set your Weights & Biases token in this environment variable
 
-    if not hf_token or not wb_token:
-        raise ValueError("Please set HF_TOKEN and WANDB_TOKEN environment variables")
-
     # Login to Weights & Biases
     wandb.login(key=wb_token)
 
-    model_name = "Andyrasika/fine-tuning-llama"
-    dataset_name = "pspedroelias96/chat2"
-    new_model_name = "pspedroelias96/LLMBk"  # Change 'YourHuggingFaceUsername' to your HF username
+    model_name = "TheBloke/guanaco-7B-HF"
+    dataset_name = "mlabonne/guanaco-llama2-1k"
+    new_model_name = "pspedroelias96/LLMBitlink"  # Change 'YourHuggingFaceUsername' to your HF username
     output_dir = "./DnlModel"  # Save the model in the current directory, adjust if needed
     ensure_dir(output_dir)
 
@@ -145,11 +128,8 @@ def main():
 
     # Load dataset
     dataset = load_dataset(dataset_name)
-    print("Dataset structure:", dataset)
-    print("First example:", dataset['train'][0])
-    processed_dataset = dataset.map(preprocess_function)
-    train_dataset = processed_dataset['train'].train_test_split(test_size=0.1)['train']
-    eval_dataset = processed_dataset['train'].train_test_split(test_size=0.1)['test']
+    train_dataset = dataset['train'].train_test_split(test_size=0.1)['train']
+    eval_dataset = dataset['train'].train_test_split(test_size=0.1)['test']
 
     try:
         # Load and prepare the model
@@ -158,7 +138,7 @@ def main():
         training_arguments = set_hyperparameters(output_dir)
 
         # Train the model
-        trainer = train_model(model, train_dataset, eval_dataset, tokenizer, training_arguments, peft_config,output_dir)
+        trainer = train_model(model, train_dataset, eval_dataset, tokenizer, training_arguments, output_dir)
 
         # Evaluate the model
         eval_results = trainer.evaluate()
@@ -179,6 +159,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 
