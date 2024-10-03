@@ -115,7 +115,7 @@ def main():
     # Login to Weights & Biases
     wandb.login(key=wb_token)
 
-    model_name = "fbanespo/Llama2-7b-qlora-chat-support-bot-faq"
+    model_name = "TinyPixel/Llama-2-7B-bf16-sharded"
     dataset_name = "pspedroelias96/chat2"
     new_model_name = "pspedroelias96/LLMBitlink_2"  # Change 'YourHuggingFaceUsername' to your HF username
     output_dir = "./DnlModel"  # Save the model in the current directory, adjust if needed
