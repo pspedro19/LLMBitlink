@@ -67,8 +67,8 @@ def train_model(model, train_dataset, eval_dataset, tokenizer, training_argument
 
     trainer = SFTTrainer(
         model=model,
-        train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
+        train_dataset=tokenized_dataset["train"],
+        eval_dataset=tokenized_dataset["validation"],
         tokenizer=tokenizer,
         args=training_arguments,
         max_seq_length=1024,
