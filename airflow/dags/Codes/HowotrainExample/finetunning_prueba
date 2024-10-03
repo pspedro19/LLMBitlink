@@ -2,7 +2,7 @@ import os
 import shutil
 import torch
 import wandb
-from transformers import LlamaForCausalLM, LlamaTokenizer, TrainingArguments, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, BitsAndBytesConfig
 from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 from trl import SFTTrainer
 from datasets import load_dataset
@@ -15,9 +15,9 @@ def ensure_dir(directory):
 
 # Load model and tokenizer
 def load_model_and_tokenizer(model_name, bnb_config):
-    tokenizer = LlamaTokenizer.from_pretrained(model_name, legacy=False)  # Set legacy=False to avoid the warning
+    tokenizer = AutoTokenizer.from_pretrained(model_name, legacy=False)  # Set legacy=False to avoid the warning
     tokenizer.pad_token = tokenizer.eos_token
-    model = LlamaForCausalLM.from_pretrained(
+    model = AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=bnb_config,
         torch_dtype=torch.bfloat16,
@@ -67,8 +67,8 @@ def train_model(model, train_dataset, eval_dataset, tokenizer, training_argument
 
     trainer = SFTTrainer(
         model=model,
-        train_dataset=tokenized_dataset["train"],
-        eval_dataset=tokenized_dataset["validation"],
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
         tokenizer=tokenizer,
         args=training_arguments,
         max_seq_length=1024,
