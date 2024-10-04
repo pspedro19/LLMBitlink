@@ -65,6 +65,10 @@ def train_model(model, train_dataset, eval_dataset, tokenizer, training_argument
     tokenizer.padding_side = 'right'
     model.config.use_cache = False
 
+ # Preparar los datasets
+    train_dataset = prepare_dataset(train_dataset)
+    eval_dataset = prepare_dataset(eval_dataset)
+
     trainer = SFTTrainer(
         model=model,
         train_dataset=train_dataset,
@@ -106,6 +110,28 @@ def save_model(trainer, model_name, output_dir, hf_token):
     except Exception as e:
         print(f"Failed to save or push model: {e}")
 
+def format_instruction(sample):
+    """
+    Formatea la instrucción para el modelo, incorporando las mejoras sugeridas.
+    """
+    return f"""### Human: {sample['input']}
+
+### Assistant: [La conversación completa que proporcioné anteriormente]
+
+### Human: Igualmente, que tengas un buen día. Adiós.
+
+### Assistant: Muchas gracias, Laura. Que tengas un excelente día tú también. Nos vemos en la videollamada la próxima semana. Adiós y hasta pronto.
+"""
+
+def prepare_dataset(dataset):
+    """
+    Prepara el dataset para el entrenamiento.
+    """
+    return dataset.map(
+        lambda x: {'text': format_instruction(x)},
+        remove_columns=dataset.column_names
+    )
+
 # Main training and save process
 def main():
     # Get Hugging Face and W&B tokens from environment variables
@@ -116,7 +142,7 @@ def main():
     wandb.login(key=wb_token)
 
     model_name = "TinyPixel/Llama-2-7B-bf16-sharded"
-    dataset_name = "pspedroelias96/chat2"
+    dataset_name = "pspedroelias96/Chat_asesor"
     new_model_name = "pspedroelias96/LLMBitlink_2"  # Change 'YourHuggingFaceUsername' to your HF username
     output_dir = "./DnlModel"  # Save the model in the current directory, adjust if needed
     ensure_dir(output_dir)
