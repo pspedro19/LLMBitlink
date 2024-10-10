@@ -142,8 +142,8 @@ def main():
     wandb.login(key=wb_token)
 
     model_name = "TinyPixel/Llama-2-7B-bf16-sharded"
-    dataset_name = "pspedroelias96/Chat_asesor"
-    new_model_name = "pspedroelias96/LLMBitlink_2"  # Change 'YourHuggingFaceUsername' to your HF username
+    dataset_name = "pspedroelias96/Chat_Asesor_Inm"
+    new_model_name = "pspedroelias96/LLMBitlink_Final"  # Change 'YourHuggingFaceUsername' to your HF username
     output_dir = "./DnlModel"  # Save the model in the current directory, adjust if needed
     ensure_dir(output_dir)
 
