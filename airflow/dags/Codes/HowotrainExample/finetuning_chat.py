@@ -112,88 +112,89 @@ def save_model(trainer, model_name, output_dir, hf_token):
         # Global variable para el dataset
         global_dataset = None
         
-        def load_global_dataset(dataset_name):
-            global global_dataset
-            global_dataset = load_dataset(dataset_name)
+# Global variable para el dataset       
+global_dataset = None
+
+def load_global_dataset(dataset_name):
+    global global_dataset
+    global_dataset = load_dataset(dataset_name)
         
-        def format_instruction(sample):
-            """
-            Formatea la instrucción para el modelo, generando una conversación basada en el dataset.
-            """
-            global global_dataset
-            
-            if global_dataset is None:
-                raise ValueError("Dataset not loaded. Call load_global_dataset first.")
+def format_instruction(sample):
+    """
+    Formatea la instrucción para el modelo, generando una conversación basada en el dataset.
+    """
+    global global_dataset
+    
+    if global_dataset is None:
+        raise ValueError("Dataset not loaded. Call load_global_dataset first.")
+
+    # Buscar una entrada relevante en el dataset basada en la pregunta del usuario
+    relevant_entries = [entry for entry in global_dataset['train'] if sample['input'].lower() in entry['input'].lower()]
+    
+    if relevant_entries:
+        # Si se encuentran entradas relevantes, elige una al azar
+        chosen_entry = random.choice(relevant_entries)
         
-            # Buscar una entrada relevante en el dataset basada en la pregunta del usuario
-            relevant_entries = [entry for entry in global_dataset['train'] if sample['input'].lower() in entry['input'].lower()]
-            
-            if relevant_entries:
-                # Si se encuentran entradas relevantes, elige una al azar
-                chosen_entry = random.choice(relevant_entries)
-                
-                formatted_prompt = f"""### Human: {chosen_entry['input']}
-        
-        ### Assistant: {chosen_entry['output']}
-        
-        ### Human: Gracias por la información. ¿Puedes darme más detalles sobre esto?
-        
-        ### Assistant: Por supuesto, estaré encantado de proporcionarte más detalles. Basándome en tu pregunta sobre {chosen_entry['input']}, puedo agregar lo siguiente:
-        
-        [Aquí el modelo puede generar información adicional basada en el contexto del dataset y la respuesta anterior]
-        
-        ¿Hay algo más específico que te gustaría saber sobre este tema?
-        
-        ### Human: Eso es muy útil. ¿Tienes alguna recomendación final al respecto?
-        
-        ### Assistant: Me alegra que la información te sea útil. Como recomendación final sobre {chosen_entry['input']}, te sugiero:
-        
-        [Aquí el modelo puede generar una recomendación final basada en el contexto del dataset y la conversación anterior]
-        
-        ¿Hay algo más en lo que pueda ayudarte hoy con respecto a propiedades en Mar del Plata?
-        
-        ### Human: No, eso es todo por ahora. Muchas gracias por tu ayuda.
-        
-        ### Assistant: Ha sido un placer ayudarte. Si en el futuro tienes más preguntas sobre propiedades en Mar del Plata o necesitas asesoramiento inmobiliario, no dudes en contactarme. Te deseo mucho éxito en tu búsqueda o inversión inmobiliaria. ¡Que tengas un excelente día!
-        """
-            else:
-                # Si no se encuentran entradas relevantes, usa un mensaje genérico
-                formatted_prompt = f"""### Human: {sample['input']}
-        
-        ### Assistant: Gracias por tu pregunta sobre "{sample['input']}". Aunque no tengo información específica sobre esto en mi base de datos de propiedades en Mar del Plata, puedo ofrecerte información general sobre el mercado inmobiliario en la zona. 
-        
-        Mar del Plata es una ciudad costera muy popular tanto para vivir como para invertir en propiedades. Algunas áreas populares incluyen La Perla, Güemes, y el centro de la ciudad. Cada zona tiene sus propias características y ventajas.
-        
-        ¿Te gustaría saber más sobre alguna zona en particular o sobre algún tipo específico de propiedad en Mar del Plata?
-        
-        ### Human: Sí, me gustaría saber más sobre la zona de La Perla.
-        
-        ### Assistant: Excelente elección. La Perla es una de las zonas más populares de Mar del Plata. Aquí tienes algunos datos sobre esta área:
-        
-        1. Ubicación: Está situada cerca del centro de la ciudad y tiene acceso directo a la playa.
-        2. Tipo de propiedades: Encontrarás una mezcla de edificios de apartamentos modernos y casas más tradicionales.
-        3. Atractivo: Es muy popular entre turistas y residentes por su proximidad a la playa y sus servicios.
-        4. Inversión: Suele ser una buena opción para inversores debido a la alta demanda de alquileres, especialmente en temporada alta.
-        
-        ¿Hay algo más específico que te gustaría saber sobre La Perla o sobre invertir en esta zona?
-        
-        ### Human: Eso es útil, gracias. ¿Alguna recomendación final?
-        
-        ### Assistant: Me alegra que encuentres útil la información. Como recomendación final para quienes consideran invertir o vivir en La Perla, te sugeriría:
-        
-        1. Visita la zona en diferentes épocas del año para entender cómo cambia entre la temporada alta y baja.
-        2. Considera el tipo de propiedad que mejor se adapte a tus necesidades: un apartamento puede ser más fácil de mantener si es para alquiler, mientras que una casa podría ser mejor para vivir todo el año.
-        3. Investiga sobre los planes de desarrollo urbano en la zona, ya que podrían afectar el valor de las propiedades en el futuro.
-        4. Consulta con un agente inmobiliario local para obtener información actualizada sobre precios y tendencias del mercado en La Perla.
-        
-        ¿Hay algo más en lo que pueda ayudarte con tu búsqueda de propiedades en Mar del Plata?
-        
-        ### Human: No, eso es todo. Muchas gracias por tu ayuda.
-        
-        ### Assistant: Ha sido un placer ayudarte. Si en el futuro tienes más preguntas sobre La Perla, otras zonas de Mar del Plata, o necesitas cualquier otro tipo de asesoramiento inmobiliario, no dudes en contactarme. Te deseo mucho éxito en tu búsqueda o inversión inmobiliaria. ¡Que tengas un excelente día!
-        """
-            
-            return formatted_prompt
+        formatted_prompt = f"""### Human: {chosen_entry['input']}
+
+### Assistant: {chosen_entry['output']}
+
+### Human: Gracias por la información. ¿Puedes darme más detalles sobre esto?
+
+### Assistant: Por supuesto, estaré encantado de proporcionarte más detalles. Basándome en tu pregunta sobre {chosen_entry['input']}, puedo agregar lo siguiente:
+
+[Aquí el modelo puede generar información adicional basada en el contexto del dataset y la respuesta anterior]
+
+¿Hay algo más específico que te gustaría saber sobre este tema?
+
+### Human: Eso es muy útil. ¿Tienes alguna recomendación final al respecto?
+
+### Assistant: Me alegra que la información te sea útil. Como recomendación final sobre {chosen_entry['input']}, te sugiero:
+
+[Aquí el modelo puede generar una recomendación final basada en el contexto del dataset y la conversación anterior]
+
+¿Hay algo más en lo que pueda ayudarte hoy con respecto a propiedades en Mar del Plata?
+
+### Human: No, eso es todo por ahora. Muchas gracias por tu ayuda.
+
+### Assistant: Ha sido un placer ayudarte. Si en el futuro tienes más preguntas sobre propiedades en Mar del Plata o necesitas asesoramiento inmobiliario, no dudes en contactarme. Te deseo mucho éxito en tu búsqueda o inversión inmobiliaria. ¡Que tengas un excelente día!
+"""
+    else:
+        # Si no se encuentran entradas relevantes, usa un mensaje genérico
+        formatted_prompt = f"""### Human: {sample['input']}
+
+### Assistant: Gracias por tu pregunta sobre "{sample['input']}". Aunque no tengo información específica sobre esto en mi base de datos de propiedades en Mar del Plata, puedo ofrecerte información general sobre el mercado inmobiliario en la zona. 
+###Mar del Plata es una ciudad costera muy popular tanto para vivir como para invertir en propiedades. Algunas áreas populares incluyen La Perla, Güemes, y el centro de la ciudad. Cada zona tiene sus propias características y ventajas.
+
+###¿Te gustaría saber más sobre alguna zona en particular o sobre algún tipo específico de propiedad en Mar del Plata?
+
+### Human: Sí, me gustaría saber más sobre la zona de La Perla.
+
+### Assistant: Excelente elección. La Perla es una de las zonas más populares de Mar del Plata. Aquí tienes algunos datos sobre esta área:
+
+###1. Ubicación: Está situada cerca del centro de la ciudad y tiene acceso directo a la playa.
+###2. Tipo de propiedades: Encontrarás una mezcla de edificios de apartamentos modernos y casas más tradicionales.
+###3. Atractivo: Es muy popular entre turistas y residentes por su proximidad a la playa y sus servicios.
+###4. Inversión: Suele ser una buena opción para inversores debido a la alta demanda de alquileres, especialmente en temporada alta.
+
+###¿Hay algo más específico que te gustaría saber sobre La Perla o sobre invertir en esta zona?
+
+### Human: Eso es útil, gracias. ¿Alguna recomendación final?
+
+### Assistant: Me alegra que encuentres útil la información. Como recomendación final para quienes consideran invertir o vivir en La Perla, te sugeriría: 
+
+###1. Visita la zona en diferentes épocas del año para entender cómo cambia entre la temporada alta y baja.
+###2. Considera el tipo de propiedad que mejor se adapte a tus necesidades: un apartamento puede ser más fácil de mantener si es para alquiler, mientras que una casa podría ser mejor para vivir todo el año.
+###3. Investiga sobre los planes de desarrollo urbano en la zona, ya que podrían afectar el valor de las propiedades en el futuro.
+###4. Consulta con un agente inmobiliario local para obtener información actualizada sobre precios y tendencias del mercado en La Perla.
+
+¿Hay algo más en lo que pueda ayudarte con tu búsqueda de propiedades en Mar del Plata?
+
+### Human: No, eso es todo. Muchas gracias por tu ayuda.
+
+### Assistant: Ha sido un placer ayudarte. Si en el futuro tienes más preguntas sobre La Perla, otras zonas de Mar del Plata, o necesitas cualquier otro tipo de asesoramiento inmobiliario, no dudes en contactarme. Te deseo mucho éxito en tu búsqueda o inversión inmobiliaria. ¡Que tengas un excelente día!
+"""
+    return formatted_prompt
 
 def prepare_dataset(dataset):
     """
@@ -203,7 +204,7 @@ def prepare_dataset(dataset):
         lambda x: {'text': format_instruction(x)},
         remove_columns=dataset.column_names
     )
-    def main():
+ def main():
     # Get Hugging Face and W&B tokens from environment variables
     hf_token = os.environ.get('HF_TOKEN')  # Set your Hugging Face token in this environment variable
     wb_token = os.environ.get('WANDB_TOKEN')  # Set your Weights & Biases token in this environment variable
