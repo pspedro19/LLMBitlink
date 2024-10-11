@@ -204,13 +204,15 @@ def prepare_dataset(dataset):
         lambda x: {'text': format_instruction(x)},
         remove_columns=dataset.column_names
     )
-def main():
-   # Get Hugging Face and W&B tokens from environment variables
-   hf_token = os.environ.get('HF_TOKEN')  # Set your Hugging Face token in this environment variable
-   wb_token = os.environ.get('WANDB_TOKEN')  # Set your Weights & Biases token in this environment variable
 
-   # Login to Weights & Biases
-   wandb.login(key=wb_token)
+# Main training and save process
+def main():
+    #Get Hugging Face and W&B tokens from environment variables
+    hf_token = os.environ.get('HF_TOKEN')  # Set your Hugging Face token in this environment variable
+    wb_token = os.environ.get('WANDB_TOKEN')  # Set your Weights & Biases token in this environment variable
+
+    # Login to Weights & Biases
+    wandb.login(key=wb_token)
 
     model_name = "TinyPixel/Llama-2-7B-bf16-sharded"
     dataset_name = "pspedroelias96/Chat_Asesor_Inm"
@@ -252,6 +254,7 @@ def main():
         print(f"An error occurred during training or evaluation: {e}")
 
     wandb.finish()
+
 
 if __name__ == "__main__":
     main()
