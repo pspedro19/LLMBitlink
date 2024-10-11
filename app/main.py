@@ -5,6 +5,15 @@ import uvicorn
 from dotenv import load_dotenv
 import os
 import logging
+from fastapi.middleware.cors import CORSMiddleware
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Cambia "*" por los dominios específicos si prefieres
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -95,5 +104,5 @@ def health_check():
     return {"status": "healthy"}
 
 if __name__ == "__main__":
-    port = int(os.getenv("FASTAPI_PORT", 8000))
+    port = int(os.getenv("FASTAPI_PORT", 8800))
     uvicorn.run(app, host="0.0.0.0", port=port, reload=True)
