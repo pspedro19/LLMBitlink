@@ -204,13 +204,13 @@ def prepare_dataset(dataset):
         lambda x: {'text': format_instruction(x)},
         remove_columns=dataset.column_names
     )
- def main():
-    # Get Hugging Face and W&B tokens from environment variables
-    hf_token = os.environ.get('HF_TOKEN')  # Set your Hugging Face token in this environment variable
-    wb_token = os.environ.get('WANDB_TOKEN')  # Set your Weights & Biases token in this environment variable
+def main():
+   # Get Hugging Face and W&B tokens from environment variables
+   hf_token = os.environ.get('HF_TOKEN')  # Set your Hugging Face token in this environment variable
+   wb_token = os.environ.get('WANDB_TOKEN')  # Set your Weights & Biases token in this environment variable
 
-    # Login to Weights & Biases
-    wandb.login(key=wb_token)
+   # Login to Weights & Biases
+   wandb.login(key=wb_token)
 
     model_name = "TinyPixel/Llama-2-7B-bf16-sharded"
     dataset_name = "pspedroelias96/Chat_Asesor_Inm"
