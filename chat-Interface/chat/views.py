@@ -13,7 +13,66 @@ import requests
 from django.http import JsonResponse
 from .models import Conversation  # Importar el modelo de conversación
 from django.contrib.auth.decorators import login_required
+import requests
+from django.http import JsonResponse
+from .models import Conversation, Chunk, Property
 
+from django.http import JsonResponse
+from .models import Conversation, Chunk, Property
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def get_all_data(request):
+    if request.method == 'GET':
+        # Obtener datos de los modelos y excluir 'timestamp' y 'created_at'
+        conversations = list(Conversation.objects.all().values('input', 'output'))
+        chunks = list(Chunk.objects.all().values('document_id', 'content', 'embedding'))
+        properties = list(Property.objects.all().values('location', 'price', 'square_meters', 'property_type', 'description'))
+
+        # Formatear la respuesta JSON
+        data = {
+            "conversations": conversations,
+            "chunks": chunks,
+            "properties": properties,
+        }
+
+        # Enviar los datos como respuesta
+        return JsonResponse(data, safe=False)
+    else:
+        return JsonResponse({"error": "Only GET requests are allowed."}, status=400)
+
+@csrf_exempt
+def send_data_to_fastapi(request):
+    # Función para eliminar campos datetime de los datos
+    def exclude_datetime_fields(data):
+        for item in data:
+            item.pop('timestamp', None)  # Elimina el campo 'timestamp' si existe
+            item.pop('created_at', None)  # Elimina el campo 'created_at' si existe
+        return data
+
+    # Recopilar datos de los modelos
+    conversations = list(Conversation.objects.all().values())
+    chunks = list(Chunk.objects.all().values())
+    properties = list(Property.objects.all().values())
+
+    # Eliminar campos datetime de los datos
+    conversations = exclude_datetime_fields(conversations)
+    properties = exclude_datetime_fields(properties)
+
+    data = {
+        "conversations": conversations,
+        "chunks": chunks,  # No tiene campos datetime, así que lo dejamos como está
+        "properties": properties,
+    }
+
+    # Enviar datos a FastAPI
+    fastapi_url = "http://localhost:8800/generate_pdf/"  # Cambia si FastAPI está en otra dirección
+    response = requests.post(fastapi_url, json=data)
+
+    if response.status_code == 200:
+        return JsonResponse({"message": "Data sent successfully", "response": response.json()})
+    else:
+        return JsonResponse({"error": "Failed to send data"}, status=response.status_code)
 @login_required
 def api_chat(request):
     if request.method == 'POST':
