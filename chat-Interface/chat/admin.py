@@ -1,6 +1,6 @@
 from django.contrib import admin
 from import_export.admin import ImportExportModelAdmin  # Para importar/exportar
-from .models import Conversation, Chunk  # Asegúrate de importar el modelo Chunk
+from .models import Conversation, Chunk, Property # Asegúrate de importar el modelo Chunk
 
 # Registrar el modelo Conversation en el admin
 @admin.register(Conversation)
@@ -19,3 +19,10 @@ class ChunkAdmin(ImportExportModelAdmin):
     def content_summary(self, obj):
         return obj.content[:50]  # Mostrar los primeros 50 caracteres del contenido
     content_summary.short_description = 'Content Summary'
+
+@admin.register(Property)
+class PropertyAdmin(ImportExportModelAdmin):
+    list_display = ('location', 'price', 'square_meters', 'property_type', 'created_at')  # Columnas a mostrar
+    search_fields = ('location', 'property_type')  # Permitir búsqueda por ubicación y tipo de inmueble
+    list_filter = ('property_type', 'created_at')  # Filtros laterales
+    ordering = ('-created_at',)  # Ordenar por los inmuebles más recientes

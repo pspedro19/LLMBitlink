@@ -29,4 +29,6 @@ urlpatterns = [
     path('logout/', views.user_logout, name='logout'),
     path('api/', views.api_chat, name='api_chat'),
     path('save_vectorization/', views.save_vectorization, name='save_vectorization'),  # Nueva URL
+    path('send_data_to_fastapi/', views.send_data_to_fastapi, name='send_data_to_fastapi'),
+    path('get_all_data/', views.get_all_data, name='get_all_data'),
 ]
