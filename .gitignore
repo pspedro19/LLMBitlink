@@ -4,6 +4,7 @@ venv/
 *.pyc
 __pycache__/
 airflow/logs/
+*/_pycache_/
 
 # Ignorar archivos de configuración de IDE
 .vscode/
@@ -41,4 +42,4 @@ docker-compose.override.yml.tmp
 # data/*.json
 
 # Ignorar ficheros de configuración específicos del usuario
-# .env
+.env
