@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 HUGGING_FACE_TOKEN = "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"
 
 # URL de la API de Django (ajusta la IP y puerto según tu configuración)
-DJANGO_API_URL = "http://18.229.150.88:8800/get_all_data/"
+DJANGO_API_URL = "http://18.229.125.114:8800/get_all_data/"
 
 app = FastAPI()
 
