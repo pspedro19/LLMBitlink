@@ -133,6 +133,6 @@ async def generate_text(request_body: RequestBody):
     
     return {"response": response}
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     port = int(os.getenv("FASTAPI_PORT", 8000))
     uvicorn.run("ApiModel:app", host="0.0.0.0", port=port, reload=True)
