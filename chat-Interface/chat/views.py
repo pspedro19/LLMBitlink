@@ -86,7 +86,7 @@ def api_chat(request):
             print(f"Mensaje enviado a FastAPI: {mensaje}")
 
             # Realizar la petición a la API de FastAPI
-            url = 'http://127.0.0.1:8800/chat/'  # URL de la API de FastAPI
+            url = 'http://18.229.150.88:8000/chat/'  # URL de la API de FastAPI
             headers = {'Content-Type': 'application/json'}
             payload = {'user_input': mensaje}
 
@@ -120,7 +120,7 @@ def api_view(request):
     if request.method == "POST":
         user_input = request.POST.get('mensaje', '')
         try:
-            response = requests.post('http://127.0.0.1:8000/chat/', json={'user_input': user_input})
+            response = requests.post('http://18.229.150.88:8800/chat/', json={'user_input': user_input})
             if response.status_code == 200:
                 response_data = response.json()
                 if 'response' in response_data:
