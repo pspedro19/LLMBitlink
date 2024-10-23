@@ -1,138 +1,196 @@
-import os
-import torch
-import requests
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from huggingface_hub import login
-from peft import PeftModel, PeftConfig
+import openai
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-from contextlib import asynccontextmanager
-
-# Reemplaza con tu token de Hugging Face
-HUGGING_FACE_TOKEN = "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"
-
-# URL de la API de Django (ajusta la IP y puerto según tu configuración)
-DJANGO_API_URL = "http://18.229.125.114:8800/get_all_data/"
-
+from dotenv import load_dotenv
+import os
+import requests
+import logging
+from fastapi import Request
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+import io
+import logging
+from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
-
-# Permitir orígenes específicos para evitar problemas de CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[""],  # Cambia "" por los dominios específicos si prefieres
+    allow_origins=["*"],  # Cambia "*" por los dominios específicos si prefieres
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-class RequestBody(BaseModel):
-    prompt: str
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
-def authenticate():
-    # Iniciar sesión en Hugging Face
-    login(HUGGING_FACE_TOKEN)
+# Load environment variables
+load_dotenv()
 
-def load_model_and_tokenizer(model_name):
-    global model, tokenizer
-    print(f"Cargando el modelo {model_name}...")
+app = FastAPI()
 
-    # Cargar la configuración del modelo fine-tuned
-    peft_config = PeftConfig.from_pretrained(model_name)
+# Initialize OpenAI API
+# Initialize OpenAI API
+openai.api_key = "sk-proj-1oGI01xaOJbZhVLfsBDcT3BlbkFJG53lOBOdXgTuApTWIUnp"
 
-    # Cargar el tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(peft_config.base_model_name_or_path)
+if not openai.api_key:
+    raise ValueError("OPENAI_API_KEY environment variable is not set")
 
-    # Cargar el modelo base
-    base_model = AutoModelForCausalLM.from_pretrained(
-        peft_config.base_model_name_or_path,
-        device_map="auto",
-        torch_dtype=torch.float16
+engine = 'gpt-3.5-turbo'
+
+class ChatMessage(BaseModel):
+    user_input: str
+
+# Prompt template (unchanged)
+prompt_template = """
+# Rol
+Eres un experto en ventas inmobiliarias llamado Max. Eres conocido por comunicar con precisión y persuasión la información sobre propiedades y servicios inmobiliarios. Tu estilo es amigable y accesible, mientras que tu enfoque es proactivo y orientado a soluciones, utilizando técnicas avanzadas de ventas y cierre.
+
+# Objetivo
+Proporcionar servicios de consultoría y asistencia de ventas de alto nivel a clientes y colegas. Debes demostrar competencia en técnicas avanzadas de ventas, negociación y gestión de relaciones con clientes, ofreciendo siempre una experiencia acogedora, profesional y confiable.
+
+# Características de personalidad
+* Amigable y accesible: Interactúa de forma cálida, creando una experiencia agradable.
+* Profesional y confiable: Ofrece información precisa y actualizada.
+* Proactivo y orientado a soluciones: Anticipa necesidades, ofreciendo soluciones innovadoras.
+* Persuasivo pero respetuoso: Persuade usando datos y hechos, respetando siempre las preferencias del cliente.
+
+# Contexto:
+Conversaciones:
+{conversations}
+
+Chunks:
+{chunks}
+
+Propiedades:
+{properties}
+
+# Pregunta:
+{question}
+
+Proporciona una respuesta clara y concisa basada en la información de contexto.
+"""
+
+# Función para construir el prompt
+def build_prompt(data, question):
+    # Ahora solo usamos 'input' y 'output' de las conversaciones, ya que 'user' ha sido eliminado
+    conversations = "\n".join([f"Input: {conv['input']} -> Output: {conv['output']}" for conv in data['conversations']])
+    chunks = "\n".join([f"Document {chunk['document_id']}: {chunk['content'][:50]}" for chunk in data['chunks']])
+    properties = "\n".join([f"{prop['property_type']} en {prop['location']} - {prop['price']} USD" for prop in data['properties']])
+
+    return prompt_template.format(
+        conversations=conversations,
+        chunks=chunks,
+        properties=properties,
+        question=question
     )
 
-    # Cargar el modelo fine-tuned
-    model = PeftModel.from_pretrained(base_model, model_name)
-
-def retrieve_data_from_django():
+# Obtener datos de Django API
+def fetch_data_from_django():
     try:
-        # Hacer una solicitud GET a la API Django para obtener los datos
-        response = requests.get(DJANGO_API_URL)
-        response.raise_for_status()  # Verifica si la respuesta fue exitosa
-        return response.json()
-    except requests.RequestException as e:
-        print(f"Error al obtener datos de la API Django: {e}")
-        return None
+        django_url = "http://18.229.125.114:8800/get_all_data/"  # URL de la API de Django
+        response = requests.get(django_url)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            logger.error(f"Error al obtener los datos de Django: {response.status_code}")
+            raise HTTPException(status_code=500, detail="Error fetching data from Django API.")
+    except Exception as e:
+        logger.error(f"Error en la solicitud a la API de Django: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error fetching data from Django API.")
 
-def retrieve_relevant_knowledge(prompt, django_data):
-    # Buscar información relevante dentro de los datos obtenidos de la API Django
-    if django_data is None:
-        return "No se pudo obtener información de la API Django."
-
-    # Unir datos de las tres categorías (conversations, chunks, properties)
-    knowledge_base = django_data.get("conversations", []) + django_data.get("chunks", []) + django_data.get("properties", [])
-
-    # Ejemplo de lógica simple de recuperación (puedes mejorar esto)
-    for entry in knowledge_base:
-        if "input" in entry and entry["input"] in prompt:
-            return entry["output"]
-        elif "content" in entry and entry["content"] in prompt:
-            return entry["content"]
-        elif "description" in entry and entry["description"] in prompt:
-            return entry["description"]
-    
-    return "No se encontró información relevante."
-
-def generate_response(model, tokenizer, prompt, retrieved_info):
-    # Formatear el prompt con la información recuperada
-    formatted_prompt = f"### Human: {prompt}\n\n### Relevant Info: {retrieved_info}\n\n### Assistant:"
-
-    inputs = tokenizer(formatted_prompt, return_tensors="pt").to(model.device)
-    with torch.no_grad():
-        outputs = model.generate(
-            inputs["input_ids"],
-            max_new_tokens=150,
-            do_sample=True,
-            top_p=0.95,
-            temperature=0.7,
-            pad_token_id=tokenizer.eos_token_id
+# Obtener respuesta de OpenAI
+def get_completion_from_openai(prompt):
+    try:
+        response = openai.ChatCompletion.create(
+            model=engine,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.5
         )
-    response = tokenizer.decode(outputs[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
-    return response.strip()
+        return response.choices[0].message["content"]
+    except openai.error.OpenAIError as e:
+        logger.error(f"Error en la API de OpenAI: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error in OpenAI API call")
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Código que se ejecuta al inicio (startup)
-    authenticate()
-    model_name = "pspedroelias96/LLMBitlink_Final"  # Usa el nombre de tu modelo fine-tuned
-    load_model_and_tokenizer(model_name)
-    print("¡Modelo cargado exitosamente!")
-    
-    yield  # Pausa para que la app siga corriendo
+# Ruta /chat/ que utiliza RAG con la información de Django y OpenAI
+@app.post("/chat/")
+async def chat_with_agent(chat_message: ChatMessage):
+    logger.debug(f"Mensaje recibido: {chat_message.user_input}")
+    try:
+        # Obtener datos de Django API
+        data = fetch_data_from_django()
 
-    # Código que se ejecuta al final (shutdown)
-    print("Apagando la aplicación...")
+        # Construir el prompt con la información de Django y la entrada del usuario
+        prompt = build_prompt(data, chat_message.user_input)
 
-app = FastAPI(lifespan=lifespan)
+        # Obtener respuesta de OpenAI
+        result = get_completion_from_openai(prompt)
 
-@app.post("/generate")
-async def generate_text(request_body: RequestBody):
-    if model is None or tokenizer is None:
-        raise HTTPException(status_code=500, detail="El modelo no está cargado")
-    
-    prompt = request_body.prompt
+        logger.debug(f"Respuesta de OpenAI: {result}")
+        return {"response": result}
+    except Exception as e:
+        logger.error(f"Error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
-    # Obtener datos de la API Django
-    django_data = retrieve_data_from_django()
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to the FastAPI OpenAI Integration!"}
 
-    # Recuperar información relevante para el prompt (RAG)
-    retrieved_info = retrieve_relevant_knowledge(prompt, django_data)
-    
-    # Generar respuesta con la información recuperada
-    response = generate_response(model, tokenizer, prompt, retrieved_info)
-    
-    return {"response": response}
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
+@app.post("/generate_pdf/")
+async def generate_pdf(request: Request):
+    try:
+        # Recibir los datos del request
+        data = await request.json()
+        conversations = data.get("conversations", [])
+        chunks = data.get("chunks", [])
+        properties = data.get("properties", [])
+
+        # Crear un buffer para el PDF
+        buffer = io.BytesIO()
+        pdf = canvas.Canvas(buffer, pagesize=letter)
+
+        # Escribir información en el PDF
+        pdf.drawString(100, 750, "Datos Recibidos:")
+
+        # Escribir conversaciones
+        pdf.drawString(100, 720, "Conversaciones:")
+        for idx, convo in enumerate(conversations, start=1):
+            pdf.drawString(100, 700 - (idx * 20), f"{convo['user_id']}: {convo['input']} -> {convo['output']}")
+
+        # Escribir chunks
+        pdf.drawString(100, 650 - (len(conversations) * 20), "Chunks:")
+        for idx, chunk in enumerate(chunks, start=1):
+            pdf.drawString(100, 630 - (len(conversations) * 20 + idx * 20), f"Document {chunk['document_id']}: {chunk['content'][:50]}")
+
+        # Escribir propiedades
+        pdf.drawString(100, 580 - (len(conversations) + len(chunks)) * 20, "Propiedades:")
+        for idx, prop in enumerate(properties, start=1):
+            pdf.drawString(100, 560 - (len(conversations) + len(chunks)) * 20 - idx * 20,
+                           f"{prop['property_type']} en {prop['location']} - {prop['price']} USD")
+
+        # Finalizar el PDF
+        pdf.showPage()
+        pdf.save()
+
+        # Guardar el PDF en el sistema de archivos
+        file_path = "generated_report.pdf"  # Cambia esta ruta por la que desees
+        with open(file_path, "wb") as f:
+            f.write(buffer.getvalue())
+
+        # Mostrar el PDF en consola (opcional)
+        logger.info(f"PDF generado y guardado en {file_path}")
+
+        return {"message": f"PDF generado y guardado en {file_path}"}
+
+    except Exception as e:
+        logger.error(f"Error al generar el PDF: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error al generar el PDF")
 
 if __name__ == "__main__":
     port = int(os.getenv("FASTAPI_PORT", 8000))
-    uvicorn.run("ApiModel:app", host="0.0.0.0", port=port, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=port, reload=True)
