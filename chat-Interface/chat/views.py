@@ -115,7 +115,7 @@ def api_chat(request):
 def index(request):
     return render(request, 'index.html')
 
-@csrf_protect  # Protección CSRF habilitada
+"""@csrf_protect  # Protección CSRF habilitada
 def api_view(request):
     if request.method == "POST":
         user_input = request.POST.get('mensaje', '')
@@ -135,7 +135,7 @@ def api_view(request):
             logger.error('Excepción al conectar con FastAPI: %s', e)
             return JsonResponse({'error': 'Error de conexión con el servicio de chat'}, status=500)
     else:
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
+        return JsonResponse({'error': 'Método no permitido'}, status=405)"""
 
 
 @csrf_protect
