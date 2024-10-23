@@ -7,8 +7,6 @@ import os
 import requests
 import logging
 from fastapi import Request
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
 import io
 import logging
 from fastapi.middleware.cors import CORSMiddleware
@@ -140,56 +138,6 @@ def read_root():
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
-
-@app.post("/generate_pdf/")
-async def generate_pdf(request: Request):
-    try:
-        # Recibir los datos del request
-        data = await request.json()
-        conversations = data.get("conversations", [])
-        chunks = data.get("chunks", [])
-        properties = data.get("properties", [])
-
-        # Crear un buffer para el PDF
-        buffer = io.BytesIO()
-        pdf = canvas.Canvas(buffer, pagesize=letter)
-
-        # Escribir información en el PDF
-        pdf.drawString(100, 750, "Datos Recibidos:")
-
-        # Escribir conversaciones
-        pdf.drawString(100, 720, "Conversaciones:")
-        for idx, convo in enumerate(conversations, start=1):
-            pdf.drawString(100, 700 - (idx * 20), f"{convo['user_id']}: {convo['input']} -> {convo['output']}")
-
-        # Escribir chunks
-        pdf.drawString(100, 650 - (len(conversations) * 20), "Chunks:")
-        for idx, chunk in enumerate(chunks, start=1):
-            pdf.drawString(100, 630 - (len(conversations) * 20 + idx * 20), f"Document {chunk['document_id']}: {chunk['content'][:50]}")
-
-        # Escribir propiedades
-        pdf.drawString(100, 580 - (len(conversations) + len(chunks)) * 20, "Propiedades:")
-        for idx, prop in enumerate(properties, start=1):
-            pdf.drawString(100, 560 - (len(conversations) + len(chunks)) * 20 - idx * 20,
-                           f"{prop['property_type']} en {prop['location']} - {prop['price']} USD")
-
-        # Finalizar el PDF
-        pdf.showPage()
-        pdf.save()
-
-        # Guardar el PDF en el sistema de archivos
-        file_path = "generated_report.pdf"  # Cambia esta ruta por la que desees
-        with open(file_path, "wb") as f:
-            f.write(buffer.getvalue())
-
-        # Mostrar el PDF en consola (opcional)
-        logger.info(f"PDF generado y guardado en {file_path}")
-
-        return {"message": f"PDF generado y guardado en {file_path}"}
-
-    except Exception as e:
-        logger.error(f"Error al generar el PDF: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Error al generar el PDF")
 
 if __name__ == "__main__":
     port = int(os.getenv("FASTAPI_PORT", 8000))
