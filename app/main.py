@@ -87,7 +87,7 @@ def build_prompt(data, question):
 # Obtener datos de Django API
 def fetch_data_from_django():
     try:
-        django_url = "https://pedro.solucionesfinancierasglobal.com/get_all_data/"  # URL de la API de Django
+        django_url = "http://52.67.197.89:8800/get_all_data/"  # URL de la API de Django
         response = requests.get(django_url)
         if response.status_code == 200:
             return response.json()
