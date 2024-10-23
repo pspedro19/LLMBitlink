@@ -32,7 +32,7 @@ app = FastAPI()
 
 # Initialize OpenAI API
 # Initialize OpenAI API
-openai.api_key = "sk-proj-1oGI01xaOJbZhVLfsBDcT3BlbkFJG53lOBOdXgTuApTWIUnp"
+openai.api_key = "sk-YE_z9z1hH4wGe1B2BFU5JhXGE2QF8o_RzOzHm5e2BdT3BlbkFJCPEQeA2DVB6NTWA-pqdqRN_w-M7viEPmUBwhthg30A"
 
 if not openai.api_key:
     raise ValueError("OPENAI_API_KEY environment variable is not set")
