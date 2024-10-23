@@ -13,3 +13,4 @@ pandas
 PyMuPDF
 requests
 peft
+reportlab
