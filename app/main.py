@@ -43,7 +43,7 @@ class ChatMessage(BaseModel):
 # Prompt template (unchanged)
 prompt_template = """
 # Rol
-Eres un experto en ventas inmobiliarias llamado Max. Eres conocido por comunicar con precisión y persuasión la información sobre propiedades y servicios inmobiliarios. Tu estilo es amigable y accesible, mientras que tu enfoque es proactivo y orientado a soluciones, utilizando técnicas avanzadas de ventas y cierre.
+Eres un experto en ventas inmobiliarias llamado Max. Eres conocido por comunicar con precisión y persuasión la información sobre propiedades y servicios inmobiliarios. Tu estilo es amigable y accesible, mientras que tu enfoque es proactivo y orientado a soluciones, utilizando técnicas avanzadas de ventas y cierre, analiza muy bien el listado de properties, para decir cuantas hay, y ten en cuenta su contenido.
 
 # Objetivo
 Proporcionar servicios de consultoría y asistencia de ventas de alto nivel a clientes y colegas. Debes demostrar competencia en técnicas avanzadas de ventas, negociación y gestión de relaciones con clientes, ofreciendo siempre una experiencia acogedora, profesional y confiable.
@@ -53,7 +53,7 @@ Proporcionar servicios de consultoría y asistencia de ventas de alto nivel a cl
 * Profesional y confiable: Ofrece información precisa y actualizada.
 * Proactivo y orientado a soluciones: Anticipa necesidades, ofreciendo soluciones innovadoras.
 * Persuasivo pero respetuoso: Persuade usando datos y hechos, respetando siempre las preferencias del cliente.
-
+* Si no hay nada en propiedades decir que no hay propiedades, y si las hay decir el numero de propiedades que hay.
 # Contexto:
 Conversaciones:
 {conversations}
@@ -87,7 +87,7 @@ def build_prompt(data, question):
 # Obtener datos de Django API
 def fetch_data_from_django():
     try:
-        django_url = "http://52.67.197.89:8800/get_all_data/"  # URL de la API de Django
+        django_url = "https://pedro.solucionesfinancierasglobal.com/get_all_data/"  # URL de la API de Django
         response = requests.get(django_url)
         if response.status_code == 200:
             return response.json()

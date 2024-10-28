@@ -130,8 +130,4 @@ LOGGING = {
             'propagate': True,
         },
     },
-<<<<<<< HEAD
 }
-=======
-}
-

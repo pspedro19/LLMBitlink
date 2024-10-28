@@ -1,18 +1,23 @@
-FROM python:3.8-slim
+# Usa una imagen base de Python
+FROM python:3.9-slim
 
+# Establece el directorio de trabajo dentro del contenedor
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+# Copia el archivo requirements.txt y luego instálalo
+COPY ./app/requirements.txt .
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --upgrade pip
+# Instala las dependencias necesarias
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code
-COPY . .
+# Instalar uvicorn globalmente
+RUN pip install uvicorn
 
-EXPOSE 8000
+# Copia el código de la aplicación
+COPY ./app .
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Expone el puerto 8800
+EXPOSE 8800
+
+# Comando para ejecutar la aplicación FastAPI
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8800", "--reload"]

@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=1  # Establece esto a 0 en producción
+
+  fastapi:
+    build:
+      context: ..
+      dockerfile: ./app/Dockerfile
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8800 --reload
+    volumes:
+      - ..:/app  # Ajusta el volumen para incluir 'app' y 'main.py' fuera de 'chat-interface'
+    ports:
+      - "8800:8800"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+
+  https-portal:
+    image: steveltn/https-portal:1
+    container_name: https-portal
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      DOMAINS: 'pedro.solucionesfinancierasglobal.com -> http://web:8000'
+      STAGE: 'production'  # Cambiar a production cuando esté listo
+      CLIENT_MAX_BODY_SIZE: 5M
+    volumes:
+      - https-portal-data:/var/lib/https-portal
+      - /data/https-portal/vhosts:/var/www/vhosts
+    depends_on:
+      - web
+      - fastapi
+
+volumes:
+  https-portal-data:

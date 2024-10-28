@@ -21,11 +21,11 @@ from chat import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', views.index, name='index'),
+    path('chat/', views.index, name='index'),
     # Asegúrate de que esta ruta acepta peticiones POST y no requiere el parámetro en la URL
     # path('api/', views.api_view, name='api'),
     path('register/', views.register, name='register'),
-    path('login/', views.user_login, name='login'),
+    path('', views.user_login, name='login'),
     path('logout/', views.user_logout, name='logout'),
     path('api/', views.api_chat, name='api_chat'),
     path('save_vectorization/', views.save_vectorization, name='save_vectorization'),  # Nueva URL
