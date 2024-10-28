@@ -1,7 +1,13 @@
 from django.contrib import admin
 from import_export.admin import ImportExportModelAdmin  # Para importar/exportar
-from .models import Conversation, Chunk, Property, Country, Province, City  # Asegúrate de importar todos los modelos
-
+from .models import Conversation, Chunk, Property, Country, Province, City, Finanzas  # Asegúrate de importar todos los modelos
+# Registrar el modelo Finanzas en el admin
+@admin.register(Finanzas)
+class FinanzasAdmin(ImportExportModelAdmin):
+    list_display = ('planes_de_financiamiento', 'tipo_de_inversion', 'tipo_de_moneda')  # Columnas a mostrar
+    search_fields = ('planes_de_financiamiento', 'tipo_de_inversion', 'tipo_de_moneda')  # Campos por los que se puede buscar
+    list_filter = ('planes_de_financiamiento', 'tipo_de_inversion', 'tipo_de_moneda')  # Filtros laterales
+    ordering = ('planes_de_financiamiento',)  # Ordenar por el plan de financiamiento
 # Registrar el modelo Conversation en el admin
 @admin.register(Conversation)
 class ConversationAdmin(ImportExportModelAdmin):
@@ -46,9 +52,9 @@ class CityAdmin(ImportExportModelAdmin):
 # Registrar el modelo Property en el admin
 @admin.register(Property)
 class PropertyAdmin(ImportExportModelAdmin):
-    list_display = ('country', 'province', 'city', 'location', 'price', 'square_meters', 'property_type', 'project_type', 'residence_type', 'project_category', 'created_at')
+    list_display = ('get_country', 'get_province', 'get_city', 'location', 'price', 'square_meters', 'get_property_type', 'get_project_type', 'get_residence_type', 'get_project_category', 'created_at')
     search_fields = ('location', 'property_type', 'country__name', 'province__name', 'city__name')
-    list_filter = ('property_type', 'project_type', 'residence_type', 'project_category', 'country', 'province', 'city', 'created_at')
+    list_filter = ('property_type', 'created_at')
     ordering = ('-created_at',)
 
     # Para mostrar dependencias jerárquicas en el formulario de administración
@@ -64,3 +70,32 @@ class PropertyAdmin(ImportExportModelAdmin):
             else:
                 kwargs["queryset"] = City.objects.none()
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    # Métodos para obtener los valores de los campos relacionados
+    def get_country(self, obj):
+        return obj.country.name if obj.country else None
+    get_country.short_description = 'Country'
+
+    def get_province(self, obj):
+        return obj.province.name if obj.province else None
+    get_province.short_description = 'Province'
+
+    def get_city(self, obj):
+        return obj.city.name if obj.city else None
+    get_city.short_description = 'City'
+
+    def get_property_type(self, obj):
+        return obj.get_property_type_display()
+    get_property_type.short_description = 'Property Type'
+
+    def get_project_type(self, obj):
+        return obj.get_project_type_display()
+    get_project_type.short_description = 'Project Type'
+
+    def get_residence_type(self, obj):
+        return obj.get_residence_type_display()
+    get_residence_type.short_description = 'Residence Type'
+
+    def get_project_category(self, obj):
+        return obj.get_project_category_display()
+    get_project_category.short_description = 'Project Category'
