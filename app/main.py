@@ -40,10 +40,9 @@ engine = 'gpt-3.5-turbo'
 class ChatMessage(BaseModel):
     user_input: str
 
-# Prompt template (unchanged)
 prompt_template = """
 # Rol
-Eres un experto en ventas inmobiliarias llamado Max. Eres conocido por comunicar con precisión y persuasión la información sobre propiedades y servicios inmobiliarios. Tu estilo es amigable y accesible, mientras que tu enfoque es proactivo y orientado a soluciones, utilizando técnicas avanzadas de ventas y cierre, analiza muy bien el listado de properties, para decir cuantas hay, y ten en cuenta su contenido.
+Eres un experto en ventas inmobiliarias llamado Max. Eres conocido por comunicar con precisión y persuasión la información sobre propiedades y servicios inmobiliarios. Tu estilo es amigable y accesible, mientras que tu enfoque es proactivo y orientado a soluciones, utilizando técnicas avanzadas de ventas y cierre. Analiza muy bien el listado de propiedades y ten en cuenta su contenido.
 
 # Objetivo
 Proporcionar servicios de consultoría y asistencia de ventas de alto nivel a clientes y colegas. Debes demostrar competencia en técnicas avanzadas de ventas, negociación y gestión de relaciones con clientes, ofreciendo siempre una experiencia acogedora, profesional y confiable.
@@ -53,7 +52,8 @@ Proporcionar servicios de consultoría y asistencia de ventas de alto nivel a cl
 * Profesional y confiable: Ofrece información precisa y actualizada.
 * Proactivo y orientado a soluciones: Anticipa necesidades, ofreciendo soluciones innovadoras.
 * Persuasivo pero respetuoso: Persuade usando datos y hechos, respetando siempre las preferencias del cliente.
-* Si no hay nada en propiedades decir que no hay propiedades, y si las hay decir el numero de propiedades que hay.
+* Si no hay propiedades, menciona que no hay propiedades disponibles. Si hay propiedades, indica el número de propiedades disponibles.
+
 # Contexto:
 Conversaciones:
 {conversations}
@@ -67,15 +67,32 @@ Propiedades:
 # Pregunta:
 {question}
 
+# Instrucciones adicionales:
+Siempre incluye la URL de la imagen de cada propiedad junto con todos los detalles relevantes, como ubicación, tipo, precio, y otros detalles importantes. Asegúrate de que la información esté actualizada en tiempo real.
 Proporciona una respuesta clara y concisa basada en la información de contexto.
 """
 
-# Función para construir el prompt
 def build_prompt(data, question):
-    # Ahora solo usamos 'input' y 'output' de las conversaciones, ya que 'user' ha sido eliminado
+    # Usamos 'input' y 'output' de las conversaciones
     conversations = "\n".join([f"Input: {conv['input']} -> Output: {conv['output']}" for conv in data['conversations']])
     chunks = "\n".join([f"Document {chunk['document_id']}: {chunk['content'][:50]}" for chunk in data['chunks']])
-    properties = "\n".join([f"{prop['property_type']} en {prop['location']} - {prop['price']} USD" for prop in data['properties']])
+
+    # Incluye todos los detalles relevantes y la URL de la imagen, manejando claves opcionales
+    properties = "\n".join([
+        (
+            f"País: {prop.get('country', 'No especificado')}, Provincia: {prop.get('province', 'No especificado')}, "
+            f"Ciudad: {prop.get('city', 'No especificado')}, Ubicación: {prop.get('location', 'No especificado')}, "
+            f"Precio: {prop.get('price', 'No especificado')} USD, Metros cuadrados: {prop.get('square_meters', 'No especificado')} m², "
+            f"Tipo de propiedad: {prop.get('property_type', 'No especificado').capitalize()}, "
+            f"Tipo de proyecto: {prop.get('project_type', 'No especificado')}, "
+            f"Número de ambientes: {prop.get('num_rooms', 'No especificado')}, "
+            f"Número de habitaciones: {prop.get('num_bedrooms', 'No especificado')}, "
+            f"Tipo de residencia: {prop.get('residence_type', 'No especificado')}, "
+            f"Categoría del proyecto: {prop.get('project_category', 'No especificado')}, "
+            f"Descripción: {prop.get('description', 'No especificado')}, Imagen: {prop.get('image', 'No disponible')}"
+        )
+        for prop in data['properties']
+    ])
 
     return prompt_template.format(
         conversations=conversations,
@@ -83,6 +100,7 @@ def build_prompt(data, question):
         properties=properties,
         question=question
     )
+
 
 # Obtener datos de Django API
 def fetch_data_from_django():
