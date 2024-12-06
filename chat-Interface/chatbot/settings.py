@@ -71,6 +71,22 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',  # La base de datos se crea en tu proyecto
     }
 }
+# DATABASE_URL = 'sqlite:///chat-Interface/db.sqlite3'  # Fixed SQLite path
+# OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# GPT_MODEL = "gpt-4"
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#         'PRAGMA': {
+#             'journal_mode': 'WAL',
+#             'cache_size': -1 * 64000,  # 64MB
+#             'foreign_keys': 1,
+#             'ignore_check_constraints': 0,
+#             'synchronous': 1
+#         }
+#     }
+# }
 
 
 # Password validation

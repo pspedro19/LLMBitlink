@@ -30,7 +30,7 @@ app = FastAPI()
 
 # Initialize OpenAI API
 # Initialize OpenAI API
-openai.api_key = 'your_api_key'
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 if not openai.api_key:
     raise ValueError("OPENAI_API_KEY environment variable is not set")
@@ -105,7 +105,7 @@ def build_prompt(data, question):
 # Obtener datos de Django API
 def fetch_data_from_django():
     try:
-        django_url = "http://161.35.120.130:8000/get_all_data/"  # URL de la API de Django
+        django_url = "http://161.35.120.130:8000//get_all_data/"  # URL de la API de Django
         response = requests.get(django_url)
         if response.status_code == 200:
             return response.json()

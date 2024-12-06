@@ -86,7 +86,7 @@ def api_chat(request):
             print(f"Mensaje enviado a FastAPI: {mensaje}")
 
             # Realizar la petición a la API de FastAPI
-            url = 'http://137.184.19.215:8800/chat/'  # URL de la API de FastAPI
+            url = 'https://api.dnlproptech-chat.com/chat/'  # URL de la API de FastAPI
             headers = {'Content-Type': 'application/json'}
             payload = {'user_input': mensaje}
 
@@ -120,7 +120,7 @@ def api_view(request):
     if request.method == "POST":
         user_input = request.POST.get('mensaje', '')
         try:
-            response = requests.post('https://pedro.solucionesfinancierasglobal.com/chat/', json={'user_input': user_input})
+            response = requests.post('https://api.dnlproptech-chat.com/chat/', json={'user_input': user_input})
             if response.status_code == 200:
                 response_data = response.json()
                 if 'response' in response_data:
