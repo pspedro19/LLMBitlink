@@ -60,6 +60,7 @@ class Property(models.Model):
     description = models.TextField(blank=True, null=True)  # Descripción opcional del inmueble
     image = models.ImageField(upload_to='property_images/', null=True, blank=True)  # Campo de imagen para la propiedad
     url = models.CharField(max_length=255, null=True) # Direccion web del proyecto
+
     created_at = models.DateTimeField(auto_now_add=True)  # Fecha de creación
 
     def __str__(self):
