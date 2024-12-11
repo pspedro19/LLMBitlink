@@ -13,3 +13,4 @@ transformers
 scikit-learn
 django-import-export
 Pillow
+beautifulsoup4

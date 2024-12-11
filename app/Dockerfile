@@ -19,5 +19,9 @@ COPY ./app .
 # Expone el puerto 8800
 EXPOSE 8800
 
+# Variables de entorno
+ENV PYTHONPATH=/app
+ENV MEDIA_DIR=/app/images
+
 # Comando para ejecutar la aplicación FastAPI
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8800", "--reload"]

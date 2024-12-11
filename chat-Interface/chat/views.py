@@ -20,6 +20,13 @@ from .models import Conversation, Chunk, Property
 from django.http import JsonResponse
 from .models import Conversation, Chunk, Property
 from django.views.decorators.csrf import csrf_exempt
+import re
+from django.conf import settings
+from django.http import HttpResponse
+import os
+
+
+logger = logging.getLogger(__name__)
 
 @csrf_exempt
 def get_all_data(request):
@@ -73,45 +80,195 @@ def send_data_to_fastapi(request):
         return JsonResponse({"message": "Data sent successfully", "response": response.json()})
     else:
         return JsonResponse({"error": "Failed to send data"}, status=response.status_code)
+
+# @login_required
+# def api_chat(request):
+#     if request.method == 'POST':
+#         try:
+#             # Leer el JSON enviado desde el frontend
+#             body_unicode = request.body.decode('utf-8')
+#             body = json.loads(body_unicode)
+#             mensaje = body.get('mensaje')
+
+#             # Verificar si el mensaje se recibió correctamente
+#             logger.info(f"Mensaje recibido: {mensaje}")
+
+#             # Realizar la petición a la API de FastAPI
+#             response = requests.post(
+#                 'https://api.dnlproptech-chat.com/chat/',
+#                 json={'user_input': mensaje},
+#                 headers={'Content-Type': 'application/json'}
+#             )
+
+#             if response.status_code == 200:
+#                 data = response.json()
+#                 respuesta = data.get('response', '')
+
+#                 # Guardar la conversación
+#                 conversation = Conversation.objects.create(
+#                     user=request.user,
+#                     input=mensaje,
+#                     output=respuesta
+#                 )
+
+#                 # Formatear la respuesta HTML según el contenido
+#                 if isinstance(respuesta, str):
+#                     # Procesar el texto para identificar propiedades
+#                     if any(keyword in respuesta.lower() for keyword in ['propiedad', 'apartamento', 'casa', 'precio']):
+#                         # Formatear texto como una descripción de propiedad estructurada
+#                         formatted_response = format_property_text_response(respuesta)
+#                     else:
+#                         # Formatear texto normal
+#                         formatted_response = format_chat_response(respuesta)
+                    
+#                     return JsonResponse({
+#                         'type': 'html',
+#                         'mensaje': formatted_response
+#                     })
+#                 else:
+#                     logger.error(f"Respuesta inesperada: {respuesta}")
+#                     return JsonResponse({
+#                         'type': 'error',
+#                         'mensaje': 'Formato de respuesta no válido'
+#                     }, status=400)
+
+#             else:
+#                 logger.error(f"Error en la API de FastAPI: {response.status_code}")
+#                 return JsonResponse({
+#                     'type': 'error',
+#                     'mensaje': 'Error al procesar tu solicitud'
+#                 }, status=500)
+
+#         except json.JSONDecodeError as e:
+#             logger.error(f"Error decodificando JSON: {str(e)}")
+#             return JsonResponse({
+#                 'type': 'error',
+#                 'mensaje': 'Error en el formato de la solicitud'
+#             }, status=400)
+#         except Exception as e:
+#             logger.error(f"Error general: {str(e)}")
+#             return JsonResponse({
+#                 'type': 'error',
+#                 'mensaje': 'Error interno del servidor'
+#             }, status=500)
+
+#     return JsonResponse({
+#         'type': 'error',
+#         'mensaje': 'Método no permitido'
+#     }, status=405)
+
 @login_required
 def api_chat(request):
     if request.method == 'POST':
         try:
             # Leer el JSON enviado desde el frontend
-            body_unicode = request.body.decode('utf-8')  # Decodificar el cuerpo
-            body = json.loads(body_unicode)  # Convertir el cuerpo a un diccionario
-            mensaje = body.get('mensaje')  # Obtener el valor del campo 'mensaje'
+            body_unicode = request.body.decode('utf-8')
+            body = json.loads(body_unicode)
+            mensaje = body.get('mensaje')
 
             # Verificar si el mensaje se recibió correctamente
-            print(f"Mensaje enviado a FastAPI: {mensaje}")
+            logger.info(f"Mensaje recibido: {mensaje}")
 
             # Realizar la petición a la API de FastAPI
-            url = 'https://api.dnlproptech-chat.com/chat/'  # URL de la API de FastAPI
-            headers = {'Content-Type': 'application/json'}
-            payload = {'user_input': mensaje}
-
-            response = requests.post(url, json=payload, headers=headers)
+            response = requests.post(
+                'https://api.dnlproptech-chat.com/chat/',
+                json={'user_input': mensaje},
+                headers={'Content-Type': 'application/json'}
+            )
 
             if response.status_code == 200:
-                data = response.json()
-                respuesta = data['response']
-
-                # Guardar la conversación en la base de datos
+                # Obtener la respuesta y guardar la conversación
+                html_response = response.text
+                
+                # Guardar la conversación
                 conversation = Conversation.objects.create(
-                    user=request.user,  # Usuario autenticado
+                    user=request.user,
                     input=mensaje,
-                    output=respuesta
+                    output=html_response
                 )
 
-                # Devolver la respuesta al frontend
-                return JsonResponse({'mensaje': respuesta})
+                return JsonResponse({
+                    'type': 'html',
+                    'mensaje': html_response
+                })
             else:
-                return JsonResponse({'error': 'Error al comunicarse con la API de FastAPI'}, status=500)
+                logger.error(f"Error en la API de FastAPI: {response.status_code}")
+                return JsonResponse({
+                    'type': 'error',
+                    'mensaje': 'Error al procesar tu solicitud'
+                }, status=500)
 
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+        except json.JSONDecodeError as e:
+            logger.error(f"Error decodificando JSON: {str(e)}")
+            return JsonResponse({
+                'type': 'error',
+                'mensaje': 'Error en el formato de la solicitud'
+            }, status=400)
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            logger.error(f"Error general: {str(e)}")
+            return JsonResponse({
+                'type': 'error',
+                'mensaje': 'Error interno del servidor'
+            }, status=500)
+
+    return JsonResponse({
+        'type': 'error',
+        'mensaje': 'Método no permitido'
+    }, status=405)
+
+def format_property_text_response(text):
+    """
+    Formatea el texto que contiene información de propiedades en HTML estructurado
+    """
+    # Dividir el texto en secciones si contiene múltiples propiedades
+    properties = text.split('\n\n')
+    
+    html_response = '<div class="chat-properties">'
+    
+    for prop in properties:
+        if prop.strip():
+            # Extraer información clave usando patrones comunes
+            location_match = re.search(r'(?:en|ubicado en)\s+([^\.]+)', prop, re.IGNORECASE)
+            price_match = re.search(r'(?:USD|precio[:]?\s+)\s*([\d,\.]+)', prop, re.IGNORECASE)
+            area_match = re.search(r'(\d+)\s*m²', prop)
+            
+            html_response += '<div class="property-card">'
+            
+            # Título/Ubicación
+            if location_match:
+                html_response += f'<h3 class="property-location">{location_match.group(1)}</h3>'
+            
+            # Detalles principales
+            html_response += '<div class="property-details">'
+            if price_match:
+                try:
+                    price = float(price_match.group(1).replace(',', '').replace('.', ''))
+                    html_response += f'<p class="property-price">USD {price:,.2f}</p>'
+                except ValueError:
+                    logger.error(f"Error convirtiendo precio: {price_match.group(1)}")
+                    html_response += f'<p class="property-price">USD {price_match.group(1)}</p>'
+            if area_match:
+                html_response += f'<p class="property-area">{area_match.group(1)} m²</p>'
+            
+            # Descripción
+            html_response += f'<p class="property-description">{prop}</p>'
+            html_response += '</div></div>'
+    
+    html_response += '</div>'
+    return html_response
+
+def format_chat_response(text):
+    """
+    Formatea respuestas de chat normales en HTML
+    """
+    # Convertir URLs en enlaces clickeables
+    text = re.sub(r'(https?://[^\s]+)', r'<a href="\1" target="_blank">\1</a>', text)
+    
+    # Convertir saltos de línea en <br>
+    text = text.replace('\n', '<br>')
+    
+    return f'<div class="chat-message">{text}</div>'
+    
 def index(request):
     return render(request, 'index.html')
 
@@ -196,3 +353,28 @@ def save_vectorization(request):
             logger.error(f"Error processing data: {e}")
             return JsonResponse({"status": "fail", "error": str(e)}, status=400)
     return JsonResponse({"status": "fail"}, status=400)
+
+def debug_media(request):
+    """Vista de debug para verificar la configuración de media"""
+    media_root = settings.MEDIA_ROOT
+    try:
+        media_files = os.listdir(media_root)
+        response = f"MEDIA_ROOT: {media_root}\n\nArchivos encontrados:\n"
+        for file in media_files:
+            file_path = os.path.join(media_root, file)
+            size = os.path.getsize(file_path)
+            response += f"\n- {file} ({size} bytes)"
+        return HttpResponse(response, content_type='text/plain')
+    except Exception as e:
+        return HttpResponse(f"Error: {str(e)}\nMEDIA_ROOT: {media_root}", content_type='text/plain')
+
+def test_media(request, filename):
+    try:
+        file_path = os.path.join(settings.MEDIA_ROOT, filename)
+        if os.path.exists(file_path):
+            with open(file_path, 'rb') as f:
+                return HttpResponse(f.read(), content_type='image/jpeg')
+        else:
+            return HttpResponse(f"File not found: {file_path}", status=404)
+    except Exception as e:
+        return HttpResponse(f"Error: {str(e)}", status=500)

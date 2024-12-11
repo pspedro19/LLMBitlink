@@ -6,6 +6,7 @@ services:
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
+      - ./property_images:/app/property_images:rw
     ports:
       - "8000:8000"
     environment:
@@ -18,10 +19,12 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8800 --reload
     volumes:
       - ..:/app # Ajusta el volumen para incluir 'app' y 'main.py' fuera de 'chat-interface'
+      - ../chat-Interface/property_images:/app/images  # Montar el directorio de imágenes
     ports:
       - "8800:8800"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MEDIA_DIR=/app/images
 
   https-portal:
     image: steveltn/https-portal:1
@@ -34,10 +37,13 @@ services:
       STAGE: 'production' # Cambiar a production cuando esté listo
       # Forzar HTTP upstream
       FORCE_HTTPS_UPSTREAM: 'false'
-      CLIENT_MAX_BODY_SIZE: 5M
+      WEBSOCKET: 'true'
+      KEEPALIVE_TIMEOUT: '60'
+      CLIENT_MAX_BODY_SIZE: 10M
     volumes:
       - https-portal-data:/var/lib/https-portal
       - /data/https-portal/vhosts:/var/www/vhosts
+      - ./nginx-conf:/etc/nginx/conf.d
     depends_on:
       - web
       - fastapi

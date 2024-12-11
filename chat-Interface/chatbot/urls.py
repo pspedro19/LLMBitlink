@@ -17,6 +17,10 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from chat import views
+from django.conf import settings
+from django.conf.urls.static import static
+from django.urls import path, re_path
+from django.views.static import serve
 # from chat.views import save_vectorization
 
 urlpatterns = [
@@ -31,4 +35,10 @@ urlpatterns = [
     path('save_vectorization/', views.save_vectorization, name='save_vectorization'),  # Nueva URL
     path('send_data_to_fastapi/', views.send_data_to_fastapi, name='send_data_to_fastapi'),
     path('get_all_data/', views.get_all_data, name='get_all_data'),
-]
+    path('debug/media/', views.debug_media, name='debug_media'),  # Nueva línea
+    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    path('test-media/<str:filename>', views.test_media, name='test_media'),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
