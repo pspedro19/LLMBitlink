@@ -73,13 +73,13 @@ analyzer = initialize_analyzer()
 AVAILABLE_FUNCTIONS = {
     "get_location_info": {
         "name": "get_location_info",
-        "description": "Get information about properties based on location",
+        "description": "Get information about properties based on location. Use this when the user asks about properties in a specific location.",
         "parameters": {
             "type": "object",
             "properties": {
                 "location": {
                     "type": "string",
-                    "description": "The location to search for"
+                    "description": "The location to search for (city, province, or country)"
                 }
             },
             "required": ["location"]
@@ -116,25 +116,35 @@ AVAILABLE_FUNCTIONS = {
 class ChatMessage(BaseModel):
     user_input: str
     response_format: Optional[str] = "html"
-
+    
 def execute_function(function_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Execute the requested function and return the results
-    """
     if not analyzer:
         return {"error": "Database connection not available"}
         
     try:
         if function_name == "get_location_info":
-            data = analyzer._obtener_datos("", "identificacion_localizacion")
+            # Extraer la ubicación de los parámetros
+            location = parameters.get('location', '')
+            # Construir la condición WHERE dinámica
+            condition = f"""
+                LOWER(cc.name) LIKE LOWER('%{location}%')
+                OR LOWER(cd.name) LIKE LOWER('%{location}%')
+                OR LOWER(cct.name) LIKE LOWER('%{location}%')
+                OR LOWER(cp.location) LIKE LOWER('%{location}%')
+            """
+            data = analyzer._obtener_datos(location, "identificacion_localizacion", condition)
             return {"properties": data.get("info_basica", [])}
             
         elif function_name == "get_price_analysis":
-            data = analyzer._obtener_datos("", "analisis_precio")
+            property_type = parameters.get('property_type', '')
+            condition = f"LOWER(cp.property_type) LIKE LOWER('%{property_type}%')" if property_type else "1=1"
+            data = analyzer._obtener_datos(property_type, "analisis_precio", condition)
             return {"price_analysis": data.get("comparativa_precios", [])}
             
         elif function_name == "get_property_details":
-            data = analyzer._obtener_datos("", "detalles_propiedad")
+            property_type = parameters.get('property_type', '')
+            condition = f"LOWER(cp.property_type) LIKE LOWER('%{property_type}%')" if property_type else "1=1"
+            data = analyzer._obtener_datos(property_type, "detalles_propiedad", condition)
             return {"details": data.get("estadisticas_tipos", [])}
             
         else:
@@ -143,6 +153,32 @@ def execute_function(function_name: str, parameters: Dict[str, Any]) -> Dict[str
     except Exception as e:
         logger.error(f"Error executing function {function_name}: {str(e)}")
         return {"error": f"Error executing function: {str(e)}"}
+# def execute_function(function_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+#     """
+#     Execute the requested function and return the results
+#     """
+#     if not analyzer:
+#         return {"error": "Database connection not available"}
+        
+#     try:
+#         if function_name == "get_location_info":
+#             data = analyzer._obtener_datos("", "identificacion_localizacion")
+#             return {"properties": data.get("info_basica", [])}
+            
+#         elif function_name == "get_price_analysis":
+#             data = analyzer._obtener_datos("", "analisis_precio")
+#             return {"price_analysis": data.get("comparativa_precios", [])}
+            
+#         elif function_name == "get_property_details":
+#             data = analyzer._obtener_datos("", "detalles_propiedad")
+#             return {"details": data.get("estadisticas_tipos", [])}
+            
+#         else:
+#             raise ValueError(f"Unknown function: {function_name}")
+            
+#     except Exception as e:
+#         logger.error(f"Error executing function {function_name}: {str(e)}")
+#         return {"error": f"Error executing function: {str(e)}"}
 
 # def build_prompt(data: Dict[str, Any], question: str) -> str:
 #     """
