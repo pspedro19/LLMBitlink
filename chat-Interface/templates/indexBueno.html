@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Chat Inmobiliario</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Estilos base */
+        body, html {
+            height: 100%;
+            margin: 0;
+            background-color: #f5f7fb;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        /* Header */
+        .chat-header {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            padding: 1rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-logo img {
+            height: 40px;
+        }
+
+        /* Mensajes */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            background-color: #f8f9fa;
+        }
+
+        .chat-message {
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 10px;
+            background-color: white;
+            max-width: 80%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .message-user {
+            margin-left: auto;
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+        }
+
+        .message-bot {
+            margin-right: auto;
+            border-left: 4px solid #007bff;
+        }
+
+        /* Propiedades */
+        .property-card {
+            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            margin: 15px 0;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .property-location {
+            color: #2c3e50;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .property-price {
+            color: #2980b9;
+            font-weight: bold;
+            font-size: 1.3em;
+            margin: 10px 0;
+        }
+
+        .property-area {
+            color: #7f8c8d;
+            margin: 8px 0;
+        }
+
+        .property-description {
+            margin-top: 12px;
+            color: #34495e;
+            line-height: 1.6;
+        }
+
+        .property-features {
+            display: flex;
+            gap: 15px;
+            margin: 15px 0;
+            padding: 10px 0;
+            border-top: 1px solid #eee;
+            border-bottom: 1px solid #eee;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #666;
+        }
+
+        /* Error messages */
+        .error-message {
+            color: #e74c3c;
+            background-color: #fde8e7;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #e74c3c;
+        }
+
+        /* Input container */
+        .chat-input-container {
+            padding: 1.5rem;
+            background-color: white;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .chat-input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #dee2e6;
+            border-radius: 25px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .chat-input:focus {
+            border-color: #007bff;
+        }
+
+        .chat-submit {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .chat-submit:hover {
+            background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+        }
+
+        /* Loading indicator */
+        #loadingIndicator {
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="chat-logo">
+                <img src="https://dnlproptech.io/wp-content/uploads/2021/06/logo-dnl-header.svg" alt="Logo">
+            </div>
+            <h1 class="chat-title">Asistente Inmobiliario</h1>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <!-- Los mensajes se insertarán aquí dinámicamente -->
+        </div>
+
+        <div class="chat-input-container">
+            <div class="chat-input-group">
+                <input type="text" class="chat-input" id="mensajeInput" placeholder="Escribe tu mensaje...">
+                <button class="chat-submit" onclick="enviarMensaje()">
+                    <i class="fas fa-paper-plane"></i> Enviar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Funciones de utilidad
+        function getCSRFToken() {
+            return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        }
+
+        // Función para enviar mensaje
+        function enviarMensaje() {
+            var mensajeInput = document.getElementById('mensajeInput');
+            var mensaje = mensajeInput.value;
+            
+            if (mensaje.trim() !== '') {
+                // Mostrar el mensaje del usuario
+                agregarMensaje('Tú', mensaje, true);
+                
+                // Mostrar indicador de carga
+                var chatMessages = document.getElementById('chatMessages');
+                var loadingDiv = document.createElement('div');
+                loadingDiv.id = 'loadingIndicator';
+                loadingDiv.className = 'chat-message message-bot';
+                loadingDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Escribiendo...';
+                chatMessages.appendChild(loadingDiv);
+                
+                // Enviar mensaje al backend
+                fetch('/api/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify({mensaje: mensaje})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Eliminar indicador de carga
+                    var loadingIndicator = document.getElementById('loadingIndicator');
+                    if (loadingIndicator) {
+                        loadingIndicator.remove();
+                    }
+                    
+                    // Procesar la respuesta según su tipo
+                    if (data.type === 'error') {
+                        agregarError(data.mensaje);
+                    } else if (data.type === 'html') {
+                        agregarMensajeHTML('Asistente', data.mensaje);
+                    } else {
+                        // Intentar procesar como propiedad si contiene información relevante
+                        if (typeof data.mensaje === 'string' && (
+                            data.mensaje.includes('USD') || 
+                            data.mensaje.includes('m²') ||
+                            data.mensaje.includes('propiedad')
+                        )) {
+                            agregarMensajePropiedad('Asistente', data.mensaje);
+                        } else {
+                            agregarMensaje('Asistente', data.mensaje || data.response);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    agregarError('Error al enviar el mensaje');
+                    
+                    // Eliminar indicador de carga en caso de error
+                    var loadingIndicator = document.getElementById('loadingIndicator');
+                    if (loadingIndicator) {
+                        loadingIndicator.remove();
+                    }
+                });
+
+                // Limpiar el campo de entrada
+                mensajeInput.value = '';
+            }
+        }
+
+        // Función para agregar mensaje normal
+        function agregarMensaje(emisor, mensaje, isUser = false) {
+            var chatMessages = document.getElementById('chatMessages');
+            var mensajeDiv = document.createElement('div');
+            mensajeDiv.className = `chat-message ${isUser ? 'message-user' : 'message-bot'}`;
+            mensajeDiv.innerHTML = `<strong>${emisor}:</strong> ${mensaje}`;
+            chatMessages.appendChild(mensajeDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Función para agregar mensaje HTML
+        function agregarMensajeHTML(emisor, mensajeHTML) {
+            var chatMessages = document.getElementById('chatMessages');
+            var mensajeDiv = document.createElement('div');
+            mensajeDiv.className = 'chat-message message-bot';
+            mensajeDiv.innerHTML = `<strong>${emisor}:</strong> ${mensajeHTML}`;
+            chatMessages.appendChild(mensajeDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Función para agregar mensaje de propiedad
+        function agregarMensajePropiedad(emisor, mensaje) {
+            var chatMessages = document.getElementById('chatMessages');
+            var propertyDiv = document.createElement('div');
+            propertyDiv.className = 'property-card';
+            
+            // Extraer información relevante
+            const precioMatch = mensaje.match(/USD\s*([\d,\.]+)/);
+            const areaMatch = mensaje.match(/(\d+)\s*m²/);
+            const ubicacionMatch = mensaje.match(/(?:en|ubicado en|ubicada en)\s+([^\.]+)/i);
+
+            // Construir HTML de la propiedad
+            let propertyHTML = `
+                <div class="property-location">
+                    ${ubicacionMatch ? ubicacionMatch[1].trim() : 'Ubicación no especificada'}
+                </div>
+            `;
+
+            if (precioMatch) {
+                propertyHTML += `
+                    <div class="property-price">
+                        USD ${precioMatch[1]}
+                    </div>
+                `;
+            }
+
+            if (areaMatch) {
+                propertyHTML += `
+                    <div class="property-area">
+                        <i class="fas fa-ruler-combined"></i> ${areaMatch[1]} m²
+                    </div>
+                `;
+            }
+
+            propertyHTML += `
+                <div class="property-description">
+                    ${mensaje}
+                </div>
+            `;
+
+            propertyDiv.innerHTML = propertyHTML;
+            chatMessages.appendChild(propertyDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Función para agregar mensaje de error
+        function agregarError(mensaje) {
+            var chatMessages = document.getElementById('chatMessages');
+            var errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${mensaje}`;
+            chatMessages.appendChild(errorDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Event listener para enviar con Enter
+        document.getElementById('mensajeInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                enviarMensaje();
+            }
+        });
+
+        // Mensaje de bienvenida al cargar la página
+        window.onload = function() {
+            agregarMensaje('Asistente', '¡Bienvenido! Soy tu asistente inmobiliario virtual. ¿En qué puedo ayudarte hoy?');
+        };
+    </script>
+</body>
+</html>

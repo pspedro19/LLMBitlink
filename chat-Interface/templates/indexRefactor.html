@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Chat Inmobiliario</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Reset y estilos base */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f5f7fb;
+        }
+
+        /* Contenedor principal */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        /* Header del chat */
+        .chat-header {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            padding: 1rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .chat-logo {
+            display: flex;
+            align-items: center;
+        }
+
+        .chat-logo img {
+            height: 40px;
+            transition: transform 0.3s ease;
+        }
+
+        .chat-logo img:hover {
+            transform: scale(1.05);
+        }
+
+        .chat-title {
+            font-size: 1.5rem;
+            margin: 0;
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        /* Área de mensajes */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            background-color: #f8f9fa;
+            scroll-behavior: smooth;
+        }
+
+        /* Estilos de mensajes */
+        .message {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border-radius: 10px;
+            max-width: 85%;
+            animation: fadeInUp 0.3s ease;
+            word-wrap: break-word;
+        }
+
+        .message-user {
+            margin-left: auto;
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border-radius: 10px 10px 0 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .message-bot {
+            margin-right: auto;
+            background-color: white;
+            border-radius: 10px 10px 10px 0;
+            border-left: 4px solid #007bff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Indicador de escritura */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: fit-content;
+        }
+
+        .typing-indicator .dots {
+            display: flex;
+            gap: 4px;
+            margin-left: 8px;
+        }
+
+        .typing-indicator .dot {
+            width: 8px;
+            height: 8px;
+            background: #007bff;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .typing-indicator .dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator .dot:nth-child(2) { animation-delay: -0.16s; }
+
+        /* Contenedor de input */
+        .chat-input-container {
+            padding: 1rem;
+            background-color: white;
+            border-top: 1px solid #dee2e6;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
+        }
+
+        .chat-input-group {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 0.75rem 1.25rem;
+            font-size: 1rem;
+            border: 2px solid #dee2e6;
+            border-radius: 25px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.25);
+        }
+
+        .chat-submit {
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            color: white;
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chat-submit:hover {
+            background: linear-gradient(135deg, #0056b3 0%, #004094 100%);
+            transform: translateY(-1px);
+        }
+
+        .chat-submit:active {
+            transform: translateY(1px);
+        }
+
+        /* Nuevo: Estilos para tarjetas de propiedades */
+        .property-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .property-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .property-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid rgba(0,123,255,0.2);
+        }
+
+        .property-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .property-price {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #007bff;
+            padding: 0.5rem 1rem;
+            background: rgba(0,123,255,0.1);
+            border-radius: 8px;
+        }
+
+        .property-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .property-detail-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(0,123,255,0.05);
+            border-radius: 8px;
+            transition: background 0.3s ease;
+        }
+
+        .property-detail-item:hover {
+            background: rgba(0,123,255,0.1);
+        }
+
+        .property-detail-icon {
+            font-size: 1.25rem;
+            color: #007bff;
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .property-detail-text {
+            font-size: 1rem;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .property-description {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(0,0,0,0.1);
+            color: #5a6c7d;
+            line-height: 1.6;
+        }
+
+        .property-features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .property-feature {
+            padding: 0.5rem 1rem;
+            background: #e9ecef;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            color: #495057;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .property-feature i {
+            color: #007bff;
+        }
+
+        /* Animaciones */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes bounce {
+            0%, 80%, 100% { 
+                transform: scale(0);
+            }
+            40% { 
+                transform: scale(1);
+            }
+        }
+
+        /* Mensajes de error */
+        .error-message {
+            background-color: #fee2e2;
+            border-left: 4px solid #ef4444;
+            color: #dc2626;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .property-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .property-price {
+                align-self: stretch;
+                text-align: center;
+            }
+
+            .property-details {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="chat-logo">
+                <img src="https://dnlproptech.io/wp-content/uploads/2021/06/logo-dnl-header.svg" alt="Logo DNL">
+            </div>
+            <h1 class="chat-title">Asistente Inmobiliario</h1>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <!-- Los mensajes se insertarán aquí dinámicamente -->
+        </div>
+
+        <div class="chat-input-container">
+            <div class="chat-input-group">
+                <input 
+                    type="text" 
+                    class="chat-input" 
+                    id="mensajeInput" 
+                    placeholder="Escribe tu mensaje..."
+                    autocomplete="off"
+                >
+                <button class="chat-submit" id="sendButton" onclick="enviarMensaje()">
+                    <i class="fas fa-paper-plane"></i>
+                    <span>Enviar</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Utilidades
+        const utils = {
+            getCSRFToken() {
+                return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            },
+
+            scrollToBottom() {
+                const chatMessages = document.getElementById('chatMessages');
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            },
+
+            formatCurrency(amount) {
+                return new Intl.NumberFormat('es-AR', {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }).format(amount);
+            },
+
+            createPropertyCard(propertyInfo) {
+                return `
+                    <div class="property-card">
+                        <div class="property-header">
+                            <h3 class="property-title">${propertyInfo.location}</h3>
+                            <span class="property-price">${this.formatCurrency(propertyInfo.price)}</span>
+                        </div>
+                        <div class="property-details">
+                            <div class="property-detail-item">
+                                <span class="property-detail-icon">
+                                    <i class="fas fa-ruler-combined"></i>
+                                </span>
+                                <span class="property-detail-text">
+                                    <strong>Área:</strong> ${propertyInfo.area} m²
+                                </span>
+                            </div>
+                            <div class="property-detail-item">
+                                <span class="property-detail-icon">
+                                    <i class="fas fa-building"></i>
+                                </span>
+                                <span class="property-detail-text">
+                                    <strong>Tipo:</strong> ${propertyInfo.type}
+                                </span>
+                            </div>
+                            <div class="property-detail-item">
+                                <span class="property-detail-icon">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </span>
+                                <span class="property-detail-text">
+                                    <strong>Ubicación:</strong> ${propertyInfo.location}
+                                </span>
+                            </div>
+                        </div>
+                        <p class="property-description">
+                            ${propertyInfo.description}
+                        </p>
+                        <div class="property-features">
+                            ${propertyInfo.features.map(feature => `
+                                <span class="property-feature">
+                                    <i class="fas fa-check"></i>
+                                    ${feature}
+                                </span>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            },
+
+            extractPropertyInfo(text) {
+                // Expresiones regulares mejoradas para extraer información
+                const priceMatch = text.match(/USD\s*([\d,.]+)/i);
+                const areaMatch = text.match(/(\d+)\s*m²/i);
+                const locationMatch = text.match(/(?:en|ubicado en)\s+([^,.]+)(?:[,.]|$)/i);
+                const typeMatch = text.match(/\b(casa|apartamento|departamento|local|oficina)\b/i);
+                
+                // Extraer características (cualquier punto después de un guion o asterisco)
+                const features = text
+                    .split(/[\n.]/)
+                    .map(line => line.trim())
+                    .filter(line => line.startsWith('-') || line.startsWith('*'))
+                    .map(feature => feature.replace(/^[-*]\s*/, ''));
+
+                return {
+                    price: priceMatch ? parseFloat(priceMatch[1].replace(/[,.]/g, '')) : 0,
+                    area: areaMatch ? parseFloat(areaMatch[1]) : 0,
+                    location: locationMatch ? locationMatch[1].trim() : 'Ubicación no especificada',
+                    type: typeMatch ? typeMatch[1].charAt(0).toUpperCase() + typeMatch[1].slice(1) : 'Propiedad',
+                    description: text.split('\n')[0], // Primera línea como descripción principal
+                    features: features.length > 0 ? features : ['Propiedad disponible']
+                };
+            },
+
+            formatResponse(text) {
+                // Detectar si el texto contiene información de propiedades
+                if (text.includes('USD') || text.includes('m²')) {
+                    const propertyInfo = this.extractPropertyInfo(text);
+                    return this.createPropertyCard(propertyInfo);
+                }
+                
+                // Convertir URLs en enlaces clickeables
+                return text.replace(
+                    /(https?:\/\/[^\s]+)/g,
+                    '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+                );
+            },
+
+            delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        };
+
+        // Gestión de UI
+        const UI = {
+            showTypingIndicator() {
+                const chatMessages = document.getElementById('chatMessages');
+                const indicator = document.createElement('div');
+                indicator.className = 'typing-indicator';
+                indicator.id = 'typingIndicator';
+                indicator.innerHTML = `
+                    <span>Escribiendo</span>
+                    <div class="dots">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                `;
+                chatMessages.appendChild(indicator);
+                utils.scrollToBottom();
+                return indicator;
+            },
+
+            removeTypingIndicator() {
+                const indicator = document.getElementById('typingIndicator');
+                if (indicator) {
+                    indicator.remove();
+                }
+            },
+
+            disableInput(disable = true) {
+                const input = document.getElementById('mensajeInput');
+                const button = document.getElementById('sendButton');
+                input.disabled = disable;
+                button.disabled = disable;
+                if (!disable) {
+                    input.focus();
+                }
+            },
+
+            addMessage(sender, content, isUser = false) {
+                const chatMessages = document.getElementById('chatMessages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${isUser ? 'message-user' : 'message-bot'}`;
+                
+                const formattedContent = utils.formatResponse(content);
+                messageDiv.innerHTML = `
+                    <strong>${sender}:</strong> 
+                    <div class="message-content">${formattedContent}</div>
+                `;
+                
+                chatMessages.appendChild(messageDiv);
+                utils.scrollToBottom();
+            },
+
+            showError(message) {
+                const chatMessages = document.getElementById('chatMessages');
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.innerHTML = `
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>${message}</span>
+                `;
+                chatMessages.appendChild(errorDiv);
+                utils.scrollToBottom();
+            }
+        };
+
+        // Manejador principal de mensajes
+        async function enviarMensaje() {
+            const input = document.getElementById('mensajeInput');
+            const mensaje = input.value.trim();
+            
+            if (!mensaje) return;
+
+            try {
+                // Preparar UI
+                UI.disableInput(true);
+                UI.addMessage('Tú', mensaje, true);
+                input.value = '';
+                
+                // Mostrar indicador de escritura
+                UI.showTypingIndicator();
+
+                // Enviar mensaje al servidor
+                const response = await fetch('/api/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': utils.getCSRFToken()
+                    },
+                    body: JSON.stringify({ mensaje: mensaje })
+                });
+
+                // Remover indicador de escritura
+                UI.removeTypingIndicator();
+
+                if (!response.ok) {
+                    throw new Error(`Error del servidor: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Procesar respuesta
+                if (data.response) {
+                    UI.addMessage('Asistente', data.response);
+                } else if (data.mensaje) {
+                    UI.addMessage('Asistente', data.mensaje);
+                } else if (data.error) {
+                    UI.showError(data.error);
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                UI.showError('Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta nuevamente.');
+            } finally {
+                UI.disableInput(false);
+            }
+        }
+
+        // Event Listeners
+        document.getElementById('mensajeInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                enviarMensaje();
+            }
+        });
+
+        // Función para retry automático en caso de error
+        async function retryFetch(url, options, maxRetries = 3) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) {
+                        return response;
+                    }
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    await utils.delay(1000 * Math.pow(2, i)); // Exponential backoff
+                }
+            }
+            throw new Error('Máximo número de reintentos alcanzado');
+        }
+
+        // Mensaje de bienvenida
+        window.onload = function() {
+            UI.addMessage(
+                'Asistente', 
+                '¡Bienvenido! Soy tu asistente inmobiliario virtual. ¿En qué puedo ayudarte hoy?'
+            );
+        };
+
+        // Función para limpiar el historial de chat
+        function clearChat() {
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML = '';
+            UI.addMessage(
+                'Asistente', 
+                '¡Historial limpiado! ¿En qué puedo ayudarte?'
+            );
+        }
+
+        // Prevenir pérdida de mensajes accidental
+        window.onbeforeunload = function() {
+            const chatMessages = document.getElementById('chatMessages');
+            if (chatMessages.children.length > 1) {
+                return "¿Estás seguro de que quieres salir? Perderás el historial de la conversación.";
+            }
+        };
+    </script>
+</body>
+</html>
