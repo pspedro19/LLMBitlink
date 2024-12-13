@@ -43,3 +43,11 @@ docker-compose.override.yml.tmp
 
 # Ignorar ficheros de configuración específicos del usuario
 .env
+
+
+**/__pycache__
+*.pyc
+*.pyo
+*.pyd
+logs/
+real_estate_logs/

@@ -4,339 +4,595 @@ import pandas as pd
 import os
 import logging
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple, Optional, Set, Union
+from dataclasses import dataclass
+from abc import ABC, abstractmethod
 import openai
+import spacy
+from spacy.tokens import Doc
+from spacy.language import Language
+import pycountry
+import Levenshtein
+import unicodedata
+import re
+from collections import defaultdict
 
+@dataclass
+class EntityContext:
+    preceding: str
+    following: str
+    related_entities: List[Dict[str, str]]
 
-class RealEstateAnalyzer:
+@dataclass
+class NumberContext:
+    type: Optional[str]
+    unit: Optional[str]
+
+@dataclass
+class Entity:
+    text: str
+    start: int
+    end: int
+    context: Union[EntityContext, NumberContext]
+
+@dataclass
+class GeoEntity:
+    name: str
+    type: str
+    confidence: float
+    normalized_name: str
+    alternatives: List[str]
+    parent_entity: Optional['GeoEntity'] = None
+    metadata: Dict[str, Any] = None
+
+class EntityExtractorInterface(ABC):
+    @abstractmethod
+    def extract_entities(self, text: str) -> Dict[str, List[Entity]]:
+        pass
+
+class QueryBuilderInterface(ABC):
+    @abstractmethod
+    def build_query(self, entities: Dict[str, List[Entity]]) -> Tuple[str, List[Any]]:
+        pass
+
+class GeoEntityManager:
+    def __init__(self):
+        self.country_names: Dict[str, Set[str]] = defaultdict(set)
+        self.city_names: Dict[str, Set[str]] = defaultdict(set)
+        self.region_names: Dict[str, Set[str]] = defaultdict(set)
+        self._init_geo_data()
+
+    def _init_geo_data(self):
+        """Inicializa los datos geográficos desde pycountry"""
+        for country in pycountry.countries:
+            self._add_country_name(country.name, country.alpha_2)
+            if hasattr(country, 'common_name'):
+                self._add_country_name(country.common_name, country.alpha_2)
+            if hasattr(country, 'official_name'):
+                self._add_country_name(country.official_name, country.alpha_2)
+
+    def _normalize_text(self, text: str) -> str:
+        """Normaliza el texto para comparaciones"""
+        text = text.lower()
+        text = unicodedata.normalize('NFKD', text).encode('ASCII', 'ignore').decode('ASCII')
+        text = re.sub(r'[^a-z0-9\s]', '', text)
+        return text.strip()
+
+    def _add_country_name(self, name: str, country_code: str):
+        """Añade un nombre de país y sus variaciones al diccionario"""
+        normalized = self._normalize_text(name)
+        self.country_names[country_code].add(normalized)
+        # Añade variaciones comunes
+        variations = self._generate_name_variations(normalized)
+        self.country_names[country_code].update(variations)
+
+    @staticmethod
+    def _generate_name_variations(name: str) -> Set[str]:
+        """Genera variaciones de nombres para mejor coincidencia"""
+        variations = {name}
+        # Añade versiones sin espacios y con guiones
+        variations.add(name.replace(' ', ''))
+        variations.add(name.replace(' ', '-'))
+        return variations
+
+    def extract_geo_entities(self, text: str) -> List[Entity]:
+        """Extrae entidades geográficas del texto"""
+        entities = []
+        normalized_text = self._normalize_text(text)
+        
+        # Buscar coincidencias de países
+        for country_code, names in self.country_names.items():
+            for name in names:
+                if name in normalized_text:
+                    # Calcular la posición en el texto original
+                    start = text.lower().find(name)
+                    if start != -1:
+                        entities.append(Entity(
+                            text=name,
+                            start=start,
+                            end=start + len(name),
+                            context=EntityContext(
+                                preceding=text[max(0, start-20):start],
+                                following=text[start+len(name):min(len(text), start+len(name)+20)],
+                                related_entities=[]
+                            )
+                        ))
+        
+        return entities
     
-    def __init__(self, db_path: str, log_path: str = "logs"):
+class EnhancedEntityExtractor(EntityExtractorInterface):
+    def __init__(self, nlp_models: List[Language], geo_manager: GeoEntityManager):
+        self.nlp_models = nlp_models
+        self.geo_manager = geo_manager
+        self._init_entity_patterns()
+
+    # def _init_entity_patterns(self):
+    #     """Inicializa los patrones de entidades para el reconocimiento"""
+    #     patterns = {
+    #         "PROP_TYPE": [
+    #             "casa", "apartamento", "piso", "chalet", "villa", "estudio", 
+    #             "duplex", "ático", "local", "oficina", "departamento",
+    #             "casa de campo", "penthouse", "loft"
+    #         ],
+    #         "FEATURE": [
+    #             "dormitorios", "habitaciones", "baños", "metros cuadrados",
+    #             "m2", "garage", "jardín", "piscina", "terraza", "balcón",
+    #             "cochera", "estacionamiento", "ascensor", "seguridad"
+    #         ],
+    #         "PRICE_RANGE": [
+    #             "económico", "lujoso", "accesible", "premium", "gama alta",
+    #             "bajo presupuesto", "alto standing", "exclusivo"
+    #         ],
+    #         "CONDITION": [
+    #             "nuevo", "usado", "a estrenar", "reformado", "buen estado",
+    #             "para reformar", "recién construido", "en construcción"
+    #         ]
+    #     }
+        
+    #     # Agregar los patrones a cada modelo de spaCy
+    #     for nlp in self.nlp_models:
+    #         ruler = nlp.get_pipe("entity_ruler") if "entity_ruler" in nlp.pipe_names else nlp.add_pipe("entity_ruler")
+    #         for label, terms in patterns.items():
+    #             patterns = [{"label": label, "pattern": term} for term in terms]
+    #             ruler.add_patterns(patterns)
+
+    def _init_entity_patterns(self):
+        """Inicializa los patrones de entidades para el reconocimiento"""
+        patterns = {  # Cambiado de lista a diccionario
+            "PROP_TYPE": [
+                "casa", "apartamento", "piso", "chalet", "villa", "estudio", 
+                "duplex", "ático", "local", "oficina", "departamento",
+                "casa de campo", "penthouse", "loft"
+            ],
+            "FEATURE": [
+                "dormitorios", "habitaciones", "baños", "metros cuadrados",
+                "m2", "garage", "jardín", "piscina", "terraza", "balcón",
+                "cochera", "estacionamiento", "ascensor", "seguridad"
+            ],
+            "PRICE_RANGE": [
+                "económico", "lujoso", "accesible", "premium", "gama alta",
+                "bajo presupuesto", "alto standing", "exclusivo"
+            ],
+            "CONDITION": [
+                "nuevo", "usado", "a estrenar", "reformado", "buen estado",
+                "para reformar", "recién construido", "en construcción"
+            ]
+        }
+        
+        # Agregar los patrones a cada modelo de spaCy
+        for nlp in self.nlp_models:
+            ruler = nlp.get_pipe("entity_ruler") if "entity_ruler" in nlp.pipe_names else nlp.add_pipe("entity_ruler")
+            for label, terms in patterns.items():
+                ruler.add_patterns([{"label": label, "pattern": term} for term in terms])
+                
+    def extract_entities(self, text: str) -> Dict[str, List[Entity]]:
+        """Extrae todas las entidades del texto"""
+        entities = {
+            "LOC": [], "PRICE": [], "NUM": [], "PROP_TYPE": [],
+            "FEATURE": [], "CONDITION": [], "PRICE_RANGE": []
+        }
+
+        # Extraer entidades geográficas
+        geo_entities = self.geo_manager.extract_geo_entities(text)
+        entities["LOC"].extend(geo_entities)
+
+        # Procesar el texto con cada modelo de spaCy
+        for nlp in self.nlp_models:
+            doc = nlp(text.lower())
+            self._process_named_entities(doc, entities)
+            self._process_numbers(doc, entities)
+
+        return entities
+
+    def _process_named_entities(self, doc: Doc, entities: Dict[str, List[Entity]]):
+        """Procesa las entidades nombradas encontradas por spaCy"""
+        for ent in doc.ents:
+            if ent.label_ in entities:
+                context = self._get_entity_context(doc, ent)
+                entities[ent.label_].append(
+                    Entity(
+                        text=ent.text,
+                        start=ent.start_char,
+                        end=ent.end_char,
+                        context=context
+                    )
+                )
+
+    def _process_numbers(self, doc: Doc, entities: Dict[str, List[Entity]]):
+        """Procesa números y valores numéricos en el texto"""
+        for token in doc:
+            if token.like_num:
+                context = self._get_number_context(doc, token)
+                if context:
+                    entities["NUM"].append(
+                        Entity(
+                            text=token.text,
+                            start=token.idx,
+                            end=token.idx + len(token.text),
+                            context=context
+                        )
+                    )
+
+    def _get_entity_context(self, doc: Doc, ent: spacy.tokens.Span) -> EntityContext:
+        """Obtiene el contexto de una entidad"""
+        preceding = doc[max(0, ent.start-3):ent.start].text
+        following = doc[ent.end:min(len(doc), ent.end+3)].text
+        
+        # Buscar entidades relacionadas en el contexto cercano
+        related_entities = []
+        for other_ent in doc.ents:
+            if other_ent != ent and abs(other_ent.start - ent.end) < 5:
+                related_entities.append({
+                    "text": other_ent.text,
+                    "label": other_ent.label_,
+                    "distance": abs(other_ent.start - ent.end)
+                })
+
+        return EntityContext(
+            preceding=preceding,
+            following=following,
+            related_entities=related_entities
+        )
+
+    def _get_number_context(self, doc: Doc, token: spacy.tokens.Token) -> Optional[NumberContext]:
+        """Determina el contexto de un número"""
+        next_token = doc[token.i + 1] if token.i + 1 < len(doc) else None
+        prev_token = doc[token.i - 1] if token.i > 0 else None
+
+        # Reglas para detectar el tipo de número
+        context_rules = [
+            # Precio
+            (lambda: next_token and next_token.text in ["euros", "€", "usd", "$", "dólares"],
+             "price", lambda: next_token.text),
+            # Área
+            (lambda: next_token and next_token.text in ["m2", "metros", "metros cuadrados"],
+             "area", lambda: "m2"),
+            # Habitaciones
+            (lambda: (next_token and next_token.text in ["habitaciones", "dormitorios", "baños"]) or
+                    (prev_token and prev_token.text in ["habitación", "dormitorio", "baño"]),
+             "rooms", lambda: next_token.text if next_token else prev_token.text)
+        ]
+
+        # Aplicar reglas
+        for condition, type_, unit_func in context_rules:
+            if condition():
+                return NumberContext(type=type_, unit=unit_func())
+
+        return None
+
+class EnhancedQueryBuilder(QueryBuilderInterface):
+    BASE_QUERY = """
+        SELECT DISTINCT
+            cp.id,
+            cp.location,
+            cp.property_type,
+            cp.price,
+            cp.square_meters,
+            cp.num_bedrooms as avg_bedrooms,
+            cp.num_rooms as avg_rooms,
+            cp.description,
+            cp.image,
+            cp.url,
+            ROUND(cp.price/cp.square_meters, 2) as price_per_m2,
+            cc.name as country_name,
+            cd.name as province_name,
+            cct.name as city_name,
+            cp.project_category,
+            cp.project_type,
+            cp.residence_type
+        FROM chat_property cp
+        LEFT JOIN chat_country cc ON cp.country_id = cc.id
+        LEFT JOIN chat_province cd ON cp.province_id = cd.id
+        LEFT JOIN chat_city cct ON cp.city_id = cct.id
+        WHERE 1=1
+    """
+
+    def build_query(self, entities: Dict[str, List[Entity]]) -> Tuple[str, List[Any]]:
+        """Construye la consulta SQL basada en las entidades extraídas"""
+        conditions = []
+        params = []
+        
+        self._add_location_conditions(entities.get("LOC", []), conditions, params)
+        self._add_price_conditions(entities.get("PRICE", []), conditions, params)
+        self._add_numeric_conditions(entities.get("NUM", []), conditions, params)
+        self._add_property_type_conditions(entities.get("PROP_TYPE", []), conditions, params)
+        self._add_feature_conditions(entities.get("FEATURE", []), conditions, params)
+        self._add_condition_conditions(entities.get("CONDITION", []), conditions, params)
+        
+        # Construir la consulta final
+        query = self.BASE_QUERY
+        if conditions:
+            query += " AND " + " AND ".join(conditions)
+        
+        # Agregar ordenamiento por relevancia
+        query += self._add_ordering(entities)
+        
+        return query, params
+
+    def _add_location_conditions(self, locations: List[Entity], conditions: List[str], params: List[Any]):
+        """Añade condiciones de ubicación"""
+        if locations:
+            location_conditions = []
+            for loc in locations:
+                location_conditions.extend([
+                    "LOWER(cp.location) LIKE LOWER(?)",
+                    "LOWER(cc.name) LIKE LOWER(?)",
+                    "LOWER(cd.name) LIKE LOWER(?)",
+                    "LOWER(cct.name) LIKE LOWER(?)"
+                ])
+                params.extend([f"%{loc.text}%"] * 4)
+            conditions.append(f"({' OR '.join(location_conditions)})")
+
+    def _add_price_conditions(self, prices: List[Entity], conditions: List[str], params: List[Any]):
+        """Añade condiciones de precio"""
+        for price in prices:
+            if isinstance(price.context, EntityContext):
+                amount = self._extract_number(price.text)
+                if not amount:
+                    continue
+
+                if "menos" in price.context.preceding or "máximo" in price.context.preceding:
+                    conditions.append("cp.price <= ?")
+                    params.append(amount)
+                elif "más" in price.context.preceding or "mínimo" in price.context.preceding:
+                    conditions.append("cp.price >= ?")
+                    params.append(amount)
+                else:
+                    # Rango de ±10% si no hay indicador específico
+                    conditions.append("cp.price BETWEEN ? AND ?")
+                    margin = amount * 0.1
+                    params.extend([amount - margin, amount + margin])
+
+    def _add_numeric_conditions(self, numbers: List[Entity], conditions: List[str], params: List[Any]):
+        """Añade condiciones basadas en números"""
+        for num in numbers:
+            if isinstance(num.context, NumberContext):
+                if num.context.type == "rooms":
+                    conditions.append("cp.num_bedrooms = ?")
+                    params.append(int(num.text))
+                elif num.context.type == "area":
+                    area = float(num.text)
+                    conditions.append("cp.square_meters BETWEEN ? AND ?")
+                    params.extend([area * 0.9, area * 1.1])  # ±10% de tolerancia
+
+    def _add_property_type_conditions(self, prop_types: List[Entity], conditions: List[str], params: List[Any]):
+        """Añade condiciones de tipo de propiedad"""
+        if prop_types:
+            type_conditions = []
+            for prop_type in prop_types:
+                type_conditions.append("LOWER(cp.property_type) LIKE LOWER(?)")
+                params.append(f"%{prop_type.text}%")
+            conditions.append(f"({' OR '.join(type_conditions)})")
+
+    def _add_feature_conditions(self, features: List[Entity], conditions: List[str], params: List[Any]):
+        """Añade condiciones de características"""
+        for feature in features:
+            conditions.append("""
+                (LOWER(cp.description) LIKE LOWER(?) 
+                OR LOWER(cp.project_category) LIKE LOWER(?)
+                OR LOWER(cp.residence_type) LIKE LOWER(?))
+            """)
+            feature_param = f"%{feature.text}%"
+            params.extend([feature_param] * 3)
+
+    def _add_condition_conditions(self, conditions_list: List[Entity], conditions: List[str], params: List[Any]):
+        """Añade condiciones de estado de la propiedad"""
+        for condition in conditions_list:
+            conditions.append("LOWER(cp.description) LIKE LOWER(?)")
+            params.append(f"%{condition.text}%")
+
+    def _add_ordering(self, entities: Dict[str, List[Entity]]) -> str:
+        """Determina el orden óptimo basado en las entidades"""
+        # Priorizar ordenamiento por precio si hay entidades de precio
+        if entities.get("PRICE") or any(num.context.type == "price" 
+                                      for num in entities.get("NUM", []) 
+                                      if isinstance(num.context, NumberContext)):
+            return " ORDER BY cp.price ASC"
+        
+        # Ordenar por precio por m² si hay menciones de área
+        if any(num.context.type == "area" 
+               for num in entities.get("NUM", []) 
+               if isinstance(num.context, NumberContext)):
+            return " ORDER BY price_per_m2 ASC"
+        
+        # Orden por relevancia como fallback
+        return " ORDER BY cp.price ASC"
+
+    @staticmethod
+    def _extract_number(text: str) -> Optional[float]:
+        """Extrae un número de un texto"""
+        text = text.replace("€", "").replace("$", "").replace(",", "").strip()
+        try:
+            return float(text)
+        except ValueError:
+            return None
+        
+class RealEstateAnalyzer:
+    def __init__(self, db_path: str, nlp_models: List[Language], log_path: str = "logs"):
+        # Configuración básica
+        self.db_path = db_path
         self._setup_logging(log_path)
-        self._validate_and_connect_db(db_path)
-        self.schema = self._get_schema()
-        self._init_query_mappings()
-
-
-    def _validate_and_connect_db(self, db_path: str):
-        if not os.path.exists(db_path):
-            self.logger.error(f"Base de datos no encontrada en: {db_path}")
-            raise FileNotFoundError(f"Base de datos no encontrada en: {db_path}")
+        self._validate_and_connect_db()
         
-        self.conn = sqlite3.connect(db_path)
-        self.logger.info(f"Conexión exitosa a la base de datos: {db_path}")
-        
-        cursor = self.conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='chat_property';")
-        
-        if not cursor.fetchone():
-            raise Exception("La tabla chat_property no existe en la base de datos")
-
+        # Inicializar componentes NER
+        try:
+            self.geo_manager = GeoEntityManager()
+            self.entity_extractor = EnhancedEntityExtractor(nlp_models, self.geo_manager)
+            self.query_builder = EnhancedQueryBuilder()
+            
+            # Cache para consultas frecuentes
+            self._query_cache = {}
+            
+            # Inicializar categorías y consultas
+            self._init_query_mappings()
+            
+        except Exception as e:
+            self.logger.error(f"Error inicializando componentes NER: {str(e)}")
+            raise
 
     def _setup_logging(self, log_path: str):
-        if not os.path.exists(log_path):
-            os.makedirs(log_path)
-        
+        """Configura el sistema de logs."""
+        os.makedirs(log_path, exist_ok=True)
         log_file = os.path.join(log_path, f'real_estate_{datetime.now().strftime("%Y%m%d")}.log')
+        
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s [%(levelname)s] %(message)s',
-            handlers=[logging.FileHandler(log_file), logging.StreamHandler()]
-        )
-        self.logger = logging.getLogger(__name__)
-
-
-    def _get_schema(self) -> str:
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT name FROM sqlite_master 
-            WHERE type='table' AND name NOT LIKE 'sqlite_%';
-        """)
-        schema_str = ""
-        for (table_name,) in cursor.fetchall():
-            cursor.execute(f"PRAGMA table_info({table_name})")
-            columns = cursor.fetchall()
-            schema_str += f"\nTabla: {table_name}\nColumnas:\n"
-            for col in columns:
-                schema_str += f"  - {col[1]} ({col[2]})\n"
-        return schema_str
-
-
-    # def _init_query_mappings(self):
-    #     self.categorias = {
-    #         "identificacion_localizacion": ["ubicacion", "localización", "ciudad", "zona"],
-    #         "analisis_precio": ["precio", "valor", "costo", "mercado"],
-    #         "detalles_propiedad": ["habitaciones", "características", "espacios"],
-    #         "clasificacion_categoria": ["categoría", "tipo", "proyecto"],
-    #         "cronologia": ["tiempo", "fecha", "histórico", "tendencias"]
-    #     }
-
-    #     self.consultas = {
-    #         "identificacion_localizacion": {
-    #             "info_basica": """
-    #                 SELECT id, location, property_type, ROUND(price, 2) as price
-    #                 FROM chat_property WHERE {condition}
-    #             """
-    #         },
-    #         "analisis_precio": {
-    #             "comparativa_precios": """
-    #                 SELECT location, property_type, 
-    #                 ROUND(AVG(price), 2) as precio_promedio
-    #                 FROM chat_property
-    #                 GROUP BY location, property_type
-    #             """
-    #         }
-    #     }
-
-    # def _init_query_mappings(self):
-    #     self.categorias = {
-    #         "identificacion_localizacion": [
-    #             "ubicacion", "localización", "ciudad", "zona", "país", "provincia",
-    #             "región", "barrio", "dirección", "geografía",
-    #             "donde", "cerca", "próximo", "alrededores", "sector", "vecindario",
-    #             "manzana", "calle", "avenida", "distrito", "código postal", "área",
-    #             "comuna", "municipio", "departamento", "estado", "territorio"
-    #         ],
-    #         "analisis_precio": [
-    #             "precio", "valor", "costo", "mercado", "tasación", "valoración",
-    #             "inversión", "presupuesto", "cotización", "metro cuadrado",
-    #             "dólares", "usd", "euros", "moneda", "financiación", "hipoteca",
-    #             "cuotas", "entrada", "inicial", "descuento", "oferta", "negociable",
-    #             "rebaja", "precio por metro", "rentabilidad", "roi", "retorno",
-    #             "ganancia", "apreciación", "valorización"
-    #         ],
-    #         "detalles_propiedad": [
-    #             "habitaciones", "características", "espacios", "dormitorios", 
-    #             "baños", "ambientes", "metros", "superficie", "amenities",
-    #             "comodidades",
-    #             "garage", "estacionamiento", "piscina", "jardín", "terraza",
-    #             "balcón", "patio", "sótano", "ático", "equipamiento", "amoblado",
-    #             "antigüedad", "año", "construcción", "materiales", "acabados",
-    #             "pisos", "techos", "ventanas", "orientación", "vista", "luz",
-    #             "natural", "seguridad", "vigilancia", "acceso"
-    #         ],
-    #         "clasificacion_categoria": [
-    #             "categoría", "tipo", "proyecto", "residencial", "comercial",
-    #             "clasificación", "nivel", "segmento", "calidad"
-    #         ],
-    #         "cronologia": [
-    #             "tiempo", "fecha", "histórico", "tendencias", "evolución",
-    #             "trayectoria", "período", "temporal", "estacional"
-    #         ],
-    #         "comparativo_mercado": [
-    #             "comparación", "benchmark", "competencia", "similar", "equivalente",
-    #             "mercado", "oferta", "demanda"
-    #         ],
-    #         "analisis_geografico": [
-    #             "distribución", "concentración", "densidad", "cluster", "zona",
-    #             "territorial", "geográfico", "regional"
-    #         ],
-    #     }
-
-    #     self.consultas = {
-    #         "identificacion_localizacion": {
-    #             "info_basica": """
-    #                 SELECT 
-    #                     cp.id, 
-    #                     cp.location, 
-    #                     cp.property_type, 
-    #                     cp.url, 
-    #                     cp.square_meters, 
-    #                     cp.description, 
-    #                     cp.image, 
-    #                     cp.num_bedrooms AS promedio_ambientes,
-    #                     cp.num_rooms AS promedio_dormitorios,
-    #                     ROUND(cp.price, 2) as price,
-    #                     cc.name as country_name,
-    #                     cd.name as province_name,
-    #                     cct.name as city_name
-    #                 FROM chat_property cp
-    #                 LEFT JOIN chat_country cc ON cp.country_id = cc.id
-    #                 LEFT JOIN chat_province cd ON cp.province_id = cd.id
-    #                 LEFT JOIN chat_city cct ON cp.city_id = cct.id
-    #                 WHERE {condition}
-    #             """,
-    #             "distribucion_geografica": """
-    #                 SELECT cc.name as country_name, 
-    #                     COUNT(*) as total_properties,
-    #                     ROUND(AVG(cp.price), 2) as avg_price
-    #                 FROM chat_property cp
-    #                 JOIN chat_country cc ON cp.country_id = cc.id
-    #                 GROUP BY cc.name
-    #                 ORDER BY total_properties DESC
-    #             """
-    #         },
-    #         "analisis_precio": {
-    #             "comparativa_precios": """
-    #                 SELECT cp.location, cp.property_type, 
-    #                     ROUND(AVG(cp.price), 2) as precio_promedio,
-    #                     ROUND(MIN(cp.price), 2) as precio_minimo,
-    #                     ROUND(MAX(cp.price), 2) as precio_maximo,
-    #                     ROUND(AVG(cp.price/cp.square_meters), 2) as precio_m2
-    #                 FROM chat_property cp
-    #                 GROUP BY cp.location, cp.property_type
-    #             """,
-    #             "analisis_por_pais": """
-    #                 SELECT cc.name as country_name,
-    #                     cp.property_type,
-    #                     ROUND(AVG(cp.price), 2) as precio_promedio,
-    #                     COUNT(*) as total_propiedades
-    #                 FROM chat_property cp
-    #                 JOIN chat_country cc ON cp.country_id = cc.id
-    #                 GROUP BY cc.name, cp.property_type
-    #                 ORDER BY cc.name, precio_promedio DESC
-    #             """
-    #         },
-    #         "detalles_propiedad": {
-    #             "estadisticas_tipos": """
-    #                 SELECT property_type,
-    #                     COUNT(*) as cantidad,
-    #                     ROUND(AVG(square_meters), 2) as promedio_m2,
-    #                     ROUND(AVG(num_bedrooms), 1) as promedio_dormitorios,
-    #                     ROUND(AVG(num_rooms), 1) as promedio_ambientes
-    #                 FROM chat_property
-    #                 GROUP BY property_type
-    #             """,
-    #             "distribucion_tamanos": """
-    #                 SELECT 
-    #                     CASE 
-    #                         WHEN square_meters <= 50 THEN 'Pequeño (<=50m2)'
-    #                         WHEN square_meters <= 100 THEN 'Mediano (51-100m2)'
-    #                         WHEN square_meters <= 200 THEN 'Grande (101-200m2)'
-    #                         ELSE 'Muy grande (>200m2)'
-    #                     END as categoria_tamano,
-    #                     COUNT(*) as cantidad,
-    #                     ROUND(AVG(price), 2) as precio_promedio
-    #                 FROM chat_property
-    #                 GROUP BY categoria_tamano
-    #             """
-    #         },
-    #         "clasificacion_categoria": {
-    #             "distribucion_categorias": """
-    #                 SELECT project_category,
-    #                     COUNT(*) as cantidad,
-    #                     ROUND(AVG(price), 2) as precio_promedio
-    #                 FROM chat_property
-    #                 GROUP BY project_category
-    #             """,
-    #             "tipos_residencia": """
-    #                 SELECT residence_type,
-    #                     COUNT(*) as cantidad,
-    #                     ROUND(AVG(square_meters), 2) as promedio_m2,
-    #                     ROUND(AVG(price), 2) as precio_promedio
-    #                 FROM chat_property
-    #                 GROUP BY residence_type
-    #             """
-    #         },
-    #         "cronologia": {
-    #             "tendencia_temporal": """
-    #                 SELECT strftime('%Y-%m', created_at) as mes,
-    #                     COUNT(*) as nuevas_propiedades,
-    #                     ROUND(AVG(price), 2) as precio_promedio
-    #                 FROM chat_property
-    #                 GROUP BY mes
-    #                 ORDER BY mes
-    #             """,
-    #             "evolucion_precios": """
-    #                 SELECT 
-    #                     strftime('%Y-%m', created_at) as mes,
-    #                     property_type,
-    #                     ROUND(AVG(price/square_meters), 2) as precio_m2_promedio
-    #                 FROM chat_property
-    #                 GROUP BY mes, property_type
-    #                 ORDER BY mes, property_type
-    #             """
-    #         },
-    #         "comparativo_mercado": {
-    #             "benchmark_precios": """
-    #                 SELECT cp.property_type,
-    #                     cc.name as country_name,
-    #                     ROUND(AVG(cp.price/cp.square_meters), 2) as precio_m2,
-    #                     COUNT(*) as muestra
-    #                 FROM chat_property cp
-    #                 JOIN chat_country cc ON cp.country_id = cc.id
-    #                 GROUP BY cp.property_type, cc.name
-    #                 HAVING muestra >= 5
-    #             """,
-    #             "analisis_competencia": """
-    #                 SELECT location,
-    #                     property_type,
-    #                     COUNT(*) as total_propiedades,
-    #                     ROUND(AVG(price), 2) as precio_promedio,
-    #                     ROUND(STDDEV(price), 2) as desviacion_precio
-    #                 FROM chat_property
-    #                 GROUP BY location, property_type
-    #                 HAVING total_propiedades >= 3
-    #             """
-    #         },
-    #         "analisis_geografico": {
-    #             "concentracion_por_pais": """
-    #                 SELECT cc.name as country_name,
-    #                     COUNT(*) as total_propiedades,
-    #                     COUNT(DISTINCT cp.property_type) as tipos_distintos,
-    #                     ROUND(AVG(cp.price), 2) as precio_promedio
-    #                 FROM chat_property cp
-    #                 JOIN chat_country cc ON cp.country_id = cc.id
-    #                 GROUP BY cc.name
-    #             """,
-    #             "densidad_tipos": """
-    #                 SELECT cc.name as country_name,
-    #                     cp.property_type,
-    #                     COUNT(*) as cantidad,
-    #                     ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (PARTITION BY cc.name), 2) as porcentaje
-    #                 FROM chat_property cp
-    #                 JOIN chat_country cc ON cp.country_id = cc.id
-    #                 GROUP BY cc.name, cp.property_type
-    #             """
-    #         }
-    #     }
-    
-    def _init_query_mappings(self):
-        self.categorias = {
-            "identificacion_localizacion": [
-                # Básicos
-                "ubicacion", "localización", "ciudad", "zona", "país", 
-                "provincia", "región", "barrio", "dirección",
-                # Especificadores
-                "donde", "cerca", "próximo", "alrededores", "sector",
-                # Términos administrativos
-                "distrito", "departamento", "estado", "capital", "central",
-                "municipalidad", "centro", "periferia", "suburbio"
-            ],
-
-            "analisis_precio": [
-                # Términos de precio
-                "precio", "valor", "costo", "tasación", "valoración",
-                "dólares", "usd", "euros", "cuanto", "cuesta",
-                # Análisis financiero
-                "metro cuadrado", "m2", "precio por metro", "inversión",
-                "economico", "barato", "costoso", "caro", "ganga",
-                # Rangos
-                "menor a", "mayor a", "entre", "máximo", "mínimo",
-                "desde", "hasta", "rango de precios"
-            ],
-
-            "detalles_propiedad": [
-                # Espacios principales
-                "habitaciones", "dormitorios", "baños", "ambientes",
-                "cuartos", "recamaras", "alcobas",
-                # Medidas
-                "metros", "m2", "superficie", "tamaño", "dimensiones",
-                "grande", "pequeño", "amplio",
-                # Características 
-                "nuevo", "usado", "moderno", "antiguo", "remodelado"
-            ],
-
-            "comparativo_mercado": [
-                # Comparaciones
-                "comparar", "similar", "parecido", "equivalente",
-                "versus", "mejor", "peor", "diferencia",
-                # Mercado
-                "oferta", "demanda", "disponible", "stock",
-                "tendencia", "promedio", "media"
+            handlers=[
+                logging.FileHandler(log_file),
+                logging.StreamHandler()
             ]
+        )
+        self.logger = logging.getLogger("RealEstateAnalyzer")
+
+    def _validate_and_connect_db(self):
+        """Valida y establece una conexión a la base de datos."""
+        if not os.path.exists(self.db_path):
+            raise FileNotFoundError(f"Base de datos no encontrada en: {self.db_path}")
+        
+        try:
+            self.conn = sqlite3.connect(self.db_path)
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='chat_property';")
+            
+            if not cursor.fetchone():
+                raise Exception("La tabla chat_property no existe en la base de datos")
+                
+            self.logger.info(f"Conectado a la base de datos en {self.db_path}")
+            
+        except sqlite3.Error as e:
+            self.logger.error(f"Error al conectar a la base de datos: {str(e)}")
+            raise
+
+    def process_user_query(self, query: str) -> Dict[str, Any]:
+        """
+        Procesa una consulta de usuario con análisis de entidades
+        """
+        try:
+            # Extraer entidades
+            entities = self.entity_extractor.extract_entities(query)
+            self.logger.info(f"Extracted entities: {entities}")
+            
+            # Construir y ejecutar consulta SQL
+            sql_query, params = self.query_builder.build_query(entities)
+            self.logger.debug(f"Generated SQL: {sql_query}")
+            self.logger.debug(f"Query parameters: {params}")
+            
+            # Ejecutar consulta y procesar resultados
+            df = pd.read_sql_query(sql_query, self.conn, params=params)
+            df = self._process_media_urls(df)
+            
+            # Análisis geográfico adicional
+            geo_analysis = self._analyze_geo_distribution(df)
+            
+            return {
+                "status": "success",
+                "entities": entities,
+                "results": df.to_dict('records'),
+                "geo_analysis": geo_analysis,
+                "query": query
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error processing query: {str(e)}", exc_info=True)
+            return {
+                "status": "error",
+                "error": str(e),
+                "query": query
+            }
+
+    def _process_media_urls(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Procesa y normaliza URLs de imágenes y enlaces"""
+        if 'image' in df.columns:
+            df['image'] = df['image'].apply(self._normalize_image_url)
+        
+        if 'url' in df.columns:
+            df['url'] = df['url'].apply(self._clean_url)
+        
+        return df
+
+    @staticmethod
+    def _normalize_image_url(image: Optional[str]) -> str:
+        """Normaliza las URLs de imágenes"""
+        if not image:
+            return '/media/default.jpg'
+        return f"/media/{image.replace('property_images/', '')}"
+
+    @staticmethod
+    def _clean_url(url: Optional[str]) -> str:
+        """Limpia y normaliza URLs"""
+        if not url:
+            return '#'
+        url = re.sub(r'\s*(class|target|rel)=[""][^""]*[""]', '', url)
+        return url.strip('" ')
+
+    def _analyze_geo_distribution(self, df: pd.DataFrame) -> Dict[str, Any]:
+        """Analiza la distribución geográfica de los resultados"""
+        geo_analysis = {
+            "locations": defaultdict(int),
+            "countries": defaultdict(int),
+            "provinces": defaultdict(int),
+            "cities": defaultdict(int),
+            "price_ranges": defaultdict(list),
+            "property_types": defaultdict(int)
         }
 
-        self.consultas = {
+        for _, row in df.iterrows():
+            # Análisis geográfico
+            if row.get('location'):
+                geo_analysis["locations"][row['location']] += 1
+            if row.get('country_name'):
+                geo_analysis["countries"][row['country_name']] += 1
+            if row.get('province_name'):
+                geo_analysis["provinces"][row['province_name']] += 1
+            if row.get('city_name'):
+                geo_analysis["cities"][row['city_name']] += 1
+
+            # Análisis de precios por ubicación
+            if row.get('price') and row.get('location'):
+                geo_analysis["price_ranges"][row['location']].append(row['price'])
+
+            # Análisis de tipos de propiedad
+            if row.get('property_type'):
+                geo_analysis["property_types"][row['property_type']] += 1
+
+        # Calcular estadísticas de precios
+        price_stats = {}
+        for location, prices in geo_analysis["price_ranges"].items():
+            price_stats[location] = {
+                "min": min(prices),
+                "max": max(prices),
+                "avg": sum(prices) / len(prices),
+                "count": len(prices)
+            }
+        geo_analysis["price_ranges"] = price_stats
+
+        return dict(geo_analysis)
+
+    def _init_query_mappings(self):
+        """Inicializa los mapeos de consultas"""
+        # Categorías de consultas
+        self.categorias = {
             "identificacion_localizacion": {
                 "info_basica": """
                     SELECT 
@@ -347,8 +603,8 @@ class RealEstateAnalyzer:
                         cp.square_meters,
                         cp.description,
                         cp.image,
-                        cp.num_bedrooms,
-                        cp.num_rooms,
+                        cp.num_bedrooms as avg_bedrooms,
+                        cp.num_rooms as avg_rooms,
                         ROUND(cp.price, 2) as price,
                         ROUND(cp.price/cp.square_meters, 2) as price_per_m2,
                         cc.name as country_name,
@@ -364,27 +620,7 @@ class RealEstateAnalyzer:
                     WHERE {condition}
                     ORDER BY cp.price/cp.square_meters ASC
                 """,
-
-                "analisis_ubicacion": """
-                    SELECT 
-                        cc.name as country_name,
-                        cd.name as province_name,
-                        cct.name as city_name,
-                        COUNT(*) as total_properties,
-                        ROUND(AVG(cp.price), 2) as avg_price,
-                        ROUND(AVG(cp.price/cp.square_meters), 2) as avg_price_per_m2,
-                        ROUND(MIN(cp.price), 2) as min_price,
-                        ROUND(MAX(cp.price), 2) as max_price
-                    FROM chat_property cp
-                    LEFT JOIN chat_country cc ON cp.country_id = cc.id
-                    LEFT JOIN chat_province cd ON cp.province_id = cd.id
-                    LEFT JOIN chat_city cct ON cp.city_id = cct.id
-                    GROUP BY cc.name, cd.name, cct.name
-                    HAVING total_properties > 0
-                    ORDER BY avg_price_per_m2 ASC
-                """
             },
-
             "analisis_precio": {
                 "comparativa_precios": """
                     SELECT 
@@ -396,8 +632,7 @@ class RealEstateAnalyzer:
                         ROUND(MIN(cp.price), 2) as min_price,
                         ROUND(MAX(cp.price), 2) as max_price,
                         ROUND(AVG(cp.price/cp.square_meters), 2) as avg_price_per_m2,
-                        ROUND(AVG(cp.square_meters), 2) as avg_size,
-                        ROUND(AVG(cp.num_bedrooms), 1) as avg_bedrooms
+                        ROUND(AVG(cp.square_meters), 2) as avg_size
                     FROM chat_property cp
                     LEFT JOIN chat_country cc ON cp.country_id = cc.id
                     LEFT JOIN chat_province cd ON cp.province_id = cd.id
@@ -406,9 +641,8 @@ class RealEstateAnalyzer:
                     ORDER BY avg_price_per_m2 ASC
                 """
             },
-
             "detalles_propiedad": {
-                "analisis_detallado": """
+                "estadisticas_tipos": """
                     SELECT 
                         cp.property_type,
                         cp.project_category,
@@ -429,123 +663,82 @@ class RealEstateAnalyzer:
                     HAVING total > 0
                     ORDER BY avg_price_per_m2 ASC
                 """
-            },
-
-            "comparativo_mercado": {
-                "analisis_mercado": """
-                    SELECT 
-                        cc.name as country_name,
-                        cp.property_type,
-                        COUNT(*) as total_properties,
-                        ROUND(AVG(cp.price), 2) as avg_price,
-                        ROUND(MIN(cp.price), 2) as min_price,
-                        ROUND(MAX(cp.price), 2) as max_price,
-                        ROUND(AVG(cp.square_meters), 2) as avg_size,
-                        ROUND(AVG(cp.price/cp.square_meters), 2) as avg_price_per_m2,
-                        ROUND(AVG(cp.num_bedrooms), 1) as avg_bedrooms
-                    FROM chat_property cp
-                    LEFT JOIN chat_country cc ON cp.country_id = cc.id
-                    GROUP BY cc.name, cp.property_type
-                    HAVING total_properties > 0
-                    ORDER BY avg_price_per_m2 ASC
-                """
             }
         }
     
-    def generar_respuesta(self, pregunta: str) -> str:
+    def generate_gpt_response(self, query: str, analysis_results: Dict[str, Any]) -> str:
+        """Genera una respuesta natural usando GPT basada en el análisis"""
         try:
-            categoria = self._identificar_categoria(pregunta)
-            datos = self._obtener_datos(pregunta, categoria)
-            return self._generar_respuesta_gpt(pregunta, datos, categoria)
-        except Exception as e:
-            self.logger.error(f"Error: {str(e)}")
-            return f"Error al procesar la pregunta: {str(e)}"
-
-
-    def _identificar_categoria(self, pregunta: str) -> str:
-        pregunta = pregunta.lower()
-        mejor_match = "general"
-        max_coincidencias = 0
-        
-        for categoria, palabras_clave in self.categorias.items():
-            coincidencias = sum(1 for palabra in palabras_clave if palabra in pregunta)
-            if coincidencias > max_coincidencias:
-                max_coincidencias = coincidencias
-                mejor_match = categoria
-        
-        return mejor_match
-
-
-    # def _obtener_datos(self, pregunta: str, categoria: str) -> Dict[str, Any]:
-    #     resultados = {}
-    #     if categoria in self.consultas:
-    #         for nombre_consulta, consulta in self.consultas[categoria].items():
-    #             try:
-    #                 if "{condition}" in consulta:
-    #                     consulta = consulta.replace("{condition}", "1=1")
-    #                 df = pd.read_sql_query(consulta, self.conn)
-    #                 resultados[nombre_consulta] = df.to_dict('records')
-    #             except Exception as e:
-    #                 resultados[nombre_consulta] = {"error": str(e)}
-    #     return resultados
-
-    def _obtener_datos(self, pregunta: str, categoria: str) -> Dict[str, Any]:
-        resultados = {}
-        if categoria in self.consultas:
-            for nombre_consulta, consulta in self.consultas[categoria].items():
-                try:
-                    if "{condition}" in consulta:
-                        consulta = consulta.replace("{condition}", "1=1")
-                    df = pd.read_sql_query(consulta, self.conn)
-                    
-                    # Procesar las URLs de las imágenes y los detalles
-                    for index, row in df.iterrows():
-                        # Construir URL completa para la imagen
-                        if 'image' in row:
-                            # Eliminar 'property_images/' si existe en el nombre del archivo
-                            image_name = row['image'].replace('property_images/', '')
-                            df.at[index, 'image'] = f"/media/{image_name}"
-                        
-                        # Procesar URL de detalles
-                        if 'url' in row:
-                            url = row['url']
-                            # Limpiar atributos HTML y comillas
-                            if 'class=' in url:
-                                url = url.split('class=')[0]
-                            if 'target=' in url:
-                                url = url.split('target=')[0]
-                            if 'rel=' in url:
-                                url = url.split('rel=')[0]
-                            url = url.replace('"', '').strip()
-                            df.at[index, 'url'] = url
-                    
-                    resultados[nombre_consulta] = df.to_dict('records')
-                except Exception as e:
-                    resultados[nombre_consulta] = {"error": str(e)}
-        return resultados
-
-    def _generar_respuesta_gpt(self, pregunta: str, datos: Dict[str, Any], categoria: str) -> str:
-        prompt = f"""
-        Pregunta: {pregunta}
-        Categoría: {categoria}
-        Datos disponibles: {json.dumps(datos, ensure_ascii=False)}
-        
-        Proporciona un análisis detallado basado en los datos disponibles.
-        """
-        
-        try:
+            prompt = self._build_gpt_prompt(query, analysis_results)
+            
             response = openai.ChatCompletion.create(
                 model="gpt-4",
                 messages=[
-                    {"role": "system", "content": "Eres un experto en análisis inmobiliario."},
+                    {
+                        "role": "system",
+                        "content": """Eres un experto en análisis inmobiliario. 
+                        Proporciona análisis detallados y relevantes basados en los datos proporcionados.
+                        Incluye información sobre ubicaciones, precios, características y tendencias cuando sea relevante."""
+                    },
                     {"role": "user", "content": prompt}
                 ]
             )
+            
             return response.choices[0].message["content"]
+            
         except Exception as e:
-            return f"Error al generar respuesta con GPT: {str(e)}"
+            self.logger.error(f"Error generating GPT response: {str(e)}")
+            return self._generate_fallback_response(analysis_results)
 
+    def _build_gpt_prompt(self, query: str, analysis_results: Dict[str, Any]) -> str:
+        """Construye un prompt detallado para GPT"""
+        entities = analysis_results.get("entities", {})
+        results = analysis_results.get("results", [])
+        geo_analysis = analysis_results.get("geo_analysis", {})
+        
+        prompt = f"""
+        Consulta del usuario: {query}
+        
+        Entidades detectadas:
+        - Ubicaciones: {[e.text for e in entities.get('LOC', [])]}
+        - Características: {[e.text for e in entities.get('FEATURE', [])]}
+        - Tipo de propiedad: {[e.text for e in entities.get('PROP_TYPE', [])]}
+        - Números/Precios: {[e.text for e in entities.get('NUM', [])]}
+        
+        Resultados encontrados: {len(results)} propiedades
+        
+        Distribución geográfica:
+        {json.dumps(geo_analysis, ensure_ascii=False, indent=2)}
+        
+        Por favor, proporciona un análisis detallado que incluya:
+        1. Resumen de los requisitos del usuario
+        2. Análisis de las propiedades encontradas
+        3. Información sobre precios y ubicaciones
+        4. Recomendaciones relevantes
+        """
+        
+        return prompt
 
-    def cerrar(self):
-        self.conn.close()
-        self.logger.info("Conexión cerrada correctamente")
+    def _generate_fallback_response(self, analysis_results: Dict[str, Any]) -> str:
+        """Genera una respuesta de fallback cuando GPT no está disponible"""
+        results = analysis_results.get("results", [])
+        if not results:
+            return "Lo siento, no encontré propiedades que coincidan con tus criterios."
+        
+        return f"""
+        He encontrado {len(results)} propiedades que podrían interesarte.
+        
+        Rango de precios: 
+        - Mínimo: {min(r['price'] for r in results if 'price' in r)}
+        - Máximo: {max(r['price'] for r in results if 'price' in r)}
+        
+        Ubicaciones principales: {', '.join(set(r['location'] for r in results if 'location' in r))}
+        """
+
+    def __del__(self):
+        """Limpieza al destruir el objeto"""
+        if hasattr(self, 'conn') and self.conn:
+            try:
+                self.conn.close()
+            except Exception as e:
+                self.logger.error(f"Error al cerrar la conexión de la base de datos: {str(e)}")

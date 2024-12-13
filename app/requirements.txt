@@ -1,18 +1,32 @@
+# Base requirements
 python-dotenv
 fastapi
 uvicorn
 openai==0.28
-python-dotenv
-psycopg2-binary
-torch
 pydantic
+pandas
+requests
+
+# Database
+psycopg2-binary
+
+# NLP and ML
+spacy==3.7.2
+pycountry
+python-Levenshtein==0.23.0
 transformers
 scikit-learn
-minio
+torch
 sentence_transformers
-pandas
-PyMuPDF
-requests
-peft
 langchain
-requests
+
+# Document processing
+PyMuPDF
+peft
+
+# Storage
+minio
+
+# Modelos de spaCy (se instalarán en el Dockerfile)
+es-core-news-md @ https://github.com/explosion/spacy-models/releases/download/es_core_news_md-3.7.0/es_core_news_md-3.7.0.tar.gz
+en-core-web-md @ https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.7.0/en_core_web_md-3.7.0.tar.gz
