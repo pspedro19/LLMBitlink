@@ -6,6 +6,8 @@ openai==0.28
 pydantic
 pandas
 requests
+aiosqlite
+aiohttp
 
 # Database
 psycopg2-binary

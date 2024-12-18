@@ -38,6 +38,7 @@ urlpatterns = [
     path('debug/media/', views.debug_media, name='debug_media'),  # Nueva línea
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
     path('test-media/<str:filename>', views.test_media, name='test_media'),
+    path('health/', views.health_check, name='health_check'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:

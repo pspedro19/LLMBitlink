@@ -378,3 +378,6 @@ def test_media(request, filename):
             return HttpResponse(f"File not found: {file_path}", status=404)
     except Exception as e:
         return HttpResponse(f"Error: {str(e)}", status=500)
+    
+def health_check(request):
+    return JsonResponse({"status": "healthy"})

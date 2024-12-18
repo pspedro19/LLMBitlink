@@ -20,10 +20,12 @@ services:
     volumes:
       - ..:/app # Ajusta el volumen para incluir 'app' y 'main.py' fuera de 'chat-interface'
       - ../chat-Interface/property_images:/app/images  # Montar el directorio de imágenes
+      - ./db.sqlite3:/app/chat-Interface/db.sqlite3
     ports:
       - "8800:8800"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DB_PATH=/app/chat-Interface/db.sqlite3
       - MEDIA_DIR=/app/images
 
   https-portal:
