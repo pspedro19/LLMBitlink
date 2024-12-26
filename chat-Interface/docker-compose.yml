@@ -7,6 +7,7 @@ services:
     volumes:
       - .:/app
       - ./property_images:/app/property_images:rw
+      - static_volume:/app/staticfiles:rw
     ports:
       - "8000:8000"
     environment:
@@ -35,20 +36,29 @@ services:
       - '80:80'
       - '443:443'
     environment:
-      DOMAINS: 'dnlproptech-chat.com -> https://web:8000, api.dnlproptech-chat.com -> http://fastapi:8800'
+      DOMAINS: 'dnlproptech-chat.com -> http://web:8000, api.dnlproptech-chat.com -> http://fastapi:8800'
       STAGE: 'production' # Cambiar a production cuando esté listo
       # Forzar HTTP upstream
       FORCE_HTTPS_UPSTREAM: 'false'
+      SSL_UPSTREAM: 'false'
       WEBSOCKET: 'true'
       KEEPALIVE_TIMEOUT: '60'
       CLIENT_MAX_BODY_SIZE: 10M
+      CUSTOM_NGINX_SERVER_CONFIG: |
+        location /static/ {
+          alias /var/www/vhosts/staticfiles/;
+          expires 30d;
+          access_log off;
+        }
     volumes:
       - https-portal-data:/var/lib/https-portal
       - /data/https-portal/vhosts:/var/www/vhosts
       - ./nginx-conf:/etc/nginx/conf.d
+      - static_volume:/var/www/vhosts/staticfiles:ro
     depends_on:
       - web
       - fastapi
 
 volumes:
   https-portal-data:
+  static_volume:

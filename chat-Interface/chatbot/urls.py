@@ -21,6 +21,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path, re_path
 from django.views.static import serve
+# from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 # from chat.views import save_vectorization
 
 urlpatterns = [
@@ -40,6 +41,8 @@ urlpatterns = [
     path('test-media/<str:filename>', views.test_media, name='test_media'),
     path('health/', views.health_check, name='health_check'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# urlpatterns += staticfiles_urlpatterns()
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
