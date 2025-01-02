@@ -1,15 +1,16 @@
-import openai
+import json
+import os
+from anthropic import Anthropic
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 import uvicorn
 from dotenv import load_dotenv
-import os
 import logging
 import spacy
-from fastapi.middleware.cors import CORSMiddleware
 from app.real_estate_analyzer import RealEstateAnalyzer
 
 # Configuración de logging
@@ -34,78 +35,49 @@ app.add_middleware(
 # Configuración de medios
 MEDIA_DIR = os.getenv('MEDIA_DIR', '/app/images')
 if not os.path.exists(MEDIA_DIR):
-    raise RuntimeError(f"El directorio de imágenes no existe en: {MEDIA_DIR}")
+    os.makedirs(MEDIA_DIR, exist_ok=True)
+    # raise RuntimeError(f"El directorio de imágenes no existe en: {MEDIA_DIR}")
 
 app.mount("/media", StaticFiles(directory=MEDIA_DIR), name="media")
 
-# Inicializar OpenAI
-openai.api_key = os.getenv("OPENAI_API_KEY")
-if not openai.api_key:
-    raise ValueError("OPENAI_API_KEY environment variable is not set")
+# Definir el modelo de Claude a usar
+CLAUDE_MODEL = "claude-3-sonnet-20240229"
 
-# Modelo Pydantic actualizado para mensajes
+# Validar ANTHROPIC_API_KEY
+api_key = os.getenv("ANTHROPIC_API_KEY")
+if not api_key:
+    raise ValueError("ANTHROPIC_API_KEY environment variable is not set")
+
+# Inicializar Anthropic
+anthropic_client = Anthropic(
+    api_key=api_key
+)
+
+# Modelo Pydantic para mensajes
 class ChatMessage(BaseModel):
     user_input: str
     response_format: Optional[str] = "html"
     context: Optional[Dict[str, Any]] = None
 
-# Funciones disponibles actualizadas para NER
-AVAILABLE_FUNCTIONS = {
-    "get_property_search": {
-        "name": "get_property_search",
-        "description": "Search for properties based on various criteria including location, price, and features",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "The user's search query"
-                },
-                "filters": {
-                    "type": "object",
-                    "properties": {
-                        "location": {"type": "string"},
-                        "price_range": {
-                            "type": "object",
-                            "properties": {
-                                "min": {"type": "number"},
-                                "max": {"type": "number"}
-                            }
-                        },
-                        "property_type": {"type": "string"},
-                        "features": {"type": "array", "items": {"type": "string"}}
-                    }
-                }
-            },
-            "required": ["query"]
-        }
-    }
-}
+# Funciones disponibles para análisis inmobiliario
+PROPERTY_ANALYSIS_SYSTEM_PROMPT = """
+You are a real estate assistant specialized in analyzing property data. Your task is to:
+1. Understand user queries about properties
+2. Extract relevant search criteria (location, price, features)
+3. Generate natural responses about properties
+4. Present property information in a clear, structured format
 
-# Inicializar RealEstateAnalyzer con modelos de spaCy
-# def initialize_analyzer():
-#     try:
-#         # Cargar modelos de spaCy
-#         nlp_models = [
-#             spacy.load("es_core_news_md"),
-#             spacy.load("en_core_web_md")
-#         ]
-        
-#         db_path = os.getenv("DB_PATH", "chat-Interface/db.sqlite3")
-#         if not os.path.exists(db_path):
-#             raise FileNotFoundError(f"Database not found at {db_path}")
-            
-#         return RealEstateAnalyzer(
-#             db_path=db_path,
-#             nlp_models=nlp_models
-#         )
-#     except Exception as e:
-#         logger.error(f"Failed to initialize analyzer: {str(e)}")
-#         return None
+When presenting properties:
+- Focus on key details: location, price, size, features
+- Highlight unique selling points
+- Include relevant market context
+- Make recommendations based on user preferences
+
+Respond in Spanish unless specifically requested otherwise.
+"""
 
 def initialize_analyzer():
     try:
-        # Cargar modelos de spaCy
         nlp_models = [
             spacy.load("es_core_news_md"),
             spacy.load("en_core_web_md")
@@ -115,7 +87,6 @@ def initialize_analyzer():
         if not os.path.exists(db_path):
             raise FileNotFoundError(f"Database not found at {db_path}")
             
-        # Crear el analizador con los modelos de spaCy
         analyzer = RealEstateAnalyzer(
             db_path=db_path,
             nlp_models=nlp_models,
@@ -131,43 +102,8 @@ def initialize_analyzer():
 
 analyzer = initialize_analyzer()
 
-def execute_function(analyzer: RealEstateAnalyzer, function_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Ejecuta la función solicitada por el LLM usando el NER para procesar la consulta
-    """
-    if not analyzer:
-        return {"error": "Database connection not available"}
-        
-    try:
-        if function_name == "get_property_search":
-            # Procesar la consulta usando NER
-            analysis_results = analyzer.process_user_query(parameters['query'])
-            
-            if analysis_results["status"] == "error":
-                return {"error": analysis_results["error"]}
-            
-            # Generar respuesta con GPT
-            gpt_response = analyzer.generate_gpt_response(
-                parameters['query'], 
-                analysis_results
-            )
-            
-            return {
-                "properties": analysis_results["results"],
-                "analysis": analysis_results,
-                "gpt_response": gpt_response
-            }
-        else:
-            raise ValueError(f"Unknown function: {function_name}")
-            
-    except Exception as e:
-        logger.error(f"Error executing function {function_name}: {str(e)}")
-        return {"error": f"Error executing function: {str(e)}"}
-
-def build_html_response(data: Dict[str, Any], gpt_response: str) -> str:
-    """
-    Construye la respuesta HTML combinando el análisis GPT y los resultados
-    """
+def build_html_response(data: Dict[str, Any], claude_response: str) -> str:
+    """Construye la respuesta HTML combinando el análisis de Claude y los resultados"""
     if "error" in data:
         return f"""
         <div class="message message-bot error-message">
@@ -177,11 +113,11 @@ def build_html_response(data: Dict[str, Any], gpt_response: str) -> str:
         </div>
         """
 
-    # Añadir respuesta GPT
+    # Añadir respuesta de Claude
     response_html = f"""
     <div class="message message-bot">
         <div class="message-content">
-            <p>{gpt_response}</p>
+            <p>{claude_response}</p>
         </div>
     </div>
     """
@@ -228,128 +164,74 @@ def build_html_response(data: Dict[str, Any], gpt_response: str) -> str:
     </div>
     """
 
-# def build_html_response(data: Dict[str, Any], question: str) -> str:
-#     if "error" in data:
-#         return f"""
-#         <div class="message message-bot">
-#             <div class="message-content">
-#                 <p>Lo siento, hubo un problema al obtener los datos: {data['error']}</p>
-#             </div>
-#         </div>
-#         """
-
-#     properties_html = ""
-#     for prop in data.get('properties', []):
-#         details_url = prop.get('url', '#')
-        
-#         properties_html += f"""
-#         <div class="property-card">
-#             <img src="{prop.get('image', 'default.bmp')}" alt="{prop.get('property_type', 'Propiedad')}" class="property-image">
-#             <div class="property-content">
-#                 <div class="property-price">{prop.get('price', 'Precio no disponible')} USD</div>
-#                 <div class="property-location">
-#                     <i class="fas fa-map-marker-alt"></i> {prop.get('location', '')}, {prop.get('city_name', '')}, {prop.get('province_name', '')}, {prop.get('country_name', '')}
-#                 </div>
-#                 <div class="property-features">
-#                     <span><i class="fas fa-bed"></i> {prop.get('promedio_dormitorios', 'N/A')} hab</span>
-#                     <span><i class="fas fa-bath"></i> {prop.get('promedio_ambientes', 'N/A')} baños</span>
-#                     <span><i class="fas fa-ruler-combined"></i> {prop.get('square_meters', 'N/A')} m²</span>
-#                 </div>
-#                 <p class="property-description">{prop.get('description', 'Sin descripción disponible')}</p>
-#                 <a href="{details_url}" class="property-cta" target="_blank" rel="noopener noreferrer">Ver Detalles</a>
-#             </div>
-#         </div>
-#         """
-
-#     # Si no hay propiedades, devolver mensaje formateado
-#     if not properties_html:
-#         return """
-#         <div class="message message-bot">
-#             <div class="message-content">
-#                 <p>Lo siento, no encontré propiedades que coincidan con tu búsqueda. ¿Te gustaría intentar con otros criterios?</p>
-#             </div>
-#         </div>
-#         """
-
-#     return f"""
-#     <div class="message message-bot">
-#         <div class="message-content">
-#             <p>Aquí te muestro las propiedades disponibles según tu búsqueda:</p>
-#         </div>
-#     </div>
-#     <div class="property-grid">
-#         {properties_html}
-#     </div>
-#     """
-
 @app.post("/chat/")
 async def chat_with_agent(chat_message: ChatMessage):
-    """
-    Endpoint principal para procesar consultas de usuarios usando NER
-    """
+    """Endpoint principal para procesar consultas de usuarios usando Claude"""
     try:
         if not analyzer:
             raise HTTPException(status_code=500, detail="Analyzer not initialized")
 
-        # Consultar a GPT para determinar la función a llamar
-        function_selection_response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {
-                    "role": "system", 
-                    "content": """You are a real estate assistant that helps users find and analyze properties. 
-                    Based on the user's message, extract the main search criteria and intent."""
-                },
-                {"role": "user", "content": chat_message.user_input}
-            ],
-            functions=list(AVAILABLE_FUNCTIONS.values()),
-            function_call="auto"
+        # Procesar la consulta con el analizador
+        analysis_results = analyzer.process_user_query(chat_message.user_input)
+        
+        if analysis_results["status"] == "error":
+            return HTMLResponse(content=build_html_response(
+                {"error": analysis_results["error"]}, 
+                "Lo siento, hubo un error al procesar tu consulta."
+            ))
+
+        # Construir el prompt para Claude
+        properties_context = json.dumps(analysis_results["results"], ensure_ascii=False)
+        prompt = f"""
+        Consulta del usuario: {chat_message.user_input}
+
+        Propiedades encontradas:
+        {properties_context}
+
+        Por favor, analiza estas propiedades y genera una respuesta natural que:
+        1. Resuma los principales hallazgos
+        2. Destaque las características más relevantes
+        3. Haga recomendaciones basadas en la consulta del usuario
+        4. Mencione rangos de precios y ubicaciones disponibles
+        """
+
+        # Obtener respuesta de Claude
+        # response = anthropic_client.messages.create(
+        #     model="claude-3-sonnet-20240229",
+        #     max_tokens=2000,
+        #     temperature=0.7,
+        #     system=PROPERTY_ANALYSIS_SYSTEM_PROMPT,
+        #     messages=[{
+        #         "role": "user",
+        #         "content": prompt
+        #     }]
+        # )
+        message = await anthropic_client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=2000,
+            temperature=0.7,
+            system="Eres un experto asistente inmobiliario que ayuda a usuarios a encontrar propiedades. Tus respuestas son claras, concisas y naturales.",
+            messages=[{
+                "role": "user",
+                "content": prompt
+            }]
         )
 
-        # Extraer información de la función a llamar
-        message = function_selection_response.choices[0].message
-        
-        if message.get("function_call"):
-            # Ejecutar la función seleccionada
-            function_name = message["function_call"]["name"]
-            function_params = eval(message["function_call"]["arguments"])
-            
-            # Añadir el contexto si existe
-            if chat_message.context:
-                function_params["context"] = chat_message.context
-            
-            data = execute_function(analyzer, function_name, function_params)
-            
-            # Construir respuesta HTML
-            response_content = build_html_response(
-                data, 
-                data.get("gpt_response", "")
-            )
+        # Construir y retornar respuesta HTML
+        html_response = build_html_response(
+            analysis_results,
+            message.content[0].text
+        )
 
-            # Retornar según formato solicitado
-            if chat_message.response_format == "html":
-                return HTMLResponse(content=response_content)
-            else:
-                return JSONResponse(content={
-                    "response": response_content,
-                    "analysis": data.get("analysis", {}),
-                    "status": "success"
-                })
-
+        if chat_message.response_format == "html":
+            return HTMLResponse(content=html_response)
         else:
-            # Si no se llamó a ninguna función, proporcionar respuesta por defecto
             return JSONResponse(content={
-                "response": """
-                    <div class="message message-bot">
-                        <div class="message-content">
-                            <p>Lo siento, no pude entender completamente tu consulta. 
-                            ¿Podrías proporcionar más detalles sobre lo que estás buscando?</p>
-                        </div>
-                    </div>
-                """,
+                "response": html_response,
+                "analysis": analysis_results,
                 "status": "success"
             })
-                
+
     except Exception as e:
         logger.error(f"Error in chat endpoint: {str(e)}", exc_info=True)
         error_response = {
@@ -367,3 +249,6 @@ async def chat_with_agent(chat_message: ChatMessage):
             status_code=500,
             content=error_response
         )
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8800)

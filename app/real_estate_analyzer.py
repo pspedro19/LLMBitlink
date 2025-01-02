@@ -7,7 +7,8 @@ from datetime import datetime
 from typing import List, Dict, Any, Tuple, Optional, Set, Union
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
-import openai
+import anthropic
+from anthropic import Anthropic
 import spacy
 from spacy.tokens import Doc
 from spacy.language import Language
@@ -15,21 +16,28 @@ import pycountry
 import Levenshtein
 import unicodedata
 import re
+from anthropic import Anthropic
 from collections import defaultdict
 
+# Definir el modelo de Claude a usar
+CLAUDE_MODEL = "claude-3-sonnet-20240229"
+    
 @dataclass
 class EntityContext:
+    """Contexto para entidades geográficas y de propiedades"""
     preceding: str
     following: str
     related_entities: List[Dict[str, str]]
 
 @dataclass
 class NumberContext:
+    """Contexto para valores numéricos (precios, áreas, etc.)"""
     type: Optional[str]
     unit: Optional[str]
 
 @dataclass
 class Entity:
+    """Entidad extraída del texto con su contexto"""
     text: str
     start: int
     end: int
@@ -37,6 +45,7 @@ class Entity:
 
 @dataclass
 class GeoEntity:
+    """Entidad geográfica con metadata y relaciones"""
     name: str
     type: str
     confidence: float
@@ -46,57 +55,124 @@ class GeoEntity:
     metadata: Dict[str, Any] = None
 
 class EntityExtractorInterface(ABC):
+    """Interfaz abstracta para extractores de entidades"""
     @abstractmethod
     def extract_entities(self, text: str) -> Dict[str, List[Entity]]:
         pass
 
 class QueryBuilderInterface(ABC):
+    """Interfaz abstracta para constructores de consultas"""
     @abstractmethod
     def build_query(self, entities: Dict[str, List[Entity]]) -> Tuple[str, List[Any]]:
         pass
 
 class GeoEntityManager:
+    """Gestiona las entidades geográficas y su normalización"""
+    
     def __init__(self):
         self.country_names: Dict[str, Set[str]] = defaultdict(set)
         self.city_names: Dict[str, Set[str]] = defaultdict(set)
         self.region_names: Dict[str, Set[str]] = defaultdict(set)
+        self.location_cache: Dict[str, List[GeoEntity]] = {}
         self._init_geo_data()
 
+    # def _init_geo_data(self):
+    #     """Inicializa los datos geográficos desde pycountry"""
+    #     for country in pycountry.countries:
+    #         self._add_country_name(country.name, country.alpha_2)
+    #         if hasattr(country, 'common_name'):
+    #             self._add_country_name(country.common_name, country.alpha_2)
+    #         if hasattr(country, 'official_name'):
+    #             self._add_country_name(country.official_name, country.alpha_2)
+
     def _init_geo_data(self):
-        """Inicializa los datos geográficos desde pycountry"""
+        """Inicializa los datos geográficos desde pycountry y la base de datos"""
+        # Inicializar países desde pycountry
+        self._init_countries()
+        # Inicializar ciudades y regiones desde la base de datos
+        self._init_cities_and_regions()
+
+    def _init_cities_and_regions(self):
+        """Inicializa datos de ciudades y regiones desde la base de datos"""
+        try:
+            conn = sqlite3.connect(os.getenv('DB_PATH'))
+            cursor = conn.cursor()
+
+            # Cargar provincias/regiones
+            cursor.execute("SELECT name, country_id FROM chat_province")
+            for name, country_id in cursor.fetchall():
+                self.region_names[country_id].add(self._normalize_text(name))
+
+            # Cargar ciudades
+            cursor.execute("SELECT name, province_id FROM chat_city")
+            for name, province_id in cursor.fetchall():
+                self.city_names[province_id].add(self._normalize_text(name))
+
+        except sqlite3.Error as e:
+            logging.error(f"Error cargando datos geográficos: {e}")
+        finally:
+            if conn:
+                conn.close()
+                
+    def _init_countries(self):
+        """Inicializa datos de países"""
         for country in pycountry.countries:
             self._add_country_name(country.name, country.alpha_2)
             if hasattr(country, 'common_name'):
                 self._add_country_name(country.common_name, country.alpha_2)
             if hasattr(country, 'official_name'):
                 self._add_country_name(country.official_name, country.alpha_2)
-
+                
     def _normalize_text(self, text: str) -> str:
-        """Normaliza el texto para comparaciones"""
+        """Normaliza el texto para comparaciones
+        
+        Args:
+            text: Texto a normalizar
+            
+        Returns:
+            Texto normalizado sin acentos, en minúsculas y sin caracteres especiales
+        """
         text = text.lower()
         text = unicodedata.normalize('NFKD', text).encode('ASCII', 'ignore').decode('ASCII')
         text = re.sub(r'[^a-z0-9\s]', '', text)
         return text.strip()
 
     def _add_country_name(self, name: str, country_code: str):
-        """Añade un nombre de país y sus variaciones al diccionario"""
+        """Añade un nombre de país y sus variaciones al diccionario
+        
+        Args:
+            name: Nombre del país
+            country_code: Código ISO del país
+        """
         normalized = self._normalize_text(name)
         self.country_names[country_code].add(normalized)
-        # Añade variaciones comunes
         variations = self._generate_name_variations(normalized)
         self.country_names[country_code].update(variations)
 
     @staticmethod
     def _generate_name_variations(name: str) -> Set[str]:
-        """Genera variaciones de nombres para mejor coincidencia"""
+        """Genera variaciones de nombres para mejor coincidencia
+        
+        Args:
+            name: Nombre base para generar variaciones
+            
+        Returns:
+            Conjunto de variaciones del nombre
+        """
         variations = {name}
-        # Añade versiones sin espacios y con guiones
         variations.add(name.replace(' ', ''))
         variations.add(name.replace(' ', '-'))
         return variations
 
     def extract_geo_entities(self, text: str) -> List[Entity]:
-        """Extrae entidades geográficas del texto"""
+        """Extrae entidades geográficas del texto
+        
+        Args:
+            text: Texto donde buscar entidades geográficas
+            
+        Returns:
+            Lista de entidades geográficas encontradas
+        """
         entities = []
         normalized_text = self._normalize_text(text)
         
@@ -104,7 +180,40 @@ class GeoEntityManager:
         for country_code, names in self.country_names.items():
             for name in names:
                 if name in normalized_text:
-                    # Calcular la posición en el texto original
+                    start = text.lower().find(name)
+                    if start != -1:
+                        entities.append(Entity(
+                            text=name,
+                            start=start,
+                            end=start + len(name),
+                            context=EntityContext(
+                                preceding=text[max(0, start-20):start],
+                                following=text[start+len(name):min(len(text), start+len(name)+20)],
+                                related_entities=[]
+                            )
+                        ))
+        
+        # Buscar coincidencias de ciudades
+        for country_code, names in self.city_names.items():
+            for name in names:
+                if name in normalized_text:
+                    start = text.lower().find(name)
+                    if start != -1:
+                        entities.append(Entity(
+                            text=name,
+                            start=start,
+                            end=start + len(name),
+                            context=EntityContext(
+                                preceding=text[max(0, start-20):start],
+                                following=text[start+len(name):min(len(text), start+len(name)+20)],
+                                related_entities=[]
+                            )
+                        ))
+                        
+        # Buscar coincidencias por regiones o provincias
+        for country_code, names in self.region_names.items():
+            for name in names:
+                if name in normalized_text:
                     start = text.lower().find(name)
                     if start != -1:
                         entities.append(Entity(
@@ -121,44 +230,16 @@ class GeoEntityManager:
         return entities
     
 class EnhancedEntityExtractor(EntityExtractorInterface):
+    """Implementación mejorada del extractor de entidades"""
+
     def __init__(self, nlp_models: List[Language], geo_manager: GeoEntityManager):
         self.nlp_models = nlp_models
         self.geo_manager = geo_manager
         self._init_entity_patterns()
 
-    # def _init_entity_patterns(self):
-    #     """Inicializa los patrones de entidades para el reconocimiento"""
-    #     patterns = {
-    #         "PROP_TYPE": [
-    #             "casa", "apartamento", "piso", "chalet", "villa", "estudio", 
-    #             "duplex", "ático", "local", "oficina", "departamento",
-    #             "casa de campo", "penthouse", "loft"
-    #         ],
-    #         "FEATURE": [
-    #             "dormitorios", "habitaciones", "baños", "metros cuadrados",
-    #             "m2", "garage", "jardín", "piscina", "terraza", "balcón",
-    #             "cochera", "estacionamiento", "ascensor", "seguridad"
-    #         ],
-    #         "PRICE_RANGE": [
-    #             "económico", "lujoso", "accesible", "premium", "gama alta",
-    #             "bajo presupuesto", "alto standing", "exclusivo"
-    #         ],
-    #         "CONDITION": [
-    #             "nuevo", "usado", "a estrenar", "reformado", "buen estado",
-    #             "para reformar", "recién construido", "en construcción"
-    #         ]
-    #     }
-        
-    #     # Agregar los patrones a cada modelo de spaCy
-    #     for nlp in self.nlp_models:
-    #         ruler = nlp.get_pipe("entity_ruler") if "entity_ruler" in nlp.pipe_names else nlp.add_pipe("entity_ruler")
-    #         for label, terms in patterns.items():
-    #             patterns = [{"label": label, "pattern": term} for term in terms]
-    #             ruler.add_patterns(patterns)
-
     def _init_entity_patterns(self):
         """Inicializa los patrones de entidades para el reconocimiento"""
-        patterns = {  # Cambiado de lista a diccionario
+        patterns = {
             "PROP_TYPE": [
                 "casa", "apartamento", "piso", "chalet", "villa", "estudio", 
                 "duplex", "ático", "local", "oficina", "departamento",
@@ -176,6 +257,14 @@ class EnhancedEntityExtractor(EntityExtractorInterface):
             "CONDITION": [
                 "nuevo", "usado", "a estrenar", "reformado", "buen estado",
                 "para reformar", "recién construido", "en construcción"
+            ],
+            "AMENITIES": [
+                "aire acondicionado", "calefacción", "amueblado", "cocina equipada",
+                "vestidor", "trastero", "bodega", "gimnasio", "seguridad 24h"
+            ],
+            "LOCATION_TYPE": [
+                "céntrico", "urbano", "suburbano", "rural", "playa", "montaña",
+                "residencial", "comercial", "industrial"
             ]
         }
         
@@ -184,12 +273,20 @@ class EnhancedEntityExtractor(EntityExtractorInterface):
             ruler = nlp.get_pipe("entity_ruler") if "entity_ruler" in nlp.pipe_names else nlp.add_pipe("entity_ruler")
             for label, terms in patterns.items():
                 ruler.add_patterns([{"label": label, "pattern": term} for term in terms])
-                
+
     def extract_entities(self, text: str) -> Dict[str, List[Entity]]:
-        """Extrae todas las entidades del texto"""
+        """Extrae todas las entidades del texto
+        
+        Args:
+            text: Texto para analizar
+            
+        Returns:
+            Diccionario con las entidades encontradas agrupadas por tipo
+        """
         entities = {
             "LOC": [], "PRICE": [], "NUM": [], "PROP_TYPE": [],
-            "FEATURE": [], "CONDITION": [], "PRICE_RANGE": []
+            "FEATURE": [], "CONDITION": [], "PRICE_RANGE": [],
+            "AMENITIES": [], "LOCATION_TYPE": []
         }
 
         # Extraer entidades geográficas
@@ -238,7 +335,6 @@ class EnhancedEntityExtractor(EntityExtractorInterface):
         preceding = doc[max(0, ent.start-3):ent.start].text
         following = doc[ent.end:min(len(doc), ent.end+3)].text
         
-        # Buscar entidades relacionadas en el contexto cercano
         related_entities = []
         for other_ent in doc.ents:
             if other_ent != ent and abs(other_ent.start - ent.end) < 5:
@@ -259,7 +355,6 @@ class EnhancedEntityExtractor(EntityExtractorInterface):
         next_token = doc[token.i + 1] if token.i + 1 < len(doc) else None
         prev_token = doc[token.i - 1] if token.i > 0 else None
 
-        # Reglas para detectar el tipo de número
         context_rules = [
             # Precio
             (lambda: next_token and next_token.text in ["euros", "€", "usd", "$", "dólares"],
@@ -273,14 +368,16 @@ class EnhancedEntityExtractor(EntityExtractorInterface):
              "rooms", lambda: next_token.text if next_token else prev_token.text)
         ]
 
-        # Aplicar reglas
         for condition, type_, unit_func in context_rules:
             if condition():
                 return NumberContext(type=type_, unit=unit_func())
 
         return None
 
+
 class EnhancedQueryBuilder(QueryBuilderInterface):
+    """Constructor mejorado de consultas SQL basadas en entidades"""
+
     BASE_QUERY = """
         SELECT DISTINCT
             cp.id,
@@ -308,7 +405,14 @@ class EnhancedQueryBuilder(QueryBuilderInterface):
     """
 
     def build_query(self, entities: Dict[str, List[Entity]]) -> Tuple[str, List[Any]]:
-        """Construye la consulta SQL basada en las entidades extraídas"""
+        """Construye la consulta SQL basada en las entidades extraídas
+        
+        Args:
+            entities: Diccionario de entidades extraídas por tipo
+            
+        Returns:
+            Tupla con la consulta SQL y sus parámetros
+        """
         conditions = []
         params = []
         
@@ -318,6 +422,8 @@ class EnhancedQueryBuilder(QueryBuilderInterface):
         self._add_property_type_conditions(entities.get("PROP_TYPE", []), conditions, params)
         self._add_feature_conditions(entities.get("FEATURE", []), conditions, params)
         self._add_condition_conditions(entities.get("CONDITION", []), conditions, params)
+        self._add_amenities_conditions(entities.get("AMENITIES", []), conditions, params)
+        self._add_location_type_conditions(entities.get("LOCATION_TYPE", []), conditions, params)
         
         # Construir la consulta final
         query = self.BASE_QUERY
@@ -401,21 +507,30 @@ class EnhancedQueryBuilder(QueryBuilderInterface):
             conditions.append("LOWER(cp.description) LIKE LOWER(?)")
             params.append(f"%{condition.text}%")
 
+    def _add_amenities_conditions(self, amenities: List[Entity], conditions: List[str], params: List[Any]):
+        """Añade condiciones de amenidades"""
+        for amenity in amenities:
+            conditions.append("LOWER(cp.description) LIKE LOWER(?)")
+            params.append(f"%{amenity.text}%")
+
+    def _add_location_type_conditions(self, location_types: List[Entity], conditions: List[str], params: List[Any]):
+        """Añade condiciones de tipo de ubicación"""
+        for loc_type in location_types:
+            conditions.append("LOWER(cp.description) LIKE LOWER(?)")
+            params.append(f"%{loc_type.text}%")
+
     def _add_ordering(self, entities: Dict[str, List[Entity]]) -> str:
         """Determina el orden óptimo basado en las entidades"""
-        # Priorizar ordenamiento por precio si hay entidades de precio
         if entities.get("PRICE") or any(num.context.type == "price" 
                                       for num in entities.get("NUM", []) 
                                       if isinstance(num.context, NumberContext)):
             return " ORDER BY cp.price ASC"
         
-        # Ordenar por precio por m² si hay menciones de área
         if any(num.context.type == "area" 
                for num in entities.get("NUM", []) 
                if isinstance(num.context, NumberContext)):
             return " ORDER BY price_per_m2 ASC"
         
-        # Orden por relevancia como fallback
         return " ORDER BY cp.price ASC"
 
     @staticmethod
@@ -426,16 +541,26 @@ class EnhancedQueryBuilder(QueryBuilderInterface):
             return float(text)
         except ValueError:
             return None
-        
+
 class RealEstateAnalyzer:
+    """Analizador principal de propiedades inmobiliarias con integración de Claude"""
+
     def __init__(self, db_path: str, nlp_models: List[Language], log_path: str = "logs"):
+        """Inicializa el analizador
+        
+        Args:
+            db_path: Ruta a la base de datos SQLite
+            nlp_models: Lista de modelos spaCy cargados
+            log_path: Directorio para los logs
+        """
         # Configuración básica
         self.db_path = db_path
         self._setup_logging(log_path)
         self._validate_and_connect_db()
         
-        # Inicializar componentes NER
+        # Inicializar componentes NER y Claude
         try:
+            self.anthropic = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
             self.geo_manager = GeoEntityManager()
             self.entity_extractor = EnhancedEntityExtractor(nlp_models, self.geo_manager)
             self.query_builder = EnhancedQueryBuilder()
@@ -443,15 +568,12 @@ class RealEstateAnalyzer:
             # Cache para consultas frecuentes
             self._query_cache = {}
             
-            # Inicializar categorías y consultas
-            self._init_query_mappings()
-            
         except Exception as e:
-            self.logger.error(f"Error inicializando componentes NER: {str(e)}")
+            self.logger.error(f"Error inicializando componentes: {str(e)}")
             raise
 
     def _setup_logging(self, log_path: str):
-        """Configura el sistema de logs."""
+        """Configura el sistema de logs"""
         os.makedirs(log_path, exist_ok=True)
         log_file = os.path.join(log_path, f'real_estate_{datetime.now().strftime("%Y%m%d")}.log')
         
@@ -466,12 +588,13 @@ class RealEstateAnalyzer:
         self.logger = logging.getLogger("RealEstateAnalyzer")
 
     def _validate_and_connect_db(self):
-        """Valida y establece una conexión a la base de datos."""
+        """Valida y establece la conexión a la base de datos"""
         if not os.path.exists(self.db_path):
             raise FileNotFoundError(f"Base de datos no encontrada en: {self.db_path}")
         
         try:
-            self.conn = sqlite3.connect(self.db_path)
+            self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+            self.conn.execute("PRAGMA foreign_keys = ON")
             cursor = self.conn.cursor()
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='chat_property';")
             
@@ -485,31 +608,39 @@ class RealEstateAnalyzer:
             raise
 
     def process_user_query(self, query: str) -> Dict[str, Any]:
-        """
-        Procesa una consulta de usuario con análisis de entidades
+        """Procesa una consulta de usuario
+        
+        Args:
+            query: Consulta del usuario
+            
+        Returns:
+            Diccionario con los resultados del análisis
         """
         try:
-            # Extraer entidades
+            # Extraer entidades y construir consulta SQL
             entities = self.entity_extractor.extract_entities(query)
-            self.logger.info(f"Extracted entities: {entities}")
-            
-            # Construir y ejecutar consulta SQL
             sql_query, params = self.query_builder.build_query(entities)
-            self.logger.debug(f"Generated SQL: {sql_query}")
-            self.logger.debug(f"Query parameters: {params}")
             
-            # Ejecutar consulta y procesar resultados
+            # Ejecutar consulta
             df = pd.read_sql_query(sql_query, self.conn, params=params)
             df = self._process_media_urls(df)
             
-            # Análisis geográfico adicional
+            # Análisis geográfico
             geo_analysis = self._analyze_geo_distribution(df)
+            
+            # Generar respuesta con Claude
+            claude_response = self._generate_claude_response(query, {
+                "results": df.to_dict('records'),
+                "geo_analysis": geo_analysis,
+                "entities": entities
+            })
             
             return {
                 "status": "success",
                 "entities": entities,
                 "results": df.to_dict('records'),
                 "geo_analysis": geo_analysis,
+                "claude_response": claude_response,
                 "query": query
             }
             
@@ -572,11 +703,11 @@ class RealEstateAnalyzer:
             if row.get('price') and row.get('location'):
                 geo_analysis["price_ranges"][row['location']].append(row['price'])
 
-            # Análisis de tipos de propiedad
-            if row.get('property_type'):
-                geo_analysis["property_types"][row['property_type']] += 1
+                # Análisis de tipos de propiedad
+                if row.get('property_type'):
+                    geo_analysis["property_types"][row['property_type']] += 1
 
-        # Calcular estadísticas de precios
+        # Calcular estadísticas de precios por ubicación
         price_stats = {}
         for location, prices in geo_analysis["price_ranges"].items():
             price_stats[location] = {
@@ -589,156 +720,275 @@ class RealEstateAnalyzer:
 
         return dict(geo_analysis)
 
-    def _init_query_mappings(self):
-        """Inicializa los mapeos de consultas"""
-        # Categorías de consultas
-        self.categorias = {
-            "identificacion_localizacion": {
-                "info_basica": """
-                    SELECT 
-                        cp.id,
-                        cp.location,
-                        cp.property_type,
-                        cp.url,
-                        cp.square_meters,
-                        cp.description,
-                        cp.image,
-                        cp.num_bedrooms as avg_bedrooms,
-                        cp.num_rooms as avg_rooms,
-                        ROUND(cp.price, 2) as price,
-                        ROUND(cp.price/cp.square_meters, 2) as price_per_m2,
-                        cc.name as country_name,
-                        cd.name as province_name,
-                        cct.name as city_name,
-                        cp.project_category,
-                        cp.project_type,
-                        cp.residence_type
-                    FROM chat_property cp
-                    LEFT JOIN chat_country cc ON cp.country_id = cc.id
-                    LEFT JOIN chat_province cd ON cp.province_id = cd.id
-                    LEFT JOIN chat_city cct ON cp.city_id = cct.id
-                    WHERE {condition}
-                    ORDER BY cp.price/cp.square_meters ASC
-                """,
-            },
-            "analisis_precio": {
-                "comparativa_precios": """
-                    SELECT 
-                        cp.property_type,
-                        cc.name as country_name,
-                        cd.name as province_name,
-                        COUNT(*) as total_properties,
-                        ROUND(AVG(cp.price), 2) as avg_price,
-                        ROUND(MIN(cp.price), 2) as min_price,
-                        ROUND(MAX(cp.price), 2) as max_price,
-                        ROUND(AVG(cp.price/cp.square_meters), 2) as avg_price_per_m2,
-                        ROUND(AVG(cp.square_meters), 2) as avg_size
-                    FROM chat_property cp
-                    LEFT JOIN chat_country cc ON cp.country_id = cc.id
-                    LEFT JOIN chat_province cd ON cp.province_id = cd.id
-                    GROUP BY cp.property_type, cc.name, cd.name
-                    HAVING total_properties > 0
-                    ORDER BY avg_price_per_m2 ASC
-                """
-            },
-            "detalles_propiedad": {
-                "estadisticas_tipos": """
-                    SELECT 
-                        cp.property_type,
-                        cp.project_category,
-                        cp.project_type,
-                        cp.residence_type,
-                        COUNT(*) as total,
-                        ROUND(AVG(cp.square_meters), 2) as avg_size,
-                        ROUND(AVG(cp.num_bedrooms), 1) as avg_bedrooms,
-                        ROUND(AVG(cp.num_rooms), 1) as avg_rooms,
-                        ROUND(AVG(cp.price), 2) as avg_price,
-                        ROUND(AVG(cp.price/cp.square_meters), 2) as avg_price_per_m2
-                    FROM chat_property cp
-                    GROUP BY 
-                        cp.property_type,
-                        cp.project_category,
-                        cp.project_type,
-                        cp.residence_type
-                    HAVING total > 0
-                    ORDER BY avg_price_per_m2 ASC
-                """
-            }
-        }
-    
-    def generate_gpt_response(self, query: str, analysis_results: Dict[str, Any]) -> str:
-        """Genera una respuesta natural usando GPT basada en el análisis"""
-        try:
-            prompt = self._build_gpt_prompt(query, analysis_results)
+    def _generate_claude_response(self, query: str, context: Dict[str, Any]) -> str:
+        """Genera una respuesta usando Claude
+        
+        Args:
+            query: Consulta del usuario
+            context: Contexto con resultados y análisis
             
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": """Eres un experto en análisis inmobiliario. 
-                        Proporciona análisis detallados y relevantes basados en los datos proporcionados.
-                        Incluye información sobre ubicaciones, precios, características y tendencias cuando sea relevante."""
-                    },
-                    {"role": "user", "content": prompt}
-                ]
+        Returns:
+            Respuesta generada por Claude
+        """
+        try:
+            system_prompt = """
+            Eres un experto asistente inmobiliario que ayuda a usuarios a encontrar propiedades.
+            Tus respuestas deben:
+            1. Ser claras y concisas
+            2. Destacar los aspectos más relevantes de las propiedades
+            3. Incluir detalles sobre ubicación, precio y características
+            4. Hacer recomendaciones personalizadas
+            5. Responder en español de manera natural y profesional
+            
+            Asegúrate de:
+            - Mencionar rangos de precios cuando sea relevante
+            - Destacar características únicas
+            - Sugerir alternativas si es apropiado
+            - Ser honesto sobre limitaciones o falta de opciones
+            """
+
+            # Preparar contexto para Claude
+            properties = context.get("results", [])
+            geo_analysis = context.get("geo_analysis", {})
+            entities = context.get("entities", {})
+
+            user_prompt = f"""
+            Consulta del usuario: {query}
+
+            Propiedades encontradas: {len(properties)}
+            
+            Detalles de las propiedades:
+            {json.dumps(properties, ensure_ascii=False, indent=2)}
+            
+            Análisis geográfico:
+            {json.dumps(geo_analysis, ensure_ascii=False, indent=2)}
+            
+            Criterios identificados:
+            - Ubicaciones: {[e.text for e in entities.get('LOC', [])]}
+            - Tipos de propiedad: {[e.text for e in entities.get('PROP_TYPE', [])]}
+            - Características: {[e.text for e in entities.get('FEATURE', [])]}
+            - Rangos de precio: {[e.text for e in entities.get('PRICE_RANGE', [])]}
+            
+            Por favor, genera una respuesta natural y útil que responda a la consulta del usuario.
+            """
+
+            # response = self.anthropic.messages.create(
+            #     model="claude-3-sonnet-20240229",
+            #     max_tokens=2000,
+            #     temperature=0.7,
+            #     system=system_prompt,
+            #     messages=[{
+            #         "role": "user",
+            #         "content": user_prompt
+            #     }]
+            # )
+            response = self.anthropic.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=2000,
+                temperature=0.7,
+                system=system_prompt,
+                messages=[{
+                    "role": "user",
+                    "content": user_prompt
+                }]
             )
             
-            return response.choices[0].message["content"]
-            
+            if not response or not response.content:
+                raise ValueError("Respuesta vacía de Claude")
+
+            return response.content[0].text
+        except (anthropic.APIError, anthropic.APIConnectionError) as e:
+            self.logger.error(f"Error de API de Claude: {str(e)}")
+            return self._generate_fallback_response(context)
         except Exception as e:
-            self.logger.error(f"Error generating GPT response: {str(e)}")
-            return self._generate_fallback_response(analysis_results)
+            self.logger.error(f"Error inesperado generando respuesta: {str(e)}")
+            return self._generate_fallback_response(context)
 
-    def _build_gpt_prompt(self, query: str, analysis_results: Dict[str, Any]) -> str:
-        """Construye un prompt detallado para GPT"""
-        entities = analysis_results.get("entities", {})
-        results = analysis_results.get("results", [])
-        geo_analysis = analysis_results.get("geo_analysis", {})
+    def _generate_fallback_response(self, context: Dict[str, Any]) -> str:
+        """Genera una respuesta de respaldo cuando Claude no está disponible
         
-        prompt = f"""
-        Consulta del usuario: {query}
-        
-        Entidades detectadas:
-        - Ubicaciones: {[e.text for e in entities.get('LOC', [])]}
-        - Características: {[e.text for e in entities.get('FEATURE', [])]}
-        - Tipo de propiedad: {[e.text for e in entities.get('PROP_TYPE', [])]}
-        - Números/Precios: {[e.text for e in entities.get('NUM', [])]}
-        
-        Resultados encontrados: {len(results)} propiedades
-        
-        Distribución geográfica:
-        {json.dumps(geo_analysis, ensure_ascii=False, indent=2)}
-        
-        Por favor, proporciona un análisis detallado que incluya:
-        1. Resumen de los requisitos del usuario
-        2. Análisis de las propiedades encontradas
-        3. Información sobre precios y ubicaciones
-        4. Recomendaciones relevantes
+        Args:
+            context: Contexto con resultados y análisis
+            
+        Returns:
+            Respuesta generada como fallback
         """
-        
-        return prompt
-
-    def _generate_fallback_response(self, analysis_results: Dict[str, Any]) -> str:
-        """Genera una respuesta de fallback cuando GPT no está disponible"""
-        results = analysis_results.get("results", [])
-        if not results:
+        properties = context.get("results", [])
+        if not properties:
             return "Lo siento, no encontré propiedades que coincidan con tus criterios."
-        
-        return f"""
-        He encontrado {len(results)} propiedades que podrían interesarte.
-        
-        Rango de precios: 
-        - Mínimo: {min(r['price'] for r in results if 'price' in r)}
-        - Máximo: {max(r['price'] for r in results if 'price' in r)}
-        
-        Ubicaciones principales: {', '.join(set(r['location'] for r in results if 'location' in r))}
-        """
+
+        # Construir respuesta básica
+        response = f"He encontrado {len(properties)} propiedades que podrían interesarte.\n\n"
+
+        # Agregar rango de precios
+        prices = [p['price'] for p in properties if 'price' in p]
+        if prices:
+            response += f"Rango de precios: USD {min(prices):,.2f} - {max(prices):,.2f}\n"
+
+        # Agregar ubicaciones
+        locations = set(p['location'] for p in properties if 'location' in p)
+        if locations:
+            response += f"Ubicaciones: {', '.join(locations)}\n"
+
+        # Agregar tipos de propiedades
+        prop_types = set(p['property_type'] for p in properties if 'property_type' in p)
+        if prop_types:
+            response += f"Tipos de propiedades disponibles: {', '.join(prop_types)}"
+
+        return response
 
     def __del__(self):
         """Limpieza al destruir el objeto"""
         if hasattr(self, 'conn') and self.conn:
             try:
                 self.conn.close()
+                self.logger.info("Conexión a la base de datos cerrada correctamente")
             except Exception as e:
                 self.logger.error(f"Error al cerrar la conexión de la base de datos: {str(e)}")
+                
+def format_currency(amount: float, currency: str = "USD") -> str:
+    """Formatea valores monetarios
+    
+    Args:
+        amount: Cantidad a formatear
+        currency: Código de moneda
+        
+    Returns:
+        Cadena formateada con el valor monetario
+    """
+    return f"{currency} {amount:,.2f}"
+
+def calculate_price_per_sqm(price: float, area: float) -> float:
+    """Calcula el precio por metro cuadrado
+    
+    Args:
+        price: Precio total
+        area: Área en metros cuadrados
+        
+    Returns:
+        Precio por metro cuadrado
+    """
+    if area <= 0:
+        raise ValueError("El área debe ser mayor que 0")
+    return price / area
+
+def normalize_location_name(name: str) -> str:
+    """Normaliza nombres de ubicaciones
+    
+    Args:
+        name: Nombre de ubicación a normalizar
+        
+    Returns:
+        Nombre normalizado
+    """
+    name = name.lower().strip()
+    name = unicodedata.normalize('NFKD', name).encode('ASCII', 'ignore').decode('ASCII')
+    name = re.sub(r'[^a-z0-9\s]', '', name)
+    return name.strip()
+
+def get_similar_locations(target: str, locations: List[str], threshold: float = 0.85) -> List[str]:
+    """Encuentra ubicaciones similares usando distancia de Levenshtein
+    
+    Args:
+        target: Ubicación objetivo
+        locations: Lista de ubicaciones para comparar
+        threshold: Umbral de similitud (0-1)
+        
+    Returns:
+        Lista de ubicaciones similares
+    """
+    normalized_target = normalize_location_name(target)
+    similar = []
+    
+    for loc in locations:
+        normalized_loc = normalize_location_name(loc)
+        similarity = Levenshtein.ratio(normalized_target, normalized_loc)
+        if similarity >= threshold:
+            similar.append(loc)
+            
+    return similar
+
+def parse_area_string(area_str: str) -> Optional[float]:
+    """Parsea strings de área a valores numéricos
+    
+    Args:
+        area_str: String con el área (ej: "100 m²", "100m2")
+        
+    Returns:
+        Valor numérico del área o None si no se puede parsear
+    """
+    match = re.search(r'(\d+(?:\.\d+)?)\s*(?:m²|m2)', area_str)
+    if match:
+        try:
+            return float(match.group(1))
+        except ValueError:
+            return None
+    return None
+
+def validate_property_data(data: Dict[str, Any]) -> List[str]:
+    """Valida datos de una propiedad
+    
+    Args:
+        data: Diccionario con datos de la propiedad
+        
+    Returns:
+        Lista de errores encontrados
+    """
+    errors = []
+    
+    # Campos requeridos
+    required_fields = ['location', 'price', 'square_meters', 'property_type']
+    for field in required_fields:
+        if field not in data or data[field] is None:
+            errors.append(f"Campo requerido faltante: {field}")
+    
+    # Validaciones de tipo y rango
+    if 'price' in data and data['price'] is not None:
+        if not isinstance(data['price'], (int, float)) or data['price'] <= 0:
+            errors.append("El precio debe ser un número positivo")
+            
+    if 'square_meters' in data and data['square_meters'] is not None:
+        if not isinstance(data['square_meters'], (int, float)) or data['square_meters'] <= 0:
+            errors.append("El área debe ser un número positivo")
+    
+    return errors
+
+class PropertyDataFormatter:
+    """Clase utilitaria para formatear datos de propiedades"""
+    
+    @staticmethod
+    def format_description(desc: str, max_length: int = 200) -> str:
+        """Formatea y trunca descripciones largas"""
+        if not desc:
+            return "Sin descripción disponible"
+        
+        desc = desc.strip()
+        if len(desc) <= max_length:
+            return desc
+            
+        return desc[:max_length].rsplit(' ', 1)[0] + "..."
+    
+    @staticmethod
+    def format_features(features: List[str]) -> str:
+        """Formatea lista de características"""
+        if not features:
+            return "Sin características especificadas"
+            
+        return ", ".join(features)
+    
+    @staticmethod
+    def format_location_hierarchy(
+        city: Optional[str], 
+        province: Optional[str], 
+        country: Optional[str]
+    ) -> str:
+        """Formatea jerarquía de ubicación"""
+        parts = []
+        if city:
+            parts.append(city)
+        if province:
+            parts.append(province)
+        if country:
+            parts.append(country)
+            
+        return ", ".join(parts) if parts else "Ubicación no especificada"
