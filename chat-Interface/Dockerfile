@@ -1,22 +1,28 @@
-# Utiliza una imagen oficial de Python como imagen base
 FROM python:3.9
 
-# Establece el directorio de trabajo en el contenedor
 WORKDIR /app
 
-# Después de WORKDIR /app
-RUN mkdir -p property_images
-RUN ls -la property_images/
+# Crear directorios necesarios
+RUN mkdir -p /app/staticfiles
+RUN mkdir -p /app/static/admin/css
+RUN mkdir -p /app/static/admin/js
+RUN mkdir -p /app/static/admin/img
 
-# Copia el archivo de requisitos y lo instala
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+# Instalar dependencias
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+RUN pip install django --upgrade
 
-# Copia el resto del proyecto en el contenedor
+# Copiar el proyecto
 COPY . .
 
-# Expone el puerto que Django usará
+# Establecer permisos
+RUN chmod -R 755 /app/staticfiles
+RUN chmod -R 755 /app/static
+
+# Recolectar archivos estáticos con verbose
+RUN python manage.py collectstatic --noinput --clear -v 2
+
 EXPOSE 8000
 
-# Ejecuta el servidor Django cuando el contenedor inicie
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["gunicorn", "chatbot.wsgi:application", "--bind", "0.0.0.0:8000"]

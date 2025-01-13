@@ -11,12 +11,17 @@ FILE_UPLOAD_PERMISSIONS = 0o644
 
 # Static root setting
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "chat-Interface/static"),
+    os.path.join(BASE_DIR, "static"),
 ]
 STATIC_URL = '/static/'
 # STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # STATIC_ROOT = os.path.join(BASE_DIR, 'chat-Interface/static')
+
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+]
 
 # Important settings for serving through proxy
 USE_X_FORWARDED_HOST = True
@@ -37,14 +42,13 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
-    'chat',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.humanize',
+    'chat',
     'import_export',
 ]
 
