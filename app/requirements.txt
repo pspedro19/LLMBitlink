@@ -1,16 +1,28 @@
+# Base requirements
+python-dotenv
 fastapi
 uvicorn
 openai==0.28
-python-dotenv
-psycopg2-binary
-torch
 pydantic
+pandas
+requests
+aiosqlite
+aiohttp
+
+# Database
+psycopg2-binary
+
+# NLP and ML
+spacy==3.7.2
+pycountry
+python-Levenshtein==0.23.0
 transformers
 scikit-learn
-minio
+torch
 sentence_transformers
-pandas
+langchain
+
+# Document processing
 PyMuPDF
-requests
 peft
 reportlab

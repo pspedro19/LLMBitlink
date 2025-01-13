@@ -1,91 +1,109 @@
 import openai
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from typing import Optional, Dict, Any, List
 import uvicorn
 from dotenv import load_dotenv
 import os
-import requests
 import logging
-from fastapi import Request
-import io
-import logging
+import spacy
 from fastapi.middleware.cors import CORSMiddleware
+from app.real_estate_analyzer import RealEstateAnalyzer
+
+# Configuración de logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+# Cargar variables de entorno
+load_dotenv()
+
+# Inicializar FastAPI
 app = FastAPI()
+
+# Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Cambia "*" por los dominios específicos si prefieres
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+# Configuración de medios
+MEDIA_DIR = os.getenv('MEDIA_DIR', '/app/images')
+if not os.path.exists(MEDIA_DIR):
+    raise RuntimeError(f"El directorio de imágenes no existe en: {MEDIA_DIR}")
 
-# Load environment variables
-load_dotenv()
+app.mount("/media", StaticFiles(directory=MEDIA_DIR), name="media")
 
-app = FastAPI()
-
-# Initialize OpenAI API
-# Initialize OpenAI API
+# Inicializar OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
-
 if not openai.api_key:
     raise ValueError("OPENAI_API_KEY environment variable is not set")
 
-engine = 'gpt-3.5-turbo'
-
+# Modelo Pydantic actualizado para mensajes
 class ChatMessage(BaseModel):
     user_input: str
+    response_format: Optional[str] = "html"
+    context: Optional[Dict[str, Any]] = None
 
-# Prompt template (unchanged)
-prompt_template = """
-# Rol
-Eres un experto en ventas inmobiliarias llamado Max. Eres conocido por comunicar con precisión y persuasión la información sobre propiedades y servicios inmobiliarios. Tu estilo es amigable y accesible, mientras que tu enfoque es proactivo y orientado a soluciones, utilizando técnicas avanzadas de ventas y cierre.
+# Funciones disponibles actualizadas para NER
+AVAILABLE_FUNCTIONS = {
+    "get_property_search": {
+        "name": "get_property_search",
+        "description": "Search for properties based on various criteria including location, price, and features",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The user's search query"
+                },
+                "filters": {
+                    "type": "object",
+                    "properties": {
+                        "location": {"type": "string"},
+                        "price_range": {
+                            "type": "object",
+                            "properties": {
+                                "min": {"type": "number"},
+                                "max": {"type": "number"}
+                            }
+                        },
+                        "property_type": {"type": "string"},
+                        "features": {"type": "array", "items": {"type": "string"}}
+                    }
+                }
+            },
+            "required": ["query"]
+        }
+    }
+}
 
-# Objetivo
-Proporcionar servicios de consultoría y asistencia de ventas de alto nivel a clientes y colegas. Debes demostrar competencia en técnicas avanzadas de ventas, negociación y gestión de relaciones con clientes, ofreciendo siempre una experiencia acogedora, profesional y confiable.
+# Inicializar RealEstateAnalyzer con modelos de spaCy
+# def initialize_analyzer():
+#     try:
+#         # Cargar modelos de spaCy
+#         nlp_models = [
+#             spacy.load("es_core_news_md"),
+#             spacy.load("en_core_web_md")
+#         ]
+        
+#         db_path = os.getenv("DB_PATH", "chat-Interface/db.sqlite3")
+#         if not os.path.exists(db_path):
+#             raise FileNotFoundError(f"Database not found at {db_path}")
+            
+#         return RealEstateAnalyzer(
+#             db_path=db_path,
+#             nlp_models=nlp_models
+#         )
+#     except Exception as e:
+#         logger.error(f"Failed to initialize analyzer: {str(e)}")
+#         return None
 
-# Características de personalidad
-* Amigable y accesible: Interactúa de forma cálida, creando una experiencia agradable.
-* Profesional y confiable: Ofrece información precisa y actualizada.
-* Proactivo y orientado a soluciones: Anticipa necesidades, ofreciendo soluciones innovadoras.
-* Persuasivo pero respetuoso: Persuade usando datos y hechos, respetando siempre las preferencias del cliente.
-
-# Contexto:
-Conversaciones:
-{conversations}
-
-Chunks:
-{chunks}
-
-Propiedades:
-{properties}
-
-# Pregunta:
-{question}
-
-Proporciona una respuesta clara y concisa basada en la información de contexto.
-"""
-
-# Función para construir el prompt
-def build_prompt(data, question):
-    # Ahora solo usamos 'input' y 'output' de las conversaciones, ya que 'user' ha sido eliminado
-    conversations = "\n".join([f"Input: {conv['input']} -> Output: {conv['output']}" for conv in data['conversations']])
-    chunks = "\n".join([f"Document {chunk['document_id']}: {chunk['content'][:50]}" for chunk in data['chunks']])
-    properties = "\n".join([f"{prop['property_type']} en {prop['location']} - {prop['price']} USD" for prop in data['properties']])
-
-    return prompt_template.format(
-        conversations=conversations,
-        chunks=chunks,
-        properties=properties,
-        question=question
-    )
-
-# Obtener datos de Django API
-def fetch_data_from_django():
+def initialize_analyzer():
     try:
         django_url = "http://18.231.111.216:8800/get_all_data/"  # URL de la API de Django
         response = requests.get(django_url)
@@ -106,39 +124,249 @@ def get_completion_from_openai(prompt):
             messages=[{"role": "user", "content": prompt}],
             temperature=0.5
         )
-        return response.choices[0].message["content"]
-    except openai.error.OpenAIError as e:
-        logger.error(f"Error en la API de OpenAI: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error in OpenAI API call")
+        
+        logger.info("Analyzer initialized successfully")
+        return analyzer
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize analyzer: {str(e)}", exc_info=True)
+        return None
 
-# Ruta /chat/ que utiliza RAG con la información de Django y OpenAI
+analyzer = initialize_analyzer()
+
+def execute_function(analyzer: RealEstateAnalyzer, function_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Ejecuta la función solicitada por el LLM usando el NER para procesar la consulta
+    """
+    if not analyzer:
+        return {"error": "Database connection not available"}
+        
+    try:
+        if function_name == "get_property_search":
+            # Procesar la consulta usando NER
+            analysis_results = analyzer.process_user_query(parameters['query'])
+            
+            if analysis_results["status"] == "error":
+                return {"error": analysis_results["error"]}
+            
+            # Generar respuesta con GPT
+            gpt_response = analyzer.generate_gpt_response(
+                parameters['query'], 
+                analysis_results
+            )
+            
+            return {
+                "properties": analysis_results["results"],
+                "analysis": analysis_results,
+                "gpt_response": gpt_response
+            }
+        else:
+            raise ValueError(f"Unknown function: {function_name}")
+            
+    except Exception as e:
+        logger.error(f"Error executing function {function_name}: {str(e)}")
+        return {"error": f"Error executing function: {str(e)}"}
+
+def build_html_response(data: Dict[str, Any], gpt_response: str) -> str:
+    """
+    Construye la respuesta HTML combinando el análisis GPT y los resultados
+    """
+    if "error" in data:
+        return f"""
+        <div class="message message-bot error-message">
+            <div class="message-content">
+                <p>Lo siento, hubo un problema: {data['error']}</p>
+            </div>
+        </div>
+        """
+
+    # Añadir respuesta GPT
+    response_html = f"""
+    <div class="message message-bot">
+        <div class="message-content">
+            <p>{gpt_response}</p>
+        </div>
+    </div>
+    """
+
+    # Construir grid de propiedades
+    properties_html = ""
+    for prop in data.get('properties', []):
+        properties_html += f"""
+        <div class="property-card">
+            <img src="{prop.get('image', '/media/default.jpg')}" 
+                 alt="{prop.get('property_type', 'Propiedad')}" 
+                 class="property-image">
+            <div class="property-content">
+                <div class="property-price">
+                    {prop.get('price', 'Precio no disponible')} USD
+                </div>
+                <div class="property-location">
+                    <i class="fas fa-map-marker-alt"></i> 
+                    {prop.get('location', '')}, {prop.get('city_name', '')}, 
+                    {prop.get('province_name', '')}, {prop.get('country_name', '')}
+                </div>
+                <div class="property-features">
+                    <span><i class="fas fa-bed"></i> {prop.get('avg_rooms', 'N/A')} hab</span>
+                    <span><i class="fas fa-bath"></i> {prop.get('avg_bedrooms', 'N/A')} baños</span>
+                    <span><i class="fas fa-ruler-combined"></i> {prop.get('square_meters', 'N/A')} m²</span>
+                </div>
+                <p class="property-description">{prop.get('description', 'Sin descripción disponible')}</p>
+                <a href="{prop.get('url', '#')}" class="property-cta" 
+                   target="_blank" rel="noopener noreferrer">Ver Detalles</a>
+            </div>
+        </div>
+        """
+
+    return f"""
+    {response_html}
+    <div class="property-grid">
+        {properties_html if properties_html else '''
+        <div class="message message-bot">
+            <div class="message-content">
+                <p>No se encontraron propiedades que coincidan con los criterios especificados.</p>
+            </div>
+        </div>
+        '''}
+    </div>
+    """
+
+# def build_html_response(data: Dict[str, Any], question: str) -> str:
+#     if "error" in data:
+#         return f"""
+#         <div class="message message-bot">
+#             <div class="message-content">
+#                 <p>Lo siento, hubo un problema al obtener los datos: {data['error']}</p>
+#             </div>
+#         </div>
+#         """
+
+#     properties_html = ""
+#     for prop in data.get('properties', []):
+#         details_url = prop.get('url', '#')
+        
+#         properties_html += f"""
+#         <div class="property-card">
+#             <img src="{prop.get('image', 'default.bmp')}" alt="{prop.get('property_type', 'Propiedad')}" class="property-image">
+#             <div class="property-content">
+#                 <div class="property-price">{prop.get('price', 'Precio no disponible')} USD</div>
+#                 <div class="property-location">
+#                     <i class="fas fa-map-marker-alt"></i> {prop.get('location', '')}, {prop.get('city_name', '')}, {prop.get('province_name', '')}, {prop.get('country_name', '')}
+#                 </div>
+#                 <div class="property-features">
+#                     <span><i class="fas fa-bed"></i> {prop.get('promedio_dormitorios', 'N/A')} hab</span>
+#                     <span><i class="fas fa-bath"></i> {prop.get('promedio_ambientes', 'N/A')} baños</span>
+#                     <span><i class="fas fa-ruler-combined"></i> {prop.get('square_meters', 'N/A')} m²</span>
+#                 </div>
+#                 <p class="property-description">{prop.get('description', 'Sin descripción disponible')}</p>
+#                 <a href="{details_url}" class="property-cta" target="_blank" rel="noopener noreferrer">Ver Detalles</a>
+#             </div>
+#         </div>
+#         """
+
+#     # Si no hay propiedades, devolver mensaje formateado
+#     if not properties_html:
+#         return """
+#         <div class="message message-bot">
+#             <div class="message-content">
+#                 <p>Lo siento, no encontré propiedades que coincidan con tu búsqueda. ¿Te gustaría intentar con otros criterios?</p>
+#             </div>
+#         </div>
+#         """
+
+#     return f"""
+#     <div class="message message-bot">
+#         <div class="message-content">
+#             <p>Aquí te muestro las propiedades disponibles según tu búsqueda:</p>
+#         </div>
+#     </div>
+#     <div class="property-grid">
+#         {properties_html}
+#     </div>
+#     """
+
 @app.post("/chat/")
 async def chat_with_agent(chat_message: ChatMessage):
-    logger.debug(f"Mensaje recibido: {chat_message.user_input}")
+    """
+    Endpoint principal para procesar consultas de usuarios usando NER
+    """
     try:
-        # Obtener datos de Django API
-        data = fetch_data_from_django()
+        if not analyzer:
+            raise HTTPException(status_code=500, detail="Analyzer not initialized")
 
-        # Construir el prompt con la información de Django y la entrada del usuario
-        prompt = build_prompt(data, chat_message.user_input)
+        # Consultar a GPT para determinar la función a llamar
+        function_selection_response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {
+                    "role": "system", 
+                    "content": """You are a real estate assistant that helps users find and analyze properties. 
+                    Based on the user's message, extract the main search criteria and intent."""
+                },
+                {"role": "user", "content": chat_message.user_input}
+            ],
+            functions=list(AVAILABLE_FUNCTIONS.values()),
+            function_call="auto"
+        )
 
-        # Obtener respuesta de OpenAI
-        result = get_completion_from_openai(prompt)
+        # Extraer información de la función a llamar
+        message = function_selection_response.choices[0].message
+        
+        if message.get("function_call"):
+            # Ejecutar la función seleccionada
+            function_name = message["function_call"]["name"]
+            function_params = eval(message["function_call"]["arguments"])
+            
+            # Añadir el contexto si existe
+            if chat_message.context:
+                function_params["context"] = chat_message.context
+            
+            data = execute_function(analyzer, function_name, function_params)
+            
+            # Construir respuesta HTML
+            response_content = build_html_response(
+                data, 
+                data.get("gpt_response", "")
+            )
 
-        logger.debug(f"Respuesta de OpenAI: {result}")
-        return {"response": result}
+            # Retornar según formato solicitado
+            if chat_message.response_format == "html":
+                return HTMLResponse(content=response_content)
+            else:
+                return JSONResponse(content={
+                    "response": response_content,
+                    "analysis": data.get("analysis", {}),
+                    "status": "success"
+                })
+
+        else:
+            # Si no se llamó a ninguna función, proporcionar respuesta por defecto
+            return JSONResponse(content={
+                "response": """
+                    <div class="message message-bot">
+                        <div class="message-content">
+                            <p>Lo siento, no pude entender completamente tu consulta. 
+                            ¿Podrías proporcionar más detalles sobre lo que estás buscando?</p>
+                        </div>
+                    </div>
+                """,
+                "status": "success"
+            })
+                
     except Exception as e:
-        logger.error(f"Error: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to the FastAPI OpenAI Integration!"}
-
-@app.get("/health")
-def health_check():
-    return {"status": "healthy"}
-
-if __name__ == "__main__":
-    port = int(os.getenv("FASTAPI_PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port, reload=True)
+        logger.error(f"Error in chat endpoint: {str(e)}", exc_info=True)
+        error_response = {
+            "status": "error",
+            "detail": str(e),
+            "response": """
+                <div class="message message-bot error-message">
+                    <div class="message-content">
+                        <p>Lo siento, ha ocurrido un error al procesar tu solicitud.</p>
+                    </div>
+                </div>
+            """
+        }
+        return JSONResponse(
+            status_code=500,
+            content=error_response
+        )
