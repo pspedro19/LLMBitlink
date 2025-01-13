@@ -105,21 +105,24 @@ AVAILABLE_FUNCTIONS = {
 
 def initialize_analyzer():
     try:
-        # Cargar modelos de spaCy
-        nlp_models = [
-            spacy.load("es_core_news_md"),
-            spacy.load("en_core_web_md")
-        ]
-        
-        db_path = os.getenv("DB_PATH", "chat-Interface/db.sqlite3")
-        if not os.path.exists(db_path):
-            raise FileNotFoundError(f"Database not found at {db_path}")
-            
-        # Crear el analizador con los modelos de spaCy
-        analyzer = RealEstateAnalyzer(
-            db_path=db_path,
-            nlp_models=nlp_models,
-            log_path="real_estate_logs"
+        django_url = "http://18.231.111.216:8800/get_all_data/"  # URL de la API de Django
+        response = requests.get(django_url)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            logger.error(f"Error al obtener los datos de Django: {response.status_code}")
+            raise HTTPException(status_code=500, detail="Error fetching data from Django API.")
+    except Exception as e:
+        logger.error(f"Error en la solicitud a la API de Django: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error fetching data from Django API.")
+
+# Obtener respuesta de OpenAI
+def get_completion_from_openai(prompt):
+    try:
+        response = openai.ChatCompletion.create(
+            model=engine,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.5
         )
         
         logger.info("Analyzer initialized successfully")

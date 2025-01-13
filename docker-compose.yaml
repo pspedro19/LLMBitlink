@@ -5,8 +5,6 @@ x-airflow-common: &airflow-common
   image: ${AIRFLOW_IMAGE_NAME:-extending_airflow:latest}
   environment: &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${PG_USER:-airflow}:${PG_PASSWORD:-airflow}@postgres/${PG_DATABASE:-airflow}
-    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${PG_USER:-airflow}:${PG_PASSWORD:-airflow}@postgres/${PG_DATABASE:-airflow}
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
@@ -30,33 +28,33 @@ x-airflow-common: &airflow-common
   networks:
     - backend
   user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-0}"
-  depends_on: &airflow-common-depends-on
-    postgres:
+  depends_on:
+    minio:
       condition: service_healthy
 
 services:
-  postgres:
-    image: ankane/pgvector
-    container_name: postgres_airflow
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
     environment:
-      - PG_HOST_AUTH_METHOD=scram-sha-256
-      - POSTGRES_USER=${PG_USER:-airflow}
-      - POSTGRES_PASSWORD=${PG_PASSWORD:-airflow}
-      - POSTGRES_DB=${PG_DATABASE:-airflow}
-      - POSTGRES_PORT=${PG_PORT:-5432}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-adminpassword}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-mydatabase}
     ports:
-      - "${PG_PORT:-5432}:5432"
+      - "${MONGO_PORT:-27017}:27017"
     volumes:
-      - pgvector_data:/var/lib/postgresql/data
+      - mongodb_data:/data/db
     networks:
       - backend
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h localhost -U ${PG_USER:-airflow}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
+  # Existing services...
   minio:
     restart: always
     image: minio/minio:latest
@@ -98,52 +96,38 @@ services:
       exit 0;
       '
 
-  django-chat-interface:
-    build:
-      context: ./chat-Interface
-      dockerfile: Dockerfile
-    container_name: django_chat_interface
-    volumes:
-      - ./chat-Interface:/app
-    ports:
-      - "8800:8800"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      - DEBUG=1
-      - SECRET_KEY=tu_clave_secreta
-      - DATABASE_URL=postgresql+psycopg2://${PG_USER:-airflow}:${PG_PASSWORD:-airflow}@postgres:${PG_PORT:-5432}/${PG_DATABASE:-airflow}
-    networks:
-      - backend
-
   mlflow:
     build: ./mlflow
     env_file:
       - .env
     container_name: mlflow_tracking
-    depends_on:
-      postgres:
-        condition: service_healthy
     ports:
       - "5000:5000"
     environment:
       - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
       - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY:-minio}
       - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_ACCESS_KEY:-minio123}
-      - POSTGRES_HOST=postgres_airflow
-      - POSTGRES_PORT=${PG_PORT:-5432}
-      - POSTGRES_USER=${PG_USER:-airflow}
-      - POSTGRES_PASSWORD=${PG_PASSWORD:-airflow}
-      - POSTGRES_DB=${MLFLOW_DB:-mlflow_db}
+      - MLFLOW_TRACKING_URI=http://localhost:5000
+      - MLFLOW_S3_IGNORE_TLS=true
+    command: >
+      bash -c "
+        ./init_db.sh &&
+        mlflow server 
+        --host 0.0.0.0 
+        --port 5000 
+        --default-artifact-root s3://${MLFLOW_BUCKET_NAME:-mlflow}/
+        --backend-store-uri postgresql://${PG_USER:-airflow}:${PG_PASSWORD:-airflow}@postgres_airflow:5432/${PG_DATABASE:-airflow}"
     networks:
       - backend
+    depends_on:
+      minio:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
-      timeout: 20s
-      retries: 3
-      start_period: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   fastapi:
     build: 
@@ -156,9 +140,9 @@ services:
       - ./app:/app
     container_name: fastapi_server
     depends_on:
-      postgres:
-        condition: service_healthy
       mlflow:
+        condition: service_healthy
+      mongodb:
         condition: service_healthy
     ports:
       - "8000:8000" 
@@ -170,13 +154,13 @@ services:
       - DB_NAME=${PG_DATABASE:-airflow}
       - DB_USER=${PG_USER:-airflow}
       - DB_PASSWORD=${PG_PASSWORD:-airflow}
-      - DB_HOST=postgres
       - DB_PORT=${PG_PORT:-5432}
       - MINIO_URL=minio:9000
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minio}
       - MINIO_SECRET_KEY=${MINIO_SECRET_ACCESS_KEY:-minio123}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - DJANGO_URL=http://django_chat_interface:8800
+      - MONGO_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-adminpassword}@mongodb:27017/${MONGO_DATABASE:-mydatabase}?authSource=admin
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -197,7 +181,6 @@ services:
       retries: 5
     restart: always
     depends_on:
-      <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
 
@@ -212,7 +195,6 @@ services:
       retries: 5
     restart: always
     depends_on:
-      <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
 
@@ -247,3 +229,4 @@ networks:
 volumes:
   pgvector_data:
   minio_data:
+  mongodb_data:
