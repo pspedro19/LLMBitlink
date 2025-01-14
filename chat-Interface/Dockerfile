@@ -2,16 +2,17 @@ FROM python:3.9
 
 WORKDIR /app
 
+# Instalar dependencias
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+RUN pip install django --upgrade
+RUN pip install whitenoise
+
 # Crear directorios necesarios
 RUN mkdir -p /app/staticfiles
 RUN mkdir -p /app/static/admin/css
 RUN mkdir -p /app/static/admin/js
 RUN mkdir -p /app/static/admin/img
-
-# Instalar dependencias
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-RUN pip install django --upgrade
 
 # Copiar el proyecto
 COPY . .

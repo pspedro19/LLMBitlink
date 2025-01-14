@@ -25,4 +25,10 @@ langchain
 # Document processing
 PyMuPDF
 peft
-reportlab
+
+# Storage
+minio
+
+# Modelos de spaCy (se instalarán en el Dockerfile)
+es-core-news-md @ https://github.com/explosion/spacy-models/releases/download/es_core_news_md-3.7.0/es_core_news_md-3.7.0.tar.gz
+en-core-web-md @ https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.7.0/en_core_web_md-3.7.0.tar.gz

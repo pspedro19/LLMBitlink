@@ -3,7 +3,10 @@ version: '3.8'
 services:
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn chatbot.wsgi:application --bind 0.0.0.0:8000"
     volumes:
       - .:/app
       - ./property_images:/app/property_images:rw
@@ -11,7 +14,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DEBUG=1 # Establece esto a 0 en producción
+      - DEBUG=0 # Establece esto a 0 en producción
 
   fastapi:
     build:
@@ -45,10 +48,14 @@ services:
       KEEPALIVE_TIMEOUT: '60'
       CLIENT_MAX_BODY_SIZE: 10M
       CUSTOM_NGINX_SERVER_CONFIG: |
+        # Configuración mejorada para servir estáticos
         location /static/ {
           alias /var/www/vhosts/staticfiles/;
+          add_header Access-Control-Allow-Origin *;
+          add_header Cache-Control "public, no-transform";
           expires 30d;
           access_log off;
+          try_files $uri $uri/ =404;
         }
     volumes:
       - https-portal-data:/var/lib/https-portal
