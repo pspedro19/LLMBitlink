@@ -1,10 +1,11 @@
-version: '3'
+version: '3.8'
 
 x-airflow-common: &airflow-common
   build: './airflow'
   image: ${AIRFLOW_IMAGE_NAME:-extending_airflow:latest}
   environment: &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${PG_USER:-airflow}:${PG_PASSWORD:-airflow}@postgres:5432/${PG_DATABASE:-airflow}
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
@@ -22,17 +23,37 @@ x-airflow-common: &airflow-common
   volumes:
     - ${AIRFLOW_PROJ_DIR:-./airflow}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-./airflow}/logs:/opt/airflow/logs
-    - ${AIRFLOW_PROJ_DIR:-./airflow}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-./airflow}/plugins:/opt/airflow/plugins
     - ${AIRFLOW_PROJ_DIR:-./airflow}/secrets:/opt/secrets
   networks:
     - backend
   user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-0}"
   depends_on:
+    postgres:
+      condition: service_healthy
     minio:
       condition: service_healthy
 
 services:
+  postgres:
+    image: postgres:13
+    container_name: postgres_airflow
+    restart: always
+    environment:
+      POSTGRES_USER: ${PG_USER:-airflow}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-airflow}
+      POSTGRES_DB: ${PG_DATABASE:-airflow}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
+    ports:
+      - "${PG_PORT:-5432}:5432"
+
   mongodb:
     image: mongo:latest
     container_name: mongodb
@@ -54,7 +75,6 @@ services:
       retries: 3
       start_period: 20s
 
-  # Existing services...
   minio:
     restart: always
     image: minio/minio:latest
@@ -98,11 +118,10 @@ services:
 
   mlflow:
     build: ./mlflow
-    env_file:
-      - .env
     container_name: mlflow_tracking
+    restart: always
     ports:
-      - "5000:5000"
+      - "${MLFLOW_PORT:-5000}:5000"
     environment:
       - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
       - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY:-minio}
@@ -116,10 +135,12 @@ services:
         --host 0.0.0.0 
         --port 5000 
         --default-artifact-root s3://${MLFLOW_BUCKET_NAME:-mlflow}/
-        --backend-store-uri postgresql://${PG_USER:-airflow}:${PG_PASSWORD:-airflow}@postgres_airflow:5432/${PG_DATABASE:-airflow}"
+        --backend-store-uri postgresql://${PG_USER:-airflow}:${PG_PASSWORD:-airflow}@postgres:5432/${PG_DATABASE:-airflow}"
     networks:
       - backend
     depends_on:
+      postgres:
+        condition: service_healthy
       minio:
         condition: service_healthy
     healthcheck:
@@ -138,6 +159,7 @@ services:
     volumes:
       - ./data:/data
       - ./app:/app
+      - ./chat-Interface/property_images:/app/images
     container_name: fastapi_server
     depends_on:
       mlflow:
@@ -145,9 +167,10 @@ services:
       mongodb:
         condition: service_healthy
     ports:
-      - "8000:8000" 
+      - "8000:8000"
     networks:
       - backend
+      - frontend
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
       - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
@@ -159,7 +182,7 @@ services:
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minio}
       - MINIO_SECRET_KEY=${MINIO_SECRET_ACCESS_KEY:-minio123}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - DJANGO_URL=http://django_chat_interface:8800
+      - DJANGO_URL=http://django:8800
       - MONGO_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-adminpassword}@mongodb:27017/${MONGO_DATABASE:-mydatabase}?authSource=admin
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     healthcheck:
@@ -168,6 +191,69 @@ services:
       timeout: 5s
       retries: 5
 
+  django:
+    build: 
+      context: ./chat-Interface
+      dockerfile: Dockerfile
+    container_name: django_chat_interface
+    restart: always
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn chatbot.wsgi:application --bind 0.0.0.0:8800"
+    volumes:
+      - ./chat-Interface:/app
+      - ./chat-Interface/property_images:/app/property_images:rw
+      - static_volume:/app/staticfiles:rw
+    ports:
+      - "8800:8800"
+    environment:
+      - DEBUG=0
+      - DJANGO_SETTINGS_MODULE=chatbot.settings
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME:-admin}
+      - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD:-admin}
+      - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL:-admin@example.com}
+    networks:
+      - frontend
+    depends_on:
+      - fastapi
+
+  https-portal:
+    image: steveltn/https-portal:1
+    container_name: https-portal
+    ports:
+      - '80:80'
+      - '443:443'
+    restart: always
+    environment:
+      DOMAINS: 'dnlproptech-chat.com -> http://django:8800, api.dnlproptech-chat.com -> http://fastapi:8000'
+      STAGE: 'production'
+      FORCE_HTTPS_UPSTREAM: 'false'
+      SSL_UPSTREAM: 'false'
+      WEBSOCKET: 'true'
+      KEEPALIVE_TIMEOUT: '60'
+      CLIENT_MAX_BODY_SIZE: 10M
+      CUSTOM_NGINX_SERVER_CONFIG: |
+        location /static/ {
+          alias /var/www/vhosts/staticfiles/;
+          add_header Access-Control-Allow-Origin *;
+          add_header Cache-Control "public, no-transform";
+          expires 30d;
+          access_log off;
+          try_files $uri $uri/ =404;
+        }
+    volumes:
+      - https-portal-data:/var/lib/https-portal
+      - /data/https-portal/vhosts:/var/www/vhosts
+      - ./chat-Interface/nginx-conf:/etc/nginx/conf.d
+      - static_volume:/var/www/vhosts/staticfiles:ro
+    networks:
+      - frontend
+    depends_on:
+      - django
+      - fastapi
+
   airflow-webserver:
     <<: *airflow-common
     container_name: airflow_webserver
@@ -175,7 +261,7 @@ services:
     ports:
       - "${AIRFLOW_PORT:-8080}:8080"
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:8080/health" ]
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 60s
       timeout: 10s
       retries: 5
@@ -189,7 +275,7 @@ services:
     container_name: airflow_scheduler
     command: scheduler
     healthcheck:
-      test: [ "CMD-SHELL", 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"' ]
+      test: ["CMD-SHELL", 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"']
       interval: 60s
       timeout: 10s
       retries: 5
@@ -227,6 +313,13 @@ networks:
     driver: bridge
 
 volumes:
-  pgvector_data:
-  minio_data:
+  postgres_data:
+    driver: local
   mongodb_data:
+    driver: local
+  minio_data:
+    driver: local
+  static_volume:
+    driver: local
+  https-portal-data:
+    driver: local

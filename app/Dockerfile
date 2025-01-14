@@ -1,38 +1,28 @@
-# Usa una imagen base de Python
 FROM python:3.9-slim
 
-# Establece el directorio de trabajo dentro del contenedor
 WORKDIR /app
 
-# Instala las dependencias del sistema necesarias para compilar algunos paquetes
+# Instalar dependencias del sistema
 RUN apt-get update && apt-get install -y \
     build-essential \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copia el archivo requirements.txt y luego instálalo
-COPY ./app/requirements.txt .
-
-# Instala las dependencias necesarias
+# Copiar requirements primero (para mejor uso de caché)
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Verifica e instala los modelos de spaCy
+# Instalar modelos de spaCy
 RUN python -m spacy download es_core_news_md
 RUN python -m spacy download en_core_web_md
 RUN python -m spacy validate
 
-# Instalar uvicorn globalmente
+# Instalar uvicorn
 RUN pip install uvicorn
 
-# Copia el código de la aplicación
-COPY ./app .
+# Copiar el resto de la aplicación
+COPY . .
 
-# Expone el puerto 8800
-EXPOSE 8800
-
-# Variables de entorno
-ENV PYTHONPATH=/app
-ENV MEDIA_DIR=/app/images
-
-# Comando para ejecutar la aplicación FastAPI
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8800", "--reload"]
+# Puerto y comando
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
