@@ -10,7 +10,7 @@ import os
 import logging
 import spacy
 from fastapi.middleware.cors import CORSMiddleware
-from app.real_estate_analyzer import RealEstateAnalyzer
+from real_estate_analyzer import RealEstateAnalyzer
 
 # Configuración de logging
 logging.basicConfig(level=logging.DEBUG)
@@ -112,6 +112,11 @@ def initialize_analyzer():
         ]
         
         db_path = os.getenv("DB_PATH", "chat-Interface/db.sqlite3")
+        logger.info(f"Trying to access database at: {db_path}")
+        logger.info(f"Database exists: {os.path.exists(db_path)}")
+        logger.info(f"Current working directory: {os.getcwd()}")
+        logger.info(f"Directory contents: {os.listdir('/app/chat-Interface')}")
+        
         if not os.path.exists(db_path):
             raise FileNotFoundError(f"Database not found at {db_path}")
             
@@ -367,3 +372,12 @@ async def chat_with_agent(chat_message: ChatMessage):
             status_code=500,
             content=error_response
         )
+        
+@app.get("/health")
+def health_check():
+    if not os.path.exists(os.getenv("DB_PATH")):
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "detail": "Database not found"}
+        )
+    return {"status": "healthy"}
