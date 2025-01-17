@@ -57,6 +57,23 @@ services:
     ports:
       - "${PG_PORT:-5432}:5432"
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@admin.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - backend
+    depends_on:
+      - postgres
+
   mongodb:
     image: mongo:latest
     container_name: mongodb
@@ -319,6 +336,8 @@ networks:
 
 volumes:
   postgres_data:
+    driver: local
+  pgadmin_data:
     driver: local
   mongodb_data:
     driver: local
