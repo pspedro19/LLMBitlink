@@ -1,4 +1,4 @@
 from .database import CSVDatabaseManager
-from .models import DataValidator, EnhancedPreferences
+from .models import EnhancedPreferences
 
-__all__ = ['CSVDatabaseManager', 'DataValidator', 'EnhancedPreferences']
+__all__ = ['CSVDatabaseManager', 'EnhancedPreferences']

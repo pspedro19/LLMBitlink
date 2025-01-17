@@ -19,20 +19,39 @@ from langchain_openai import ChatOpenAI
 from langchain.tools import Tool
 from langchain.memory import ConversationBufferMemory
 
-
+from app.core.utils.validators import DataValidator  # Cambiar la importación
+from app.core.analyzer import ImprovedNLPProcessor
+from app.core.data import CSVDatabaseManager
+# Por esta:
+from .validator import RecommendationValidator
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+ERROR_TYPES = {
+    "query_error": "Error processing query",
+    "validation_error": "Error validating data",
+    "database_error": "Error accessing database",
+    "preference_error": "Error processing preferences",
+    "recommendation_error": "Error generating recommendations",
+    "diversity_error": "Error ensuring recommendation diversity",
+    "unknown": "An unknown error occurred"
+}
+
+
 class IntegratedTourismSystem:
-    from app.core.analyzer import ImprovedNLPProcessor, DataValidator
-    from app.core.data import CSVDatabaseManager
-    from app.core.recommender import RecommendationValidator
+
     """Enhanced tourism system with improved recommendations and error handling"""
 
     def __init__(self, openai_api_key: Optional[str] = None):
         """Initialize the system and its components"""
+        # Database and components initialization
+    # Add these at the beginning of __init__
+        self._seen_types = set()
+        self._seen_locations = set()
+        
         # Database and components initialization
         self.db_manager = CSVDatabaseManager()
         self.nlp_processor = ImprovedNLPProcessor()
@@ -548,51 +567,32 @@ class IntegratedTourismSystem:
             reverse=True
         )
 
-    def get_recommendations(
-        self, 
-        preferences: Dict[str, Any],
-        limit: int = 10
-    ) -> List[Dict]:
-        """Get recommendations with enhanced error handling"""
+    def get_recommendations(self, preferences: Dict[str, Any], limit: int = 10) -> List[Dict]:
         try:
             recommendations = []
             errors = []
 
-            # Get initial recommendations for each category
+            # Get recommendations for each category
             for category in self.category_table_mappings:
                 try:
-                    category_recs = self._get_category_recommendations(
-                        category, 
-                        preferences
-                    )
+                    category_recs = self._get_category_recommendations(category, preferences)
                     if category_recs:
                         recommendations.extend(category_recs)
                 except Exception as e:
-                    errors.append(
-                        f"Error getting {category} recommendations: {str(e)}"
-                    )
+                    errors.append(f"Error getting {category} recommendations: {str(e)}")
                     continue
 
             if not recommendations and errors:
-                logger.error(
-                    "Errors occurred while getting recommendations:\n" + 
-                    "\n".join(errors)
-                )
-                recommendations = self._handle_missing_data(
-                    recommendations, 
-                    preferences
-                )
+                logger.error("Errors occurred while getting recommendations:\n" + "\n".join(errors))
+                recommendations = self._handle_missing_data(recommendations, preferences)
 
             # Score and sort recommendations
-            scored_recommendations = self._score_recommendations(
-                recommendations, 
-                preferences
-            )
+            scored_recommendations = self._score_recommendations(recommendations, preferences)
 
-            # Balance and diversify recommendations
+            # Use max_items parameter instead of limit
             balanced_recommendations = self._ensure_recommendation_diversity(
-                scored_recommendations,
-                limit=limit
+                recommendations=scored_recommendations,
+                max_items=limit  # Pass limit as max_items
             )
 
             return balanced_recommendations
@@ -774,11 +774,37 @@ class IntegratedTourismSystem:
             logger.error(f"Error calculating recommendation score: {str(e)}")
             return 0.0
 
-    def _ensure_recommendation_diversity(self, recommendations: List[Dict]) -> List[Dict]:
-        """Enhanced diversity handling with comprehensive balancing"""
+
+
+    def _ensure_recommendation_diversity(
+        self,
+        recommendations: List[Dict],
+        weights: Dict[str, float] = None,
+        max_items: int = 10
+    ) -> List[Dict]:
+        """Enhanced diversity handling with comprehensive balancing
+        
+        Args:
+            recommendations (List[Dict]): List of recommendations to diversify
+            weights (Dict[str, float], optional): Custom weights for scoring
+            max_items (int): Maximum number of recommendations to return
+            
+        Returns:
+            List[Dict]: Diversified recommendations list
+        """
         try:
             if not recommendations:
+                logger.warning("No recommendations to diversify")
                 return []
+
+            # Use provided weights or defaults
+            if weights is None:
+                weights = {
+                    'rating': 0.4,
+                    'type_diversity': 0.3,
+                    'location_diversity': 0.2,
+                    'price_diversity': 0.1
+                }
 
             # Deduplicate recommendations
             unique_recs = {}
@@ -798,16 +824,16 @@ class IntegratedTourismSystem:
             MAX_PER_TYPE = 3
             MAX_PER_LOCATION = 2
             MAX_PRICE_RANGE = 3
-            TARGET_SIZE = min(10, len(unique_recs))
+            TARGET_SIZE = min(max_items, len(unique_recs))
 
             # Sort by composite score (adjusted rating + diversity bonus)
             sorted_recs = sorted(
                 unique_recs.values(),
                 key=lambda x: (
-                    float(x.get('adjusted_rating', 0)) +
-                    float(x.get('rating', 0)) * 0.5 +
-                    (1.0 if x.get('type', '').lower() not in type_counts else 0.0) +
-                    (0.5 if x.get('location', '').lower() not in location_counts else 0.0)
+                    float(x.get('adjusted_rating', 0)) * weights['rating'] +
+                    float(x.get('rating', 0)) * weights['rating'] * 0.5 +
+                    (weights['type_diversity'] if x.get('type', '').lower() not in type_counts else 0.0) +
+                    (weights['location_diversity'] if x.get('location', '').lower() not in location_counts else 0.0)
                 ),
                 reverse=True
             )
@@ -816,13 +842,14 @@ class IntegratedTourismSystem:
             for rec in sorted_recs[:]:
                 category = self._get_recommendation_category(rec)
                 if category in self.category_requirements:
-                    if (category_counts[category] < self.category_requirements[category]['min'] and
+                    min_required = self.category_requirements[category].get('min', 0)
+                    if (category_counts[category] < min_required and
                         len(diverse_recs) < TARGET_SIZE):
                         diverse_recs.append(rec)
-                        category_counts[category] += 1
-                        type_counts[str(rec.get('type', '')).lower()] += 1
-                        location_counts[str(rec.get('location', '')).lower()] += 1
-                        price_ranges[self._get_price_category(rec)] += 1
+                        self._update_diversity_counters(
+                            rec, category_counts, type_counts, 
+                            location_counts, price_ranges, category
+                        )
                         sorted_recs.remove(rec)
 
             # Second pass: fill remaining slots while maintaining diversity
@@ -833,18 +860,19 @@ class IntegratedTourismSystem:
                 category = self._get_recommendation_category(rec)
 
                 # Check all diversity conditions
-                if (len(diverse_recs) < TARGET_SIZE and
-                    type_counts[rec_type] < MAX_PER_TYPE and
-                    location_counts[location] < MAX_PER_LOCATION and
-                    price_ranges[price_category] < MAX_PRICE_RANGE and
-                    (category not in self.category_requirements or
-                     category_counts[category] < self.category_requirements[category]['max'])):
-
-                    # Calculate diversity bonus
-                    diversity_bonus = (
-                        (1.0 if type_counts[rec_type] == 0 else 0.5) +
-                        (1.0 if location_counts[location] == 0 else 0.3) +
-                        (0.5 if price_ranges[price_category] == 0 else 0.2)
+                if self._meets_diversity_criteria(
+                    diverse_recs, TARGET_SIZE,
+                    type_counts, rec_type, MAX_PER_TYPE,
+                    location_counts, location, MAX_PER_LOCATION,
+                    price_ranges, price_category, MAX_PRICE_RANGE,
+                    category_counts, category
+                ):
+                    # Calculate diversity bonus with weights
+                    diversity_bonus = self._calculate_diversity_bonus(
+                        rec_type, type_counts,
+                        location, location_counts,
+                        price_category, price_ranges,
+                        weights
                     )
 
                     # Add recommendation with diversity score
@@ -852,18 +880,62 @@ class IntegratedTourismSystem:
                     diverse_recs.append(rec)
 
                     # Update counters
-                    type_counts[rec_type] += 1
-                    location_counts[location] += 1
-                    price_ranges[price_category] += 1
-                    if category in self.category_requirements:
-                        category_counts[category] += 1
+                    self._update_diversity_counters(
+                        rec, category_counts, type_counts, 
+                        location_counts, price_ranges, category
+                    )
 
-            return diverse_recs
+            return diverse_recs[:max_items]
 
         except Exception as e:
             logger.error(f"Error ensuring diversity: {str(e)}", exc_info=True)
-            return recommendations[:10] if recommendations else []
+            return recommendations[:max_items] if recommendations else []
 
+    def _meets_diversity_criteria(
+        self, diverse_recs: List[Dict], target_size: int,
+        type_counts: Dict, rec_type: str, max_type: int,
+        location_counts: Dict, location: str, max_location: int,
+        price_ranges: Dict, price_category: str, max_price: int,
+        category_counts: Dict, category: str
+    ) -> bool:
+        """Check if a recommendation meets all diversity criteria"""
+        return (
+            len(diverse_recs) < target_size and
+            type_counts[rec_type] < max_type and
+            location_counts[location] < max_location and
+            price_ranges[price_category] < max_price and
+            (category not in self.category_requirements or
+            category_counts[category] < self.category_requirements[category].get('max', float('inf')))
+        )
+
+    def _calculate_diversity_bonus(
+        self, rec_type: str, type_counts: Dict,
+        location: str, location_counts: Dict,
+        price_category: str, price_ranges: Dict,
+        weights: Dict[str, float]
+    ) -> float:
+        """Calculate diversity bonus score for a recommendation"""
+        return (
+            (weights['type_diversity'] if type_counts[rec_type] == 0 else weights['type_diversity'] * 0.5) +
+            (weights['location_diversity'] if location_counts[location] == 0 else weights['location_diversity'] * 0.3) +
+            (weights['price_diversity'] if price_ranges[price_category] == 0 else weights['price_diversity'] * 0.2)
+        )
+
+    def _update_diversity_counters(
+        self, rec: Dict,
+        category_counts: Dict,
+        type_counts: Dict,
+        location_counts: Dict,
+        price_ranges: Dict,
+        category: str
+    ) -> None:
+        """Update all diversity tracking counters"""
+        type_counts[str(rec.get('type', '')).lower()] += 1
+        location_counts[str(rec.get('location', '')).lower()] += 1
+        price_ranges[self._get_price_category(rec)] += 1
+        if category in self.category_requirements:
+            category_counts[category] += 1
+        
     def _get_recommendation_category(self, recommendation: Dict) -> str:
         """Determine the primary category of a recommendation"""
         rec_type = str(recommendation.get('type', '')).lower()

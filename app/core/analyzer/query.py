@@ -1,18 +1,4 @@
 from typing import Dict, Any, Optional
-import logging
-from datetime import datetime
-import time
-
-from .nlp_processor import ImprovedNLPProcessor
-from ..recommender.recommendation_engine import IntegratedTourismSystem
-
-
-
-logger = get_logger(__name__)
-
-# app/core/analyzer/query.py
-
-from typing import Dict, Any, Optional
 from datetime import datetime
 import time
 
@@ -21,7 +7,7 @@ from ..recommender.recommendation_engine import IntegratedTourismSystem
 from app.utils.config import API_CONFIG
 from app.utils.logger import get_logger
 
-
+# Solo necesitamos una instancia del logger
 logger = get_logger(__name__)
 
 class QueryProcessor:

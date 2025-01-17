@@ -5,8 +5,9 @@ Enhanced preference model with comprehensive validation for tourism preferences.
 from typing import Dict, List, Optional, Any
 from datetime import date
 from pydantic import BaseModel, Field, validator
+from app.core.utils.validators import DataValidator  # Cambiar la importación
 
-from ..data.models import DataValidator
+
 
 class TourismPreferenceError(Exception):
     """Custom exception for tourism preference validation errors"""

@@ -1,3 +1,5 @@
-from .recommendation_engine import IntegratedTourismSystem, RecommendationValidator
+from .recommendation_engine import IntegratedTourismSystem
+from .validator import RecommendationValidator
+from .recommend import recommend
 
-__all__ = ["IntegratedTourismSystem", "RecommendationValidator"]
+__all__ = ["IntegratedTourismSystem", "RecommendationValidator", "recommend"]
