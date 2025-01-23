@@ -1,6 +1,6 @@
 from typing import Dict, Any, List
 from .recommendation_engine import IntegratedTourismSystem
-from app.utils.logger import get_logger
+from utils.logger import get_logger
 from datetime import datetime
 
 logger = get_logger(__name__)

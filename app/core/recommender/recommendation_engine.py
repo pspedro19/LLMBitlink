@@ -1,991 +1,537 @@
-# -*- coding: utf-8 -*-
-"""Tourism Recommendation System
-
-Enhanced system with comprehensive recommendation features and error handling.
-"""
-
-import re
-import json
-import logging
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Any, Optional
 from datetime import datetime
-import time
 import statistics
-from collections import Counter, defaultdict
+from collections import defaultdict
+import logging
 
-from langchain.agents import AgentExecutor, create_openai_functions_agent
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_openai import ChatOpenAI
-from langchain.tools import Tool
-from langchain.memory import ConversationBufferMemory
+from core.analyzer.nlp_processor import ImprovedNLPProcessor
+from core.recommender.validator import RecommendationValidator
+from core.data.database import CSVDatabaseManager
+from core.utils.validators import DataValidator
 
-from app.core.utils.validators import DataValidator  # Cambiar la importación
-from app.core.analyzer import ImprovedNLPProcessor
-from app.core.data import CSVDatabaseManager
-# Por esta:
-from .validator import RecommendationValidator
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-ERROR_TYPES = {
-    "query_error": "Error processing query",
-    "validation_error": "Error validating data",
-    "database_error": "Error accessing database",
-    "preference_error": "Error processing preferences",
-    "recommendation_error": "Error generating recommendations",
-    "diversity_error": "Error ensuring recommendation diversity",
-    "unknown": "An unknown error occurred"
-}
-
-
-class IntegratedTourismSystem:
-
-    """Enhanced tourism system with improved recommendations and error handling"""
-
-    def __init__(self, openai_api_key: Optional[str] = None):
-        """Initialize the system and its components"""
-        # Database and components initialization
-    # Add these at the beginning of __init__
-        self._seen_types = set()
-        self._seen_locations = set()
-        
-        # Database and components initialization
-        self.db_manager = CSVDatabaseManager()
+class RecommendationEngine:
+    def __init__(self):
         self.nlp_processor = ImprovedNLPProcessor()
-        self.data_validator = DataValidator()
-        self.recommendation_validator = RecommendationValidator()
-
-        # Define category mappings
-        self.category_mappings = {
-            'cultural': {
-                'keywords': ['museum', 'heritage', 'history', 'art', 'architecture', 'colonial'],
-                'locations': ['punda', 'otrobanda', 'pietermaai'],
-                'activities': ['walking_tour', 'guided_tour', 'museum_visit']
-            },
-            'nature': {
-                'keywords': ['park', 'trail', 'hiking', 'wildlife', 'bird', 'cave'],
-                'locations': ['christoffel park', 'shete boka', 'westpunt'],
-                'activities': ['hiking', 'birdwatching', 'nature_walk']
-            },
-            'water_activities': {
-                'keywords': ['beach', 'diving', 'snorkel', 'swim', 'kayak', 'boat'],
-                'locations': ['westpunt', 'spanish water', 'piscadera bay'],
-                'activities': ['diving', 'snorkeling', 'kayaking']
-            },
-            'food': {
-                'keywords': ['restaurant', 'dining', 'cuisine', 'local food', 'gastronomy'],
-                'locations': ['willemstad', 'punda', 'otrobanda'],
-                'activities': ['food_tour', 'dining', 'cooking_class']
-            },
-            'nightlife': {
-                'keywords': ['bar', 'club', 'music', 'dance', 'entertainment'],
-                'locations': ['pietermaai', 'punda', 'willemstad'],
-                'activities': ['live_music', 'dancing', 'nightclub']
-            },
-            'shopping': {
-                'keywords': ['market', 'shop', 'mall', 'boutique', 'craft'],
-                'locations': ['willemstad', 'punda', 'otrobanda'],
-                'activities': ['shopping_tour', 'market_visit', 'souvenir']
-            }
-        }
-
-        # Table mappings for recommendations
-        self.category_table_mappings = {
-            'cultural': {
-                'table': 'realistic_curacao_tourist_spots',
-                'type_field': 'type',
-                'cost_field': 'entry_fee',
-                'id_field': 'id_spot',
-                'recommendations_field': 'ideal_for',
-                'conditions': ['historic site', 'museum', 'cultural']
-            },
-            'nature': {
-                'table': 'realistic_curacao_activities',
-                'type_field': 'type',
-                'cost_field': 'cost',
-                'id_field': 'id_activity',
-                'recommendations_field': 'recommended_for',
-                'conditions': ['hiking', 'nature', 'park']
-            },
-            'water_activities': {
-                'table': 'realistic_curacao_activities',
-                'type_field': 'type',
-                'cost_field': 'cost',
-                'id_field': 'id_activity',
-                'recommendations_field': 'recommended_for',
-                'conditions': ['diving', 'snorkeling', 'kayaking']
-            },
-            'food': {
-                'table': 'realistic_curacao_restaurants',
-                'type_field': 'cuisine_type',
-                'cost_field': 'price_range',
-                'id_field': 'id_restaurant',
-                'recommendations_field': 'recommended_for',
-                'conditions': ['local', 'international', 'seafood']
-            },
-            'nightlife': {
-                'table': 'realistic_curacao_nightclubs',
-                'type_field': 'music_type',
-                'cost_field': 'price_range',
-                'id_field': 'id_nightclub',
-                'recommendations_field': 'recommended_for',
-                'conditions': ['live music', 'dance', 'bar']
-            }
+        self.validator = RecommendationValidator()
+        self.db_manager = CSVDatabaseManager()
+        
+        # Scoring weights
+        self.weights = {
+            'interest_match': 0.35,
+            'location_match': 0.25,
+            'budget_match': 0.20,
+            'rating': 0.10,
+            'diversity': 0.10
         }
         
-                # Scoring weights
-        self.scoring_weights = {
-            'interest_match': 2.0,
-            'location_match': 1.5,
-            'budget_match': 1.3,
-            'rating_bonus': 1.2,
-            'diversity_bonus': 1.1
+        # Category requirements
+        self.category_balance = {
+            'cultural': {'min': 2, 'max': 4},
+            'nature': {'min': 1, 'max': 3},
+            'food': {'min': 1, 'max': 2},
+            'activity': {'min': 1, 'max': 3}
         }
 
-        # Category requirements for diversity balancing
-        self.category_requirements = {
-            'cultural': {'min': 2, 'max': 4, 'weight': 1.4},
-            'nature': {'min': 1, 'max': 3, 'weight': 1.3},
-            'food': {'min': 1, 'max': 2, 'weight': 1.2},
-            'adventure': {'min': 1, 'max': 2, 'weight': 1.3},
-            'specialty': {'min': 1, 'max': 2, 'weight': 1.5}
-        }
-
-        # Initialize LangChain components if API key is provided
-        if openai_api_key:
-            self.setup_langchain(openai_api_key)
-          
-    def _get_category_recommendations(self, category: str, preferences: Dict) -> List[Dict]:
+    def get_recommendations(self, query: str, preferences: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Get recommendations for a specific category with enhanced error handling
+        Obtener recomendaciones personalizadas de turismo
         
         Args:
-            category: Category to search for recommendations
-            preferences: User preferences dictionary
+            query (str): Consulta en lenguaje natural
+            preferences (Dict[str, Any]): Preferencias explícitas del usuario
             
         Returns:
-            List of recommendations matching criteria
+            Dict[str, Any]: Recomendaciones y metadata
         """
         try:
-            if category not in self.category_table_mappings:
-                logger.warning(f"Unknown category: {category}")
-                return []
-
-            mapping = self.category_table_mappings[category]
-
-            # Build query conditions
-            conditions = []
-
-            # Location filtering with fuzzy matching
-            if preferences.get('locations'):
-                locations = [loc.lower().strip() for loc in preferences['locations'] if loc]
-                if locations:
-                    location_clauses = []
-                    for location in locations:
-                        location_clauses.append(f"LOWER(location) LIKE '%{location}%'")
-                    if location_clauses:
-                        conditions.append(f"({' OR '.join(location_clauses)})")
-
-            # Type conditions
-            type_clauses = []
-            for condition in mapping['conditions']:
-                type_clauses.append(f"LOWER({mapping['type_field']}) LIKE '%{condition}%'")
-            if type_clauses:
-                conditions.append(f"({' OR '.join(type_clauses)})")
-
-            # Enhanced budget handling with string cost support
-            if preferences.get('budget_per_day'):
-                try:
-                    budget = float(preferences['budget_per_day'])
-                    if mapping['cost_field'] == 'price_range':
-                        # Handle categorical price ranges
-                        conditions.append(f"""
-                            CASE
-                                WHEN LOWER({mapping['cost_field']}) = 'low' THEN 50
-                                WHEN LOWER({mapping['cost_field']}) = 'medium' THEN 100
-                                WHEN LOWER({mapping['cost_field']}) = 'high' THEN 200
-                                WHEN CAST({mapping['cost_field']} AS FLOAT) > 0 THEN CAST({mapping['cost_field']} AS FLOAT)
-                                ELSE 0
-                            END <= {budget}
-                        """)
-                    else:
-                        # Direct numeric comparison with CAST
-                        conditions.append(f"CAST(COALESCE({mapping['cost_field']}, '0') AS FLOAT) <= {budget}")
-                except (ValueError, TypeError) as e:
-                    logger.warning(f"Budget conversion error: {str(e)}")
-
-            # Build WHERE clause
-            where_clause = " AND ".join(conditions) if conditions else "1=1"
-
-            # Construct final query with cost handling
-            query = f"""
-                SELECT DISTINCT
-                    '{category}' as source,
-                    {mapping['id_field']} as id,
-                    name,
-                    {mapping['type_field']} as type,
-                    location,
-                    CASE
-                        WHEN LOWER({mapping['cost_field']}) = 'low' THEN '50'
-                        WHEN LOWER({mapping['cost_field']}) = 'medium' THEN '100'
-                        WHEN LOWER({mapping['cost_field']}) = 'high' THEN '200'
-                        ELSE COALESCE({mapping['cost_field']}, '0')
-                    END as cost,
-                    rating,
-                    CASE
-                        WHEN rating >= 4.5 THEN rating * 1.3
-                        WHEN rating >= 4.0 THEN rating * 1.2
-                        WHEN rating >= 3.5 THEN rating * 1.1
-                        ELSE rating
-                    END as adjusted_rating,
-                    description,
-                    COALESCE({mapping['recommendations_field']}, '') as recommended_for
-                FROM {mapping['table']}
-                WHERE {where_clause}
-                ORDER BY rating DESC, adjusted_rating DESC
-                LIMIT 5
-            """
-
-            try:
-                results = self.db_manager.execute_query(query)
-
-                # If no results, try with relaxed conditions
-                if not results:
-                    logger.info(f"No results for {category} with strict conditions. Trying relaxed search...")
-                    # Remove budget condition if present
-                    conditions = [c for c in conditions if 'cost' not in c.lower() and 'price' not in c.lower()]
-                    where_clause = " AND ".join(conditions) if conditions else "1=1"
-
-                    # Retry query with relaxed conditions
-                    query = query.replace(f"WHERE {where_clause}", f"WHERE {where_clause}")
-                    results = self.db_manager.execute_query(query)
-
-                # Post-process results to ensure valid cost values
-                processed_results = []
-                for result in results:
-                    try:
-                        # Convert cost to float if possible
-                        cost_str = str(result.get('cost', '0')).lower()
-                        if cost_str in ['low', 'medium', 'high']:
-                            cost_mapping = {'low': 50, 'medium': 100, 'high': 200}
-                            result['cost'] = cost_mapping[cost_str]
-                        else:
-                            result['cost'] = float(cost_str) if cost_str.replace('.','',1).isdigit() else 0
-                        processed_results.append(result)
-                    except (ValueError, TypeError) as e:
-                        logger.warning(f"Error processing result cost: {e}")
-                        result['cost'] = 0
-                        processed_results.append(result)
-
-                return processed_results
-
-            except Exception as e:
-                logger.error(f"Database query failed for category {category}: {str(e)}")
-                return []
-
-        except Exception as e:
-            logger.error(f"Error in category recommendations for {category}: {str(e)}")
-            return []
-
-    def _handle_missing_data(self, recommendations: List[Dict], preferences: Dict) -> List[Dict]:
-        """Enhanced recovery for missing recommendations"""
-        if recommendations:
-            return recommendations
-
-        logger.info("No recommendations found with initial criteria. Attempting recovery...")
-
-        try:
-            # Create relaxed preferences
-            relaxed_prefs = preferences.copy()
-
-            # Remove strict constraints
-            relaxed_prefs.pop('budget_per_day', None)
-            relaxed_prefs.pop('specific_sites', None)
-            relaxed_prefs.pop('special_interests', None)
-
-            # Keep only primary location if multiple exist
-            if relaxed_prefs.get('locations'):
-                relaxed_prefs['locations'] = [relaxed_prefs['locations'][0]]
-
-            # Keep only primary interests
-            if relaxed_prefs.get('interests'):
-                relaxed_prefs['interests'] = relaxed_prefs['interests'][:2]
-
-            # Try getting recommendations with relaxed preferences
-            recovery_recommendations = []
-            for category in self.category_table_mappings:
-                try:
-                    category_recs = self._get_category_recommendations(category, relaxed_prefs)
-                    if category_recs:
-                        recovery_recommendations.extend(category_recs)
-                except Exception as e:
-                    logger.error(f"Error in recovery recommendations for {category}: {str(e)}")
-                    continue
-
-            if recovery_recommendations:
-                logger.info(f"Retrieved {len(recovery_recommendations)} recommendations with relaxed criteria")
-                return recovery_recommendations[:10]  # Limit to top 10
-
-            # If still no results, try with minimal criteria
-            minimal_prefs = {
-                'locations': preferences.get('locations', [])[:1],
-                'interests': preferences.get('interests', [])[:1]
-            }
-
-            minimal_recommendations = []
-            for category in self.category_table_mappings:
-                try:
-                    category_recs = self._get_category_recommendations(category, minimal_prefs)
-                    if category_recs:
-                        minimal_recommendations.extend(category_recs)
-                except Exception as e:
-                    logger.error(f"Error in minimal recommendations for {category}: {str(e)}")
-                    continue
-
-            return minimal_recommendations[:10] if minimal_recommendations else []
-
-        except Exception as e:
-            logger.error(f"Error in recommendation recovery: {str(e)}")
-            return []
-
-    def _analyze_preference_coverage(self, recommendations: List[Dict], preferences: Dict) -> Dict[str, float]:
-        """Analyze how well recommendations cover all user preferences"""
-        try:
-            coverage = {
-                'interests_coverage': 0.0,
-                'locations_coverage': 0.0,
-                'price_range_coverage': 0.0,
-                'overall_coverage': 0.0
-            }
-
-            # Calculate coverage scores
-            if preferences.get('interests'):
-                matched_interests = set()
-                for rec in recommendations:
-                    rec_text = f"{rec.get('type', '')} {rec.get('description', '')}".lower()
-                    for interest in preferences['interests']:
-                        if interest.lower() in rec_text:
-                            matched_interests.add(interest.lower())
-                coverage['interests_coverage'] = len(matched_interests) / len(preferences['interests'])
-
-            # Calculate overall coverage
-            coverage['overall_coverage'] = statistics.mean(
-                [v for v in coverage.values() if v > 0]
-            ) if any(v > 0 for v in coverage.values()) else 0.0
-
-            return coverage
-        except Exception as e:
-            logger.error(f"Error analyzing preference coverage: {str(e)}")
-            return {'overall_coverage': 0.0}
-
-    def _merge_and_validate_preferences(self, extracted: Dict, explicit: Dict) -> Dict:
-        """Merge and validate preferences from multiple sources"""
-        try:
-            merged = {}
-
-            # Validate and merge interests
-            interests = set(extracted.get('interests', []))
-            interests.update(explicit.get('interests', []))
-            merged['interests'] = [i for i in interests if self.data_validator.normalize_interest(i)]
-
-            # Validate and merge locations
-            locations = set(extracted.get('locations', []))
-            locations.update(explicit.get('locations', []))
-            merged['locations'] = [l for l in locations if self.data_validator.normalize_location(l)]
-
-            # Validate budget
-            budget = explicit.get('budget_per_day', extracted.get('budget'))
-            if budget:
-                merged['budget_per_day'] = float(budget)
-
-            # Add other preferences
-            for key, value in explicit.items():
-                if key not in merged and value is not None:
-                    merged[key] = value
-
-            return merged
-        except Exception as e:
-            logger.error(f"Error merging preferences: {str(e)}")
-            return {}  # Return empty dict on error
-        
-    def _add_debug_logs(self, stage: str, data: Any) -> None:
-        """Add detailed debug logs for troubleshooting"""
-        try:
-            if stage == 'query':
-                logger.debug(f"Generated SQL Query:\n{data}")
-            elif stage == 'original_preferences':
-                logger.debug(f"Original preferences:\n{json.dumps(data, indent=2)}")
-            elif stage == 'extracted_preferences':
-                logger.debug(f"Extracted preferences:\n{json.dumps(data, indent=2)}")
-            elif stage == 'merged_preferences':
-                logger.debug(f"Merged preferences:\n{json.dumps(data, indent=2)}")
-            elif stage == 'final_recommendations':
-                logger.debug(f"Found {len(data)} recommendations")
-                for idx, rec in enumerate(data[:3], 1):
-                    logger.debug(f"Top {idx} recommendation: {rec.get('name')} ({rec.get('type')})")
-            else:
-                logger.debug(f"{stage}: {data}")
-        except Exception as e:
-            logger.error(f"Error in debug logging: {str(e)}")
-
-    def _calculate_query_understanding(self, query: str, extracted_prefs: Dict, merged_prefs: Dict) -> float:
-        """Calculate how well the system understood the query"""
-        try:
-            matches = 0
-            total_points = 0
-
-            # Check key preference extractions
-            key_preferences = ['interests', 'locations', 'budget_per_day', 'trip_duration']
-            for pref in key_preferences:
-                if pref in merged_prefs and merged_prefs[pref]:
-                    matches += 1
-                total_points += 1
-
-            # Calculate final score
-            return matches / total_points if total_points > 0 else 0.0
-        except Exception as e:
-            logger.error(f"Error calculating query understanding: {str(e)}")
-            return 0.0
-
-    def _handle_error(self, error_type: str, message: str) -> Dict[str, Any]:
-        """Handle errors consistently and return detailed error information."""
-        error_message = ERROR_TYPES.get(error_type, 'Unknown error')
-        logger.error(f"{error_message}: {message}")
-
-        return {
-            "status": "error",
-            "error_type": error_type,
-            "error_message": f"{error_message}: {message}",
-            "recommendations": [],
-            "validation": {
-                'location_match': 0.0,
-                'budget_match': 0.0,
-                'interest_match': 0.0,
-                'diversity_score': 0.0,
-                'preference_coverage': 0.0
-            },
-            "query_analysis": {
-                "intent_scores": {},
-                "extracted_preferences": {},
-                "merged_preferences": {}
-            },
-            "metadata": {
-                "query_time": datetime.now().isoformat(),
-                "preference_count": 0,
-                "recommendation_count": 0
-            }
-        }
-
-
-
-
-    def setup_langchain(self, api_key: str):
-        """Setup LangChain components with enhanced OpenAI configuration"""
-        self.llm = ChatOpenAI(
-            temperature=0.7,
-            model="gpt-3.5-turbo",
-            api_key=api_key,
-            max_tokens=2000,
-            presence_penalty=0.2,
-            frequency_penalty=0.3
-        )
-
-        self.memory = ConversationBufferMemory(
-            memory_key="chat_history",
-            return_messages=True,
-            output_key="output"
-        )
-
-        self.tools = [
-            Tool(
-                name="get_recommendations",
-                func=self.get_recommendations,
-                description="Get personalized tourism recommendations based on preferences"
-            ),
-            Tool(
-                name="analyze_preferences",
-                func=lambda x: self.nlp_processor.extract_preferences(x),
-                description="Analyze and extract user preferences from natural language"
-            )
-        ]
-
-        self.agent = self._setup_agent()
-
-    def _setup_agent(self) -> AgentExecutor:
-        """Setup LangChain agent with enhanced prompts"""
-        system_prompt = """
-        You are an expert tourism assistant for Curacao specializing in:
-        - Personalized travel recommendations
-        - Activity and accommodation suggestions
-        - Budget planning
-        - Accessible tourism
-        - Cultural and historical insights
-        - Local cuisine and dining experiences
-        """
-
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", system_prompt),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "{input}"),
-            ("human", "Agent Scratchpad: {agent_scratchpad}")
-        ])
-
-        agent = create_openai_functions_agent(
-            llm=self.llm,
-            prompt=prompt,
-            tools=self.tools
-        )
-
-        return AgentExecutor(
-            agent=agent,
-            tools=self.tools,
-            memory=self.memory,
-            verbose=True
-        )
-        
-    def _score_recommendations(
-    self, 
-    recommendations: List[Dict], 
-    preferences: Dict
-) -> List[Dict]:
-        
-        """Score recommendations based on preferences"""
-        scored_recommendations = []
-        for rec in recommendations:
-            try:
-                score = self._calculate_recommendation_score(rec, preferences)
-                scored_recommendations.append({**rec, '_score': score})
-            except Exception as e:
-                logger.error(f"Error scoring recommendation: {str(e)}")
-                continue
-        return sorted(
-            scored_recommendations, 
-            key=lambda x: x.get('_score', 0), 
-            reverse=True
-        )
-
-    def get_recommendations(self, preferences: Dict[str, Any], limit: int = 10) -> List[Dict]:
-        try:
-            recommendations = []
-            errors = []
-
-            # Get recommendations for each category
-            for category in self.category_table_mappings:
-                try:
-                    category_recs = self._get_category_recommendations(category, preferences)
-                    if category_recs:
-                        recommendations.extend(category_recs)
-                except Exception as e:
-                    errors.append(f"Error getting {category} recommendations: {str(e)}")
-                    continue
-
-            if not recommendations and errors:
-                logger.error("Errors occurred while getting recommendations:\n" + "\n".join(errors))
-                recommendations = self._handle_missing_data(recommendations, preferences)
-
-            # Score and sort recommendations
-            scored_recommendations = self._score_recommendations(recommendations, preferences)
-
-            # Use max_items parameter instead of limit
-            balanced_recommendations = self._ensure_recommendation_diversity(
-                recommendations=scored_recommendations,
-                max_items=limit  # Pass limit as max_items
-            )
-
-            return balanced_recommendations
-
-        except Exception as e:
-            logger.error(f"Error getting recommendations: {str(e)}", exc_info=True)
-            return []
-
-    def process_query(self, query: str, preferences: Dict[str, Any]) -> Dict[str, Any]:
-        """Process user query and generate recommendations with enhanced metrics"""
-        start_time = time.time()
-        processing_times = {}
-
-        try:
-            if not isinstance(query, str) or not query.strip():
-                raise ValueError("Invalid query format")
-
-            # Initialize performance metrics
-            metrics = {
-                'processing_stages': {},
-                'recommendation_stats': {},
-                'validation_scores': {},
-                'performance_metrics': {}
-            }
-
-            # Extract and merge preferences with timing
-            stage_start = time.time()
-            extracted_prefs = self.nlp_processor.extract_preferences(query)
-            processing_times['preference_extraction'] = time.time() - stage_start
+            start_time = datetime.now()
             
-            stage_start = time.time()
-            merged_preferences = self._merge_and_validate_preferences(extracted_prefs, preferences)
-            processing_times['preference_merging'] = time.time() - stage_start
-
-            # Get recommendations with timing
-            stage_start = time.time()
-            recommendations = self.get_recommendations(merged_preferences)
-            processing_times['recommendation_generation'] = time.time() - stage_start
-
-            # Enhanced recommendation statistics
-            recommendation_stats = {
-                'total_count': len(recommendations),
-                'type_distribution': self._get_type_distribution(recommendations),
-                'price_range_distribution': self._get_price_distribution(recommendations),
-                'location_distribution': self._get_location_distribution(recommendations),
-                'rating_distribution': self._get_rating_distribution(recommendations)
-            }
-
-            # Validate recommendations with timing
-            stage_start = time.time()
-            validation_results = self.recommendation_validator.validate(
-                recommendations,
-                merged_preferences
-            )
-            processing_times['validation'] = time.time() - stage_start
-
-            # Get intent analysis with timing
-            stage_start = time.time()
-            intent_analysis = self.nlp_processor.classify_intent(query)
-            processing_times['intent_analysis'] = time.time() - stage_start
-
-            # Calculate overall performance metrics
-            total_time = time.time() - start_time
-            performance_metrics = {
-                'total_processing_time': total_time,
-                'processing_times': processing_times,
-                'average_time_per_recommendation': total_time / len(recommendations) if recommendations else 0,
-                'preference_processing_ratio': processing_times['preference_extraction'] / total_time,
-                'recommendation_generation_ratio': processing_times['recommendation_generation'] / total_time
-            }
-
-            # Construct enhanced response
-            response = {
+            # Procesar consulta y preferencias
+            extracted_prefs = self.nlp_processor.extract_preferences(query)
+            merged_prefs = self._merge_preferences(extracted_prefs, preferences)
+            
+            # Obtener recomendaciones iniciales
+            recommendations = self._fetch_recommendations(merged_prefs)
+            if not recommendations:
+                return self._create_empty_response("No recommendations found")
+            
+            # Puntuar y ordenar recomendaciones 
+            scored_recs = self._score_recommendations(recommendations, merged_prefs)
+            
+            # Balancear y diversificar resultados
+            final_recs = self._balance_recommendations(scored_recs, merged_prefs)
+            
+            # Validar resultados
+            validation_results = self.validator.validate(final_recs, merged_prefs)
+            
+            return {
                 "status": "success",
-                "recommendations": recommendations,
-                "validation": validation_results,
-                "query_analysis": {
-                    "intent_scores": intent_analysis,
-                    "extracted_preferences": extracted_prefs,
-                    "merged_preferences": merged_preferences,
-                    "query_understanding_score": self._calculate_query_understanding(
-                        query, extracted_prefs, merged_preferences
-                    )
-                },
+                "recommendations": final_recs,
                 "metadata": {
                     "query_time": datetime.now().isoformat(),
-                    "preference_count": len(merged_preferences),
-                    "recommendation_count": len(recommendations),
-                    "processing_times": processing_times,
-                    "performance_metrics": performance_metrics
+                    "processing_time": (datetime.now() - start_time).total_seconds(),
+                    "total_results": len(final_recs),
+                    "query_understanding": self._calculate_query_understanding(query, merged_prefs)
                 },
-                "statistics": {
-                    "recommendation_stats": recommendation_stats,
-                    "validation_metrics": validation_results,
-                    "coverage_analysis": self._analyze_preference_coverage(
-                        recommendations, merged_preferences
-                    )
-                }
+                "validation": validation_results
             }
-
-            return response
-
+            
         except Exception as e:
-            logger.error(f"Error processing query: {str(e)}", exc_info=True)
-            error_response = self._handle_error("query_error", str(e))
-            error_response['metadata'] = {
-                'error_time': datetime.now().isoformat(),
-                'processing_time': time.time() - start_time,
-                'processing_stage_times': processing_times
+            logger.error(f"Error in recommendation engine: {str(e)}")
+            return self._create_error_response(str(e))
+
+    def _get_relevant_categories(self, preferences: Dict[str, Any]) -> List[str]:
+        """Determinar las categorías relevantes basadas en las preferencias del usuario"""
+        categories = set()
+        
+        # Mapear intereses a categorías
+        interest_to_category = {
+            'cultural': ['realistic_curacao_tourist_spots', 'realistic_curacao_activities'],
+            'history': ['realistic_curacao_tourist_spots'],
+            'food': ['realistic_curacao_restaurants'],
+            'nightlife': ['realistic_curacao_nightclubs'],
+            'music': ['realistic_curacao_nightclubs'],
+            'adventure': ['realistic_curacao_activities'],
+            'nature': ['realistic_curacao_activities']
+        }
+        
+        # Agregar categorías basadas en intereses
+        if interests := preferences.get('interests', []):
+            for interest in interests:
+                for category in interest_to_category.get(interest, []):
+                    categories.add(category)
+        
+        # Agregar categorías basadas en tipos de actividad
+        activity_to_category = {
+            'walking_tour': ['realistic_curacao_activities'],
+            'museum_visits': ['realistic_curacao_tourist_spots'],
+            'food_tasting': ['realistic_curacao_restaurants'],
+            'dancing': ['realistic_curacao_nightclubs'],
+            'live_music': ['realistic_curacao_nightclubs'] 
+        }
+        
+        if activities := preferences.get('activity_types', []):
+            for activity in activities:
+                for category in activity_to_category.get(activity, []):
+                    categories.add(category)
+        
+        # Si no hay categorías específicas, incluir todas
+        if not categories:
+            categories = {
+                'realistic_curacao_tourist_spots',
+                'realistic_curacao_activities',
+                'realistic_curacao_restaurants',
+                'realistic_curacao_nightclubs'
             }
-            return error_response
+        
+        return list(categories)
+    
 
-    def _calculate_recommendation_score(self, item: Dict, preferences: Dict) -> float:
-        """Enhanced scoring algorithm with weighted criteria"""
-        base_score = 0.0
-        try:
-            # Base rating score (0-5 scale)
-            rating = float(item.get('rating', 0))
-            base_score = rating / 5.0
-
-            # Interest matching with enhanced scoring
-            if preferences.get('interests'):
-                interest_score = 0
-                item_text = f"{item.get('type', '')} {item.get('description', '')} {item.get('recommended_for', '')}".lower()
-
-                for interest in preferences['interests']:
-                    # Direct match
-                    if interest.lower() in item_text:
-                        interest_score += 1.0
-
-                    # Category matching
-                    for category, keywords in self.INTEREST_MAPPINGS.items():
-                        if interest in category or any(kw in interest for kw in keywords):
-                            if any(kw in item_text for kw in keywords):
-                                interest_score += 0.8
-
-                interest_score = min(interest_score / len(preferences['interests']), 1.0)
-                base_score += interest_score * self.scoring_weights['interest_match']
-
-            # Location matching with proximity bonus
-            if preferences.get('locations'):
-                location_score = 0
-                item_location = item.get('location', '').lower()
-
-                for location in preferences['locations']:
-                    if location.lower() in item_location:
-                        location_score = 1.0
-                        # Proximity bonus for exact match
-                        if location.lower() == item_location:
-                            location_score *= 1.2
-                        break
-
-                base_score += location_score * self.scoring_weights['location_match']
-
-            # Budget matching with range consideration
-            if preferences.get('budget_per_day'):
-                budget = float(preferences['budget_per_day'])
-                item_cost = float(item.get('cost', 0)) or float(item.get('price', 0))
-
-                if item_cost <= budget:
-                    budget_score = 1.0
-                    # Bonus for being well within budget
-                    if item_cost <= budget * 0.7:
-                        budget_score *= 1.2
-                    base_score += budget_score * self.scoring_weights['budget_match']
-
-            # Rating bonus for highly-rated items
-            if rating >= 4.5:
-                base_score *= self.scoring_weights['rating_bonus']
-
-            # Diversity bonus based on unique attributes
-            if (item.get('type') not in self._seen_types and
-                item.get('location') not in self._seen_locations):
-                base_score *= self.scoring_weights['diversity_bonus']
-
-            return base_score
-
-        except Exception as e:
-            logger.error(f"Error calculating recommendation score: {str(e)}")
-            return 0.0
-
-
-
-    def _ensure_recommendation_diversity(
-        self,
-        recommendations: List[Dict],
-        weights: Dict[str, float] = None,
-        max_items: int = 10
-    ) -> List[Dict]:
-        """Enhanced diversity handling with comprehensive balancing
+    def _build_query(self, category: str, preferences: Dict[str, Any]) -> str:
+        """
+        Construir consulta SQL basada en categoría y preferencias para consultar dataframes
         
         Args:
-            recommendations (List[Dict]): List of recommendations to diversify
-            weights (Dict[str, float], optional): Custom weights for scoring
-            max_items (int): Maximum number of recommendations to return
+            category (str): Categoría a consultar 
+            preferences (Dict[str, Any]): Preferencias del usuario
             
         Returns:
-            List[Dict]: Diversified recommendations list
+            str: Consulta SQL construida
+        """
+        conditions = []
+        
+        # Filtrado por ubicación usando LOWER para case-insensitive
+        if locations := preferences.get('locations'):
+            location_clauses = []
+            for loc in locations:
+                location_clauses.append(f"location LIKE '%{loc.lower()}%'") 
+            if location_clauses:
+                conditions.append("(" + " OR ".join(location_clauses) + ")")
+        
+        # Filtrado por presupuesto con campo dinámico
+        if budget := preferences.get('budget_per_day'):
+            cost_field = {
+                'realistic_curacao_activities': 'cost',
+                'realistic_curacao_tourist_spots': 'entry_fee',
+                'realistic_curacao_restaurants': 'average_person_expense',
+                'realistic_curacao_nightclubs': 'average_person_expense'
+            }.get(category)
+            if cost_field:
+                conditions.append(f"{cost_field} <= {float(budget)}")
+        
+        # Construir cláusula WHERE
+        where_clause = " AND ".join(conditions) if conditions else "1=1"
+        
+        # Construir consulta completa
+        query = f"""
+            SELECT *
+            FROM {category}
+            WHERE {where_clause}
+            ORDER BY rating DESC
+            LIMIT 10
+        """
+        
+        return query.strip()
+
+    def _fetch_recommendations(self, preferences: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Fetch recommendations from database"""
+        try:
+            recommendations = []
+            
+            # Query each relevant table based on preferences
+            for category in self._get_relevant_categories(preferences):
+                query = self._build_query(category, preferences)
+                results = self.db_manager.execute_query(query)
+                recommendations.extend(results)
+                
+                # Validar resultados obtenidos
+                for rec in results:
+                    if 'type' not in rec or not rec['type']:
+                        rec['type'] = 'unknown'
+                
+                recommendations.extend(results)
+            
+            return recommendations
+            
+        except Exception as e:
+            logger.error(f"Error fetching recommendations: {str(e)}")
+            return []
+
+    def _score_recommendations(self, recommendations: List[Dict], preferences: Dict) -> List[Dict]:
+        """Score recommendations based on preferences"""
+        scored_recs = []
+        
+        for rec in recommendations:
+            score = 0.0
+            
+            # Interest match
+            interest_score = self._calculate_interest_match(rec, preferences)
+            score += interest_score * self.weights['interest_match']
+            
+            # Location match
+            location_score = self._calculate_location_match(rec, preferences)
+            score += location_score * self.weights['location_match']
+            
+            # Budget match
+            budget_score = self._calculate_budget_match(rec, preferences)
+            score += budget_score * self.weights['budget_match']
+            
+            # Rating contribution
+            rating_score = float(rec.get('rating', 0)) / 5.0
+            score += rating_score * self.weights['rating']
+            
+            # Store scores for transparency
+            rec['_scores'] = {
+                'interest': interest_score,
+                'location': location_score,
+                'budget': budget_score,
+                'rating': rating_score,
+                'total': score
+            }
+            
+            scored_recs.append(rec)
+            
+        return sorted(scored_recs, key=lambda x: x['_scores']['total'], reverse=True)
+
+    def _balance_recommendations(self, recommendations: List[Dict], preferences: Dict) -> List[Dict]:
+        """Balance and diversify recommendations"""
+        balanced_recs = []
+        category_counts = defaultdict(int)
+        
+        # Sort by score but respect category balance
+        for rec in sorted(recommendations, key=lambda x: x['_scores']['total'], reverse=True):
+            category = self._get_category(rec)
+            
+            if (category_counts[category] < self.category_balance.get(category, {}).get('max', float('inf')) and
+                len(balanced_recs) < preferences.get('limit', 10)):
+                
+                # Add diversity bonus for underrepresented categories
+                if category_counts[category] < self.category_balance.get(category, {}).get('min', 0):
+                    rec['_scores']['total'] *= 1.2
+                
+                balanced_recs.append(rec)
+                category_counts[category] += 1
+        
+        return balanced_recs
+
+    def _calculate_interest_match(self, recommendation: Dict, preferences: Dict) -> float:
+        """Calculate how well a recommendation matches user interests"""
+        if not preferences.get('interests'):
+            return 0.0
+            
+        rec_text = f"{recommendation.get('type', '')} {recommendation.get('description', '')}".lower()
+        matches = sum(1 for interest in preferences['interests'] 
+                     if interest.lower() in rec_text)
+        
+        return matches / len(preferences['interests'])
+
+    def _calculate_location_match(self, recommendation: Dict, preferences: Dict) -> float:
+        """Calculate location match score"""
+        if not preferences.get('locations'):
+            return 0.0
+            
+        rec_location = recommendation.get('location', '').lower()
+        for location in preferences['locations']:
+            if location.lower() == rec_location:
+                return 1.0
+            elif location.lower() in rec_location or rec_location in location.lower():
+                return 0.8
+                
+        return 0.0
+
+    def _calculate_budget_match(self, recommendation: Dict, preferences: Dict) -> float:
+        """Calculate budget match score"""
+        if not preferences.get('budget_per_day'):
+            return 0.0
+            
+        try:
+            budget = float(preferences['budget_per_day'])
+            cost = float(recommendation.get('cost', 0))
+            
+            if cost <= budget:
+                return 1.0
+            elif cost <= budget * 1.2:
+                return 0.7
+            elif cost <= budget * 1.5:
+                return 0.3
+                
+            return 0.0
+            
+        except (ValueError, TypeError):
+            return 0.0
+
+    def _merge_preferences(self, extracted: Dict, explicit: Dict) -> Dict:
+        """Merge and validate extracted and explicit preferences"""
+        merged = explicit.copy()
+        
+        # Add extracted preferences if not explicitly specified
+        for key in ['interests', 'locations', 'budget_per_day']:
+            if key not in merged and key in extracted:
+                merged[key] = extracted[key]
+                
+        # Validate merged preferences
+        return DataValidator.validate_preferences(merged)
+
+    def _create_empty_response(self, message: str) -> Dict:
+        """Create response for no recommendations"""
+        return {
+            "status": "no_results",
+            "message": message,
+            "recommendations": [],
+            "metadata": {
+                "query_time": datetime.now().isoformat(),
+                "total_results": 0
+            }
+        }
+
+    def _create_error_response(self, error: str) -> Dict:
+        """Create error response"""
+        return {
+            "status": "error",
+            "error": error,
+            "recommendations": [],
+            "metadata": {
+                "query_time": datetime.now().isoformat(),
+                "error_type": "recommendation_error"
+            }
+        }
+
+    def _get_category(self, recommendation: Dict) -> str:
+        """
+        Determine category based on establishment type and details
         """
         try:
-            if not recommendations:
-                logger.warning("No recommendations to diversify")
-                return []
-
-            # Use provided weights or defaults
-            if weights is None:
-                weights = {
-                    'rating': 0.4,
-                    'type_diversity': 0.3,
-                    'location_diversity': 0.2,
-                    'price_diversity': 0.1
-                }
-
-            # Deduplicate recommendations
-            unique_recs = {}
-            for rec in recommendations:
-                key = f"{rec.get('name', '')}-{rec.get('location', '')}-{rec.get('type', '')}"
-                if key not in unique_recs:
-                    unique_recs[key] = rec
-
-            # Initialize tracking dictionaries with category balancing
-            diverse_recs = []
-            type_counts = defaultdict(int)
-            location_counts = defaultdict(int)
-            price_ranges = defaultdict(int)
-            category_counts = defaultdict(int)
-
-            # Define diversity thresholds and category limits
-            MAX_PER_TYPE = 3
-            MAX_PER_LOCATION = 2
-            MAX_PRICE_RANGE = 3
-            TARGET_SIZE = min(max_items, len(unique_recs))
-
-            # Sort by composite score (adjusted rating + diversity bonus)
-            sorted_recs = sorted(
-                unique_recs.values(),
-                key=lambda x: (
-                    float(x.get('adjusted_rating', 0)) * weights['rating'] +
-                    float(x.get('rating', 0)) * weights['rating'] * 0.5 +
-                    (weights['type_diversity'] if x.get('type', '').lower() not in type_counts else 0.0) +
-                    (weights['location_diversity'] if x.get('location', '').lower() not in location_counts else 0.0)
-                ),
-                reverse=True
-            )
-
-            # First pass: ensure minimum category requirements
-            for rec in sorted_recs[:]:
-                category = self._get_recommendation_category(rec)
-                if category in self.category_requirements:
-                    min_required = self.category_requirements[category].get('min', 0)
-                    if (category_counts[category] < min_required and
-                        len(diverse_recs) < TARGET_SIZE):
-                        diverse_recs.append(rec)
-                        self._update_diversity_counters(
-                            rec, category_counts, type_counts, 
-                            location_counts, price_ranges, category
-                        )
-                        sorted_recs.remove(rec)
-
-            # Second pass: fill remaining slots while maintaining diversity
-            for rec in sorted_recs:
-                rec_type = str(rec.get('type', '')).lower()
-                location = str(rec.get('location', '')).lower()
-                price_category = self._get_price_category(rec)
-                category = self._get_recommendation_category(rec)
-
-                # Check all diversity conditions
-                if self._meets_diversity_criteria(
-                    diverse_recs, TARGET_SIZE,
-                    type_counts, rec_type, MAX_PER_TYPE,
-                    location_counts, location, MAX_PER_LOCATION,
-                    price_ranges, price_category, MAX_PRICE_RANGE,
-                    category_counts, category
-                ):
-                    # Calculate diversity bonus with weights
-                    diversity_bonus = self._calculate_diversity_bonus(
-                        rec_type, type_counts,
-                        location, location_counts,
-                        price_category, price_ranges,
-                        weights
-                    )
-
-                    # Add recommendation with diversity score
-                    rec['diversity_score'] = diversity_bonus
-                    diverse_recs.append(rec)
-
-                    # Update counters
-                    self._update_diversity_counters(
-                        rec, category_counts, type_counts, 
-                        location_counts, price_ranges, category
-                    )
-
-            return diverse_recs[:max_items]
-
-        except Exception as e:
-            logger.error(f"Error ensuring diversity: {str(e)}", exc_info=True)
-            return recommendations[:max_items] if recommendations else []
-
-    def _meets_diversity_criteria(
-        self, diverse_recs: List[Dict], target_size: int,
-        type_counts: Dict, rec_type: str, max_type: int,
-        location_counts: Dict, location: str, max_location: int,
-        price_ranges: Dict, price_category: str, max_price: int,
-        category_counts: Dict, category: str
-    ) -> bool:
-        """Check if a recommendation meets all diversity criteria"""
-        return (
-            len(diverse_recs) < target_size and
-            type_counts[rec_type] < max_type and
-            location_counts[location] < max_location and
-            price_ranges[price_category] < max_price and
-            (category not in self.category_requirements or
-            category_counts[category] < self.category_requirements[category].get('max', float('inf')))
-        )
-
-    def _calculate_diversity_bonus(
-        self, rec_type: str, type_counts: Dict,
-        location: str, location_counts: Dict,
-        price_category: str, price_ranges: Dict,
-        weights: Dict[str, float]
-    ) -> float:
-        """Calculate diversity bonus score for a recommendation"""
-        return (
-            (weights['type_diversity'] if type_counts[rec_type] == 0 else weights['type_diversity'] * 0.5) +
-            (weights['location_diversity'] if location_counts[location] == 0 else weights['location_diversity'] * 0.3) +
-            (weights['price_diversity'] if price_ranges[price_category] == 0 else weights['price_diversity'] * 0.2)
-        )
-
-    def _update_diversity_counters(
-        self, rec: Dict,
-        category_counts: Dict,
-        type_counts: Dict,
-        location_counts: Dict,
-        price_ranges: Dict,
-        category: str
-    ) -> None:
-        """Update all diversity tracking counters"""
-        type_counts[str(rec.get('type', '')).lower()] += 1
-        location_counts[str(rec.get('location', '')).lower()] += 1
-        price_ranges[self._get_price_category(rec)] += 1
-        if category in self.category_requirements:
-            category_counts[category] += 1
-        
-    def _get_recommendation_category(self, recommendation: Dict) -> str:
-        """Determine the primary category of a recommendation"""
-        rec_type = str(recommendation.get('type', '')).lower()
-
-        # Category mapping
-        for category, info in self.category_mappings.items():
-            if any(keyword in rec_type for keyword in info['keywords']):
-                return category
-
-        # Check description if type is inconclusive
-        description = str(recommendation.get('description', '')).lower()
-        for category, info in self.category_mappings.items():
-            if any(keyword in description for keyword in info['keywords']):
-                return category
-
-        return 'other'
-
-    def _get_price_category(self, recommendation: Dict) -> str:
-        """Determine price category for a recommendation"""
-        try:
-            cost = float(recommendation.get('cost', 0))
-            if cost <= 50:
-                return 'budget'
-            elif cost <= 150:
-                return 'moderate'
-            return 'premium'
-        except (ValueError, TypeError):
-            return 'unknown'
-
-    def _get_type_distribution(self, recommendations: List[Dict]) -> Dict[str, int]:
-        """Calculate distribution of recommendation types"""
-        return Counter(rec.get('type', 'unknown').lower() for rec in recommendations)
-
-    def _get_price_distribution(self, recommendations: List[Dict]) -> Dict[str, int]:
-        """Calculate distribution of price ranges"""
-        return Counter(self._get_price_category(rec) for rec in recommendations)
-
-    def _get_location_distribution(self, recommendations: List[Dict]) -> Dict[str, int]:
-        """Calculate distribution of locations"""
-        return Counter(rec.get('location', 'unknown').lower() for rec in recommendations)
-
-    def _get_rating_distribution(self, recommendations: List[Dict]) -> Dict[str, float]:
-        """Calculate rating statistics"""
-        ratings = [float(rec.get('rating', 0)) for rec in recommendations if rec.get('rating')]
-        if not ratings:
-            return {'average': 0, 'median': 0, 'max': 0, 'min': 0}
+            rec_type = recommendation.get('type', '').lower()
             
-        return {
-            'average': statistics.mean(ratings),
-            'median': statistics.median(ratings),
-            'max': max(ratings),
-            'min': min(ratings)
-        }
+            # Nightlife categories based on music_type
+            nightlife_types = {
+                # Dance Music
+                'salsa', 'bachata', 'merengue', 'reggaeton', 'latin', 'cumbia',
+                'electronic', 'techno', 'house', 'edm', 'dance', 'disco', 'trance',
+                
+                # Live Music
+                'rock', 'jazz', 'blues', 'live music', 'live band', 'acoustic',
+                'pop', 'r&b', 'soul', 'funk', 'hip hop', 'rap',
+                
+                # Caribbean/Local
+                'zouk', 'soca', 'calypso', 'caribbean', 'steel pan', 'tumba',
+                
+                # Venue Types  
+                'lounge', 'club', 'nightclub', 'bar', 'pub', 'dance club',
+                'cocktail bar', 'music bar', 'karaoke', 'disco bar',
+                
+                # Event Types
+                'dj', 'live performance', 'concert', 'dance party', 'social dancing',
+                'dance floor', 'live entertainment', 'music show', 'party'
+            }
+
+            # Restaurant categories based on cuisine_type 
+            food_types = {
+                # Local & Regional
+                'local', 'krioyo', 'caribbean', 'creole', 'antillean', 'curaçaoan',
+                'dutch', 'surinamese', 'venezuelan', 'island cuisine',
+                
+                # Seafood & Fish
+                'seafood', 'fish', 'lobster', 'crab', 'shellfish', 'fresh catch',
+                'ocean grill', 'sea food', 'maritime cuisine', 'fisherman\'s',
+                
+                # International
+                'international', 'fusion', 'mediterranean', 'european', 'american',
+                'asian', 'chinese', 'japanese', 'thai', 'indian', 'indonesian',
+                'italian', 'french', 'spanish', 'greek', 'mexican', 'latin american',
+                
+                # Dietary Specific
+                'vegan', 'vegetarian', 'plant-based', 'gluten-free', 'dairy-free',
+                'halal', 'kosher', 'organic', 'health food', 'raw food',
+                
+                # Restaurant Types
+                'fine dining', 'casual dining', 'bistro', 'cafe', 'steakhouse',
+                'grill', 'buffet', 'food court', 'beach bar', 'tapas', 'wine bar',
+                'gastro pub', 'trattoria', 'pizzeria', 'sushi bar', 'noodle house',
+                
+                # Meal Types
+                'breakfast', 'brunch', 'lunch', 'dinner', 'all-day dining',
+                'street food', 'snack bar', 'quick bites', 'takeaway', 'delivery',
+                
+                # Specialties
+                'barbecue', 'grill', 'rotisserie', 'smokehouse', 'raw bar',
+                'seafood market', 'farm to table', 'home cooking', 'traditional',
+                'contemporary', 'modern', 'innovative', 'fusion'
+            }
+
+            # Activity and attraction types
+            cultural_types = {
+                # Museums & Galleries
+                'museum', 'art gallery', 'exhibition hall', 'heritage museum',
+                'maritime museum', 'history museum', 'science museum', 'art studio',
+                
+                # Historic Sites
+                'historic', 'heritage', 'monument', 'historic site', 'landmark',
+                'colonial building', 'fort', 'castle', 'palace', 'plantation house',
+                'historic district', 'old town', 'heritage site', 'unesco site',
+                
+                # Cultural Venues
+                'theater', 'cultural center', 'concert hall', 'opera house',
+                'performing arts center', 'amphitheater', 'library', 'archive',
+                
+                # Religious Sites
+                'church', 'synagogue', 'temple', 'cathedral', 'chapel',
+                'religious site', 'sacred place', 'monastery', 'shrine',
+                
+                # Cultural Activities
+                'cultural tour', 'guided tour', 'heritage walk', 'historical tour',
+                'art workshop', 'cultural workshop', 'cultural festival',
+                'traditional ceremony', 'cultural demonstration', 'artisan market',
+                
+                # Architecture
+                'architecture', 'colonial architecture', 'dutch architecture',
+                'historic architecture', 'architectural site', 'traditional building',
+                
+                # Education & Research
+                'research center', 'educational center', 'cultural institute',
+                'heritage center', 'interpretation center', 'visitor center'
+            }
+
+            nature_types = {
+                # Beaches & Coastal
+                'beach', 'cove', 'bay', 'lagoon', 'coast', 'shoreline', 'reef',
+                'marine park', 'seaside', 'oceanfront', 'beach park', 'tide pools',
+                
+                # Parks & Reserves
+                'park', 'nature reserve', 'national park', 'marine reserve', 
+                'protected area', 'conservation area', 'wildlife sanctuary',
+                'botanical garden', 'eco park', 'nature park', 'forest reserve',
+                
+                # Natural Features
+                'cave', 'cliff', 'rock formation', 'coral reef', 'mangrove',
+                'wetland', 'salt flat', 'lagoon', 'natural pool', 'sinkhole',
+                'natural bridge', 'limestone formation',
+                
+                # Activities & Trails
+                'hiking', 'hiking trail', 'nature trail', 'walking path',
+                'bird watching', 'wildlife viewing', 'nature walk', 'eco tour',
+                'trekking', 'outdoor adventure', 'nature exploration',
+                
+                # Eco Tourism
+                'eco tourism', 'eco friendly', 'sustainable tourism',
+                'environmental education', 'nature education', 'conservation site',
+                'eco lodge', 'eco resort', 'nature center', 'visitor center',
+                
+                # Outdoor Recreation
+                'outdoor', 'nature activity', 'outdoor recreation',
+                'nature photography', 'camping', 'picnic area', 'viewpoint',
+                'observation point', 'scenic spot', 'lookout point'
+            }
+
+            activity_types = {
+                # Tours & Guided Experiences
+                'tour', 'guided tour', 'walking tour', 'sightseeing', 'city tour',
+                'excursion', 'day trip', 'guided visit', 'island tour', 'boat tour',
+                'food tour', 'cultural tour', 'photography tour', 'sunset cruise',
+                'private tour', 'group tour',
+                
+                # Water Activities  
+                'diving', 'snorkeling', 'swimming', 'kayaking', 'paddleboarding',
+                'sailing', 'fishing', 'boat ride', 'jet skiing', 'windsurfing',
+                'kite surfing', 'surfing', 'water sports',
+                
+                # Educational & Cultural
+                'workshop', 'class', 'cooking class', 'art class', 'dance lesson',
+                'craft workshop', 'tasting', 'seminar', 'demonstration', 
+                'cultural workshop', 'language lesson',
+                
+                # Adventure & Sport
+                'hiking', 'biking', 'cycling', 'climbing', 'horseback riding',
+                'atv tour', 'jeep safari', 'zip lining', 'paragliding',
+                'cliff jumping', 'cave exploration',
+                
+                # Entertainment & Shows
+                'performance', 'show', 'concert', 'festival', 'carnival',
+                'live entertainment', 'dance show', 'music performance',
+                'cultural show', 'dinner show',
+                
+                # Wellness & Recreation
+                'yoga', 'spa treatment', 'massage', 'meditation', 'fitness class',
+                'beach activity', 'pool access', 'golf', 'tennis'
+            }
+            
+            logger.debug("Recommendation object: %s", recommendation)
+            logger.debug("Type fields present: %s", {k:v for k,v in recommendation.items() if 'type' in k})
+
+            if recommendation.get('music_type'):
+                    return 'nightlife'
+                
+            if recommendation.get('cuisine_type'):
+                return 'food'
+
+            if recommendation.get('type'):
+                rec_type = recommendation['type'].lower()
+                
+                for type_set, category in [
+                    (cultural_types, 'cultural'),
+                    (food_types, 'food'),
+                    (nature_types, 'nature'),
+                    (nightlife_types, 'nightlife'),
+                    (activity_types, 'activity')
+                ]:
+                    if any(t in rec_type for t in type_set):
+                        logger.debug("Category object: %s", category)
+                        return category
+                
+            logger.debug("No category match found, returning 'other'")
+            return 'other'
+            
+        except Exception as e:
+            logger.error(f"Error determining category: {str(e)}", exc_info=True)
+            return 'other'
+
+    def _calculate_query_understanding(self, query: str, preferences: Dict) -> float:
+        """Calculate how well the system understood the query"""
+        key_preferences = ['interests', 'locations', 'budget_per_day']
+        matches = sum(1 for pref in key_preferences if preferences.get(pref))
+        return matches / len(key_preferences)
+
+# Initialize singleton instance
+recommender = RecommendationEngine()

@@ -6,8 +6,8 @@ import os
 import pandas as pd
 from typing import List, Dict, Any, Optional
 from pandasql import sqldf
-from app.utils.logger import get_logger
-from app.utils.config import DATABASE_PATHS
+from utils.logger import get_logger
+from utils.config import DATABASE_PATHS
 
 logger = get_logger(__name__)
 
@@ -56,7 +56,7 @@ class CSVDatabaseManager:
                 "realistic_curacao_restaurants": {
                     "path": "restaurants",  # Removed .xlsx extension
                     "expected_columns": [
-                        "id_restaurant", "name", "cuisine_type", "price_range",
+                        "id_restaurant", "name", "cuisine_type", "average_person_expense", "price_range",
                         "location", "opening_hours", "rating", "recommended_for",
                         "description", "contact_info", "website", "social_media",
                         "accessibility", "parking", "payment_options",
@@ -66,7 +66,7 @@ class CSVDatabaseManager:
                 "realistic_curacao_nightclubs": {
                     "path": "nightclubs",  # Removed .xlsx extension
                     "expected_columns": [
-                        "id_nightclub", "name", "music_type", "price_range",
+                        "id_nightclub", "name", "music_type", "average_person_expense", "price_range",
                         "location", "opening_hours", "rating", "recommended_for",
                         "description", "contact_info", "website", "social_media",
                         "accessibility", "parking", "payment_options",
@@ -133,7 +133,8 @@ class CSVDatabaseManager:
                         'price': 'float64',
                         'rating': 'float64',
                         'duration_hours': 'float64',
-                        'duration_days': 'int64'
+                        'duration_days': 'int64',
+                        'average_person_expense': 'float64'
                     }
 
                     for col, dtype in numeric_columns.items():
@@ -164,38 +165,48 @@ class CSVDatabaseManager:
             raise
 
     def execute_query(self, query: str, params: Optional[List[Any]] = None) -> List[Dict]:
-        """
-        Execute SQL query with enhanced error handling
-
-        Args:
-            query (str): SQL query to execute
-            params (List[Any], optional): Parameters to substitute in query
-
-        Returns:
-            List[Dict]: Query results as list of dictionaries
-        """
         try:
-            # Parameter substitution with enhanced type checking
-            if params:
-                for param in params:
-                    if isinstance(param, (int, float)):
-                        query = query.replace('?', str(param), 1)
-                    else:
-                        # Enhanced string parameter handling
-                        param_str = str(param).replace("'", "''")
-                        if not any(c.isalnum() for c in param_str):  # Basic injection check
-                            logger.warning(f"Suspicious parameter value: {param_str}")
-                        query = query.replace('?', f"'{param_str}'", 1)
+            # Extraer nombre de tabla
+            table_name = query.split('FROM')[1].split('WHERE')[0].strip()
+            df = self.dataframes[table_name].copy()
+            
+            # Procesar WHERE
+            if 'WHERE' in query:
+                where_clause = query.split('WHERE')[1].split('ORDER BY')[0].strip()
+                
+                # Procesar condiciones de ubicación
+                if 'location LIKE' in where_clause:
+                    location_conditions = where_clause.split('AND')[0].strip('()')
+                    locations = [
+                        loc.split("'%")[1].split("%'")[0] 
+                        for loc in location_conditions.split('OR')
+                    ]
+                    location_mask = df['location'].str.lower().str.contains('|'.join(locations), na=False)
+                    df = df[location_mask]
+                
+                # Procesar condiciones numéricas
+                if '<=' in where_clause:
+                    for condition in where_clause.split('AND'):
+                        if '<=' in condition:
+                            field, value = condition.strip().split('<=')
+                            field = field.strip()
+                            value = float(value.strip())
+                            df = df[df[field] <= value]
+            
+            # Ordenar
+            if 'ORDER BY' in query:
+                sort_field = query.split('ORDER BY')[1].split('LIMIT')[0].strip().split()[0]
+                ascending = 'DESC' not in query
+                df = df.sort_values(sort_field, ascending=ascending)
+            
+            # Límite
+            if 'LIMIT' in query:
+                limit = int(query.split('LIMIT')[-1].strip())
+                df = df.head(limit)
 
-            # Log sanitized query for debugging
-            logger.debug(f"Executing sanitized query: {query}")
-
-            # Execute query without scope_kwargs
-            result = sqldf(query, self.dataframes)
-
-            # Convert to list of dictionaries with enhanced null handling
+            # Convertir a diccionarios
             records = []
-            for _, row in result.iterrows():
+            for _, row in df.iterrows():
                 record = {}
                 for column in row.index:
                     value = row[column]
@@ -207,14 +218,12 @@ class CSVDatabaseManager:
                         record[column] = value
                 records.append(record)
 
-            # Log result summary
-            logger.debug(f"Query returned {len(records)} records")
             return records
 
         except Exception as e:
             logger.error(f"Query execution failed: {str(e)}\nQuery: {query}")
             return []
-
+    
     def get_table_info(self, table_name: str) -> Dict:
         """
         Get enhanced information about a specific table

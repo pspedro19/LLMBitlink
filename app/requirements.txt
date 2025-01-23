@@ -2,9 +2,8 @@
 python-dotenv
 fastapi
 uvicorn
-openai==0.28
+
 pydantic
-pandas
 requests
 aiosqlite
 aiohttp
@@ -20,7 +19,6 @@ transformers
 scikit-learn
 torch
 sentence-transformers
-langchain
 
 # Document processing
 PyMuPDF
@@ -28,3 +26,4 @@ peft
 
 # Storage
 minio
+fuzzywuzzy

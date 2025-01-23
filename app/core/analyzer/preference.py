@@ -5,7 +5,7 @@ Enhanced preference model with comprehensive validation for tourism preferences.
 from typing import Dict, List, Optional, Any
 from datetime import date
 from pydantic import BaseModel, Field, validator
-from app.core.utils.validators import DataValidator  # Cambiar la importación
+from core.utils.validators import DataValidator  # Cambiar la importación
 
 
 

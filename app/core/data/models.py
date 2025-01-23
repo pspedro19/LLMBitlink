@@ -7,8 +7,8 @@ from functools import lru_cache
 from datetime import date
 from pydantic import BaseModel, Field, validator
 from fuzzywuzzy import process, fuzz
-from app.utils.logger import get_logger
-from app.core.utils.validators import DataValidator  # Cambiar la importación
+from utils.logger import get_logger
+from core.utils.validators import DataValidator  # Cambiar la importación
 
 
 logger = get_logger(__name__)

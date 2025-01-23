@@ -1,5 +1,1 @@
-from .analyzer import QueryProcessor
-from .data import CSVDatabaseManager
-from .recommender import IntegratedTourismSystem
-
-__all__ = ['QueryProcessor', 'CSVDatabaseManager', 'IntegratedTourismSystem']
+from .analyzer import ImprovedNLPProcessor, QueryProcessor

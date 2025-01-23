@@ -1,10 +1,10 @@
 import re
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Any
 from functools import lru_cache
 from datetime import date
 from pydantic import BaseModel, Field, validator
 from fuzzywuzzy import process, fuzz
-from app.utils.logger import get_logger
+from utils.logger import get_logger
 
 
 
@@ -240,3 +240,46 @@ class DataValidator:
             if amount <= range_info['max']:
                 return range_name
         return 'high'
+
+    @classmethod
+    def validate_preferences(cls, preferences: Dict[str, Any]) -> Dict[str, Any]:
+        validated = {}
+        
+        # Validar intereses
+        if preferences.get('interests'):
+            validated['interests'] = [
+                interest for interest in preferences['interests']
+                if cls.normalize_interest(interest)
+            ]
+        
+        # Validar ubicaciones
+        if preferences.get('locations'):
+            validated['locations'] = [
+                loc for loc in preferences['locations']
+                if cls.normalize_location(loc)
+            ]
+        
+        # Validar presupuesto
+        if preferences.get('budget_per_day'):
+            budget = cls.normalize_budget(preferences['budget_per_day'])
+            if budget:
+                validated['budget_per_day'] = budget
+                
+        # Validar campos numéricos
+        numeric_fields = ['trip_duration', 'group_size']
+        for field in numeric_fields:
+            if value := preferences.get(field):
+                try:
+                    num_value = float(value)
+                    if num_value > 0:
+                        validated[field] = num_value
+                except ValueError:
+                    continue
+                    
+        # Mantener campos opcionales si existen
+        optional_fields = ['specific_sites', 'cuisine_preferences']
+        for field in optional_fields:
+            if value := preferences.get(field):
+                validated[field] = value
+
+        return validated

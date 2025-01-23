@@ -1,21 +1,20 @@
 from typing import Dict, Any, Optional
 from datetime import datetime
 import time
+import logging
 
-from .nlp_processor import ImprovedNLPProcessor
-from ..recommender.recommendation_engine import IntegratedTourismSystem
-from app.utils.config import API_CONFIG
-from app.utils.logger import get_logger
-
-# Solo necesitamos una instancia del logger
+from core.analyzer.nlp_processor import ImprovedNLPProcessor
+from core.recommender.recommendation_engine import RecommendationEngine
+from utils.config import API_CONFIG
+from utils.logger import get_logger
+recommender = RecommendationEngine()
 logger = get_logger(__name__)
 
 class QueryProcessor:
-    def __init__(self, openai_api_key: Optional[str] = None):
-        """Initialize query processor with NLP and recommendation components"""
+    def __init__(self, openai_api_key: Optional[str] = "api-key"):
         try:
             self.nlp_processor = ImprovedNLPProcessor()
-            self.tourism_system = IntegratedTourismSystem(openai_api_key)
+            self.tourism_system = RecommendationEngine()
         except Exception as e:
             logger.error(f"Failed to initialize QueryProcessor: {e}")
             raise
@@ -26,16 +25,14 @@ class QueryProcessor:
         preferences: Optional[Dict[str, Any]] = None,
         max_recommendations: int = API_CONFIG["max_recommendations"]
     ) -> Dict[str, Any]:
-        """Process user query with enhanced error handling and metrics"""
         start_time = time.time()
         processing_times = {}
 
         try:
-            # Validate input
             if not isinstance(query, str) or not query.strip():
                 raise ValueError("Invalid query format")
 
-            # Extract and merge preferences with timing
+            # Extract and merge preferences
             stage_start = time.time()
             extracted_prefs = self.nlp_processor.extract_preferences(query)
             processing_times['preference_extraction'] = time.time() - stage_start
@@ -45,7 +42,7 @@ class QueryProcessor:
                 preferences or {}
             )
 
-            # Get recommendations with limit
+            # Get recommendations
             recommendations = self.tourism_system.get_recommendations(
                 merged_preferences,
                 limit=max_recommendations
@@ -68,16 +65,6 @@ class QueryProcessor:
             return self._create_error_response(str(e), time.time() - start_time)
 
     def _merge_preferences(self, extracted: Dict[str, Any], existing: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Merge extracted preferences with existing preferences
-        
-        Args:
-            extracted (Dict[str, Any]): Newly extracted preferences
-            existing (Dict[str, Any]): Existing preferences
-            
-        Returns:
-            Dict[str, Any]: Merged preferences
-        """
         merged = existing.copy()
         
         # Merge list fields
@@ -88,7 +75,7 @@ class QueryProcessor:
                 new_items = set(extracted[field])
                 merged[field] = list(existing_items.union(new_items))
 
-        # Update scalar values if new ones are extracted
+        # Update scalar values
         scalar_fields = ['budget_per_day', 'trip_duration']
         for field in scalar_fields:
             if field in extracted and extracted[field] is not None:
@@ -105,20 +92,6 @@ class QueryProcessor:
         processing_times: dict,
         total_time: float
     ) -> Dict[str, Any]:
-        """
-        Compile the final response with all metrics and data
-        
-        Args:
-            query (str): Original query text
-            recommendations (list): List of recommendations
-            preferences (dict): Processed preferences
-            intent_analysis (dict): Intent analysis results
-            processing_times (dict): Processing time metrics
-            total_time (float): Total processing time
-            
-        Returns:
-            Dict[str, Any]: Complete response with all data and metrics
-        """
         return {
             "status": "success",
             "recommendations": recommendations,
@@ -135,16 +108,6 @@ class QueryProcessor:
         }
 
     def _create_error_response(self, error_message: str, total_time: float) -> Dict[str, Any]:
-        """
-        Create an error response
-        
-        Args:
-            error_message (str): Description of the error
-            total_time (float): Total processing time
-            
-        Returns:
-            Dict[str, Any]: Error response with metadata
-        """
         return {
             "status": "error",
             "error_message": error_message,
