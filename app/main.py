@@ -6,6 +6,11 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import logging
 from core.recommender.recommendation_engine import RecommendationEngine
+from fastapi.responses import HTMLResponse
+from core.recommender.formatter import HTMLFormatter
+import os
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+print(f"API Key configured: {'Yes' if OPENAI_API_KEY else 'No'}")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -114,6 +119,38 @@ def get_recommendations(request: RecommendationRequest) -> JSONResponse:
             detail=f"Internal server error: {str(e)}"
         )
 
+@app.post("/recommendations/html")
+def get_html_recommendations(request: RecommendationRequest) -> HTMLResponse:
+    try:
+        if not OPENAI_API_KEY:
+            raise HTTPException(
+                status_code=500,
+                detail="OpenAI API key not configured"
+            )
+            
+        response = engine.get_recommendations(
+            request.query,
+            request.preferences.dict()
+        )
+        
+        if response["status"] != "success":
+            raise HTTPException(
+                status_code=404 if response["status"] == "no_results" else 500,
+                detail=response.get("message", "Error generating recommendations")
+            )
+            
+        formatter = HTMLFormatter()
+        html_content = formatter.format_to_html(
+            response["recommendations"],
+            request.preferences.dict()
+        )
+        
+        return HTMLResponse(content=html_content)
+        
+    except Exception as e:
+        logger.error(f"Error processing HTML recommendation request: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
 @app.get("/health")
 async def health_check() -> Dict[str, str]:
     """API health check endpoint"""

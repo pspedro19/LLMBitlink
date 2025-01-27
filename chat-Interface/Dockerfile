@@ -10,14 +10,17 @@ RUN pip install whitenoise
 
 # Crear directorios necesarios
 RUN mkdir -p /app/staticfiles
+RUN mkdir -p /app/static
 RUN mkdir -p /app/static/admin/css
 RUN mkdir -p /app/static/admin/js
 RUN mkdir -p /app/static/admin/img
+RUN mkdir -p /app/property_images
 
 # Copiar el proyecto
 COPY . .
 
 # Establecer permisos
+RUN chmod -R 755 /app
 RUN chmod -R 755 /app/staticfiles
 RUN chmod -R 755 /app/static
 

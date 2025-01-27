@@ -44,14 +44,55 @@ class ImprovedNLPProcessor:
         
         # Enhanced interest context with broader categories
         self.interest_context = {
-            'cultural': ['museum', 'history', 'art', 'culture', 'heritage', 'monument', 'architecture'],
-            'adventure': ['hiking', 'climbing', 'adventure', 'trek', 'expedition', 'outdoor'],
-            'nature': ['park', 'beach', 'nature', 'wildlife', 'flora', 'fauna', 'ecosystem'],
-            'food': ['restaurant', 'dining', 'food', 'cuisine', 'culinary', 'gastronomy', 'taste'],
-            'water_activities': ['diving', 'snorkel', 'swim', 'marine', 'underwater', 'beach'],
-            'arts_crafts': ['gallery', 'exhibition', 'workshop', 'handmade', 'artisan', 'craft'],
-            'special_interests': ['photography', 'birdwatching', 'archaeology', 'architecture'],
-            'local_experiences': ['traditional', 'authentic', 'local', 'cultural', 'indigenous']
+            'cultural': [
+                'museum', 'history', 'art', 'culture', 'heritage', 'monument', 'architecture',
+                'theater', 'festival', 'ruins', 'temple', 'palace', 'historic_site', 'tradition',
+                'ceremony', 'archaeological_site', 'folk_art', 'customs', 'music', 'dance',
+                'religious_site', 'library', 'cultural_center', 'performing_arts'
+            ],
+            'adventure': [
+                'hiking', 'climbing', 'adventure', 'trek', 'expedition', 'outdoor',
+                'zipline', 'rappelling', 'canyoning', 'rafting', 'kayaking', 'paragliding',
+                'rock_climbing', 'mountain_biking', 'horseback_riding', 'caving', 'camping',
+                'off_road', 'survival_skills', 'bungee_jumping', 'skydiving', 'orienteering'
+            ],
+            'nature': [
+                'park', 'beach', 'nature', 'wildlife', 'flora', 'fauna', 'ecosystem',
+                'forest', 'mountain', 'waterfall', 'lake', 'river', 'desert', 'canyon',
+                'volcano', 'hot_springs', 'wetlands', 'cave', 'reef', 'lagoon', 'valley',
+                'sanctuary', 'reserve', 'botanical_garden', 'geyser', 'natural_bridge'
+            ],
+            'food': [
+                'restaurant', 'dining', 'food', 'cuisine', 'culinary', 'gastronomy', 'taste',
+                'food_tour', 'cooking_class', 'wine_tasting', 'brewery', 'market', 'street_food',
+                'farm_to_table', 'food_festival', 'local_produce', 'seafood', 'vegetarian',
+                'traditional_cooking', 'food_market', 'distillery', 'coffee_shop', 'bakery'
+            ],
+            'water_activities': [
+                'diving', 'snorkel', 'swim', 'marine', 'underwater', 'beach',
+                'surfing', 'paddleboarding', 'jet_skiing', 'sailing', 'windsurfing',
+                'fishing', 'boat_tour', 'whale_watching', 'dolphin_watching', 'waterpark',
+                'scuba_diving', 'freediving', 'submarine_tour', 'coral_reef', 'aquarium'
+            ],
+            'arts_crafts': [
+                'gallery', 'exhibition', 'workshop', 'handmade', 'artisan', 'craft',
+                'pottery', 'weaving', 'painting', 'sculpture', 'jewelry_making', 'glassblowing',
+                'woodworking', 'textile_art', 'ceramics', 'printmaking', 'metalworking',
+                'local_crafts', 'art_studio', 'artistic_workshop', 'handicraft_market'
+            ],
+            'special_interests': [
+                'photography', 'birdwatching', 'archaeology', 'architecture',
+                'astronomy', 'geology', 'botany', 'meditation', 'yoga', 'wellness',
+                'spiritual_retreat', 'agricultural_tourism', 'wine_tourism', 'stargazing',
+                'language_learning', 'scientific_tourism', 'volunteering', 'historical_research'
+            ],
+            'local_experiences': [
+                'traditional', 'authentic', 'local', 'cultural', 'indigenous',
+                'homestay', 'village_visit', 'local_festival', 'community_tourism',
+                'traditional_dance', 'folklore', 'local_market', 'artisan_workshop',
+                'farming_experience', 'fishing_village', 'tribal_visit', 'local_guide',
+                'traditional_music', 'cultural_exchange', 'local_ceremonies'
+            ]
         }
 
         # Enhanced patterns for various extractions
