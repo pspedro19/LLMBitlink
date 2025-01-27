@@ -6,9 +6,13 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import logging
 from core.recommender.recommendation_engine import RecommendationEngine
+from core.analyzer.nlp.routes import router as nlp_router
+from core.recommender.full_service import get_full_recommendations, NLPRequest
 from fastapi.responses import HTMLResponse
 from core.recommender.formatter import HTMLFormatter
 import os
+from utils.logger import get_logger
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 print(f"API Key configured: {'Yes' if OPENAI_API_KEY else 'No'}")
 
@@ -26,6 +30,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(nlp_router)
 
 class Preferences(BaseModel):
     interests: List[str] = Field(..., description="List of travel interests")
@@ -151,6 +157,14 @@ def get_html_recommendations(request: RecommendationRequest) -> HTMLResponse:
         logger.error(f"Error processing HTML recommendation request: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
     
+
+@app.post("/recommendations/full")
+async def full_recommendations_endpoint(request: NLPRequest) -> HTMLResponse:
+    """
+    Endpoint que combina el análisis de texto en lenguaje natural y la generación de HTML
+    """
+    return await get_full_recommendations(request)
+
 @app.get("/health")
 async def health_check() -> Dict[str, str]:
     """API health check endpoint"""
@@ -158,4 +172,4 @@ async def health_check() -> Dict[str, str]:
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

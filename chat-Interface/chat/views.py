@@ -171,8 +171,8 @@ def api_chat(request):
 
             # Realizar la petición a la API de FastAPI
             response = requests.post(
-                'https://api.dnlproptech-chat.com/chat/',
-                json={'user_input': mensaje},
+                'http://192.241.155.252:8000/recommendations/full',
+                json={'text': mensaje},
                 headers={'Content-Type': 'application/json'}
             )
 
@@ -277,7 +277,7 @@ def api_view(request):
     if request.method == "POST":
         user_input = request.POST.get('mensaje', '')
         try:
-            response = requests.post('https://api.dnlproptech-chat.com/chat/', json={'user_input': user_input})
+            response = requests.post('http://192.241.155.252:8000/recommendations/full', json={'text': user_input})
             if response.status_code == 200:
                 response_data = response.json()
                 if 'response' in response_data:
