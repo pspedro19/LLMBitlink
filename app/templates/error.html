@@ -1,0 +1,20 @@
+<!-- error.html -->
+<div class="message message-bot error-message">
+    <div class="message-content">
+        <p style="font-size: 1.2em; color: #333; margin-bottom: 16px;">
+            {% if error_type == 'openai_error' %}
+                Lo siento, estoy teniendo problemas para procesar tu solicitud en este momento.
+                ¿Te gustaría ver algunas de nuestras recomendaciones populares mientras tanto?
+            {% elif error_type == 'recommendation_error' %}
+                Disculpa, no pude encontrar recomendaciones específicas para tu solicitud.
+                Permíteme sugerirte algunas alternativas interesantes.
+            {% elif error_type == 'mixed_intent' %}
+                Parece que hubo un problema procesando tu solicitud completa.
+                ¿Podrías especificar qué parte te interesa más: las recomendaciones o la información general?
+            {% else %}
+                Lo siento, hubo un problema al procesar tu solicitud.
+                ¿Podrías reformularla de otra manera?
+            {% endif %}
+        </p>
+    </div>
+</div>

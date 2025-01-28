@@ -1,0 +1,40 @@
+<!-- mixed_response.html -->
+<div class="chat-response">
+    <div class="message message-bot">
+        <div class="message-content">
+            <p style="font-size: 1.2em; color: #333; margin-bottom: 16px;">
+                {{ chat_content }}
+            </p>
+        </div>
+    </div>
+    
+    {% if recommendations %}
+        <div class="recommendations-section">
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px;">
+                {% for rec in recommendations %}
+                    <div class="recommendation-card" style="border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin: 16px; max-width: 400px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);">
+                        <img src="https://via.placeholder.com/400" alt="Imagen de {{ rec.name }}" style="width: 100%; border-radius: 8px 8px 0 0;">
+                        <div style="padding: 12px;">
+                            <h3 style="margin: 0 0 8px; font-size: 1.5em; color: #333;">{{ rec.name }}</h3>
+                            <p style="margin: 0 0 8px; color: #555;"><strong>Ubicación:</strong> {{ rec.location }}</p>
+                            <p style="margin: 0 0 8px; color: #555;">{{ rec.description }}</p>
+                            <p style="margin: 0 0 8px; color: #555;"><strong>Calificación:</strong> {{ rec.rating.display }}</p>
+                            <p style="margin: 0 0 8px; color: #555;"><strong>Costo:</strong> ${{ "%.2f"|format(rec.cost) }}</p>
+                            <p style="margin: 0 0 8px; color: #555;"><strong>Relevancia:</strong> {{ rec.relevance }}</p>
+                            {% if rec.schedule %}
+                                <p style="margin: 0 0 8px; color: #555;"><strong>Horario:</strong> {{ rec.schedule }}</p>
+                            {% endif %}
+                            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee;">
+                                <p style="margin: 0 0 8px; color: #555;">
+                                    <strong>Accesibilidad:</strong> {{ rec.accessibility }} | 
+                                    <strong>Estacionamiento:</strong> {{ rec.parking }} | 
+                                    <strong>Formas de pago:</strong> {{ rec.payment_methods }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>

@@ -2,16 +2,18 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Optional
-from datetime import datetime
+from typing import List, Dict, Any, Optional, Tuple
+from datetime import datetime, timedelta
 import logging
 from core.recommender.recommendation_engine import RecommendationEngine
 from core.analyzer.nlp.routes import router as nlp_router
 from core.recommender.full_service import get_full_recommendations, NLPRequest
+from core.analyzer.nlp.intent_analyzer import IntentAnalyzer, IntentType, IntentResult
 from fastapi.responses import HTMLResponse
 from core.recommender.formatter import HTMLFormatter
 import os
 from utils.logger import get_logger
+from utils.openai_helper import OpenAIHelper
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 print(f"API Key configured: {'Yes' if OPENAI_API_KEY else 'No'}")
@@ -22,6 +24,10 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Tourism Recommendations API")
 engine = RecommendationEngine()
+
+# Inicializar OpenAI helper
+openai_helper = OpenAIHelper(OPENAI_API_KEY)
+
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
@@ -32,6 +38,37 @@ app.add_middleware(
 )
 
 app.include_router(nlp_router)
+
+# Sistema de caché simple para respuestas
+class ChatCache:
+    def __init__(self, max_size: int = 1000):
+        self.cache = {}
+        self.max_size = max_size
+        self.hits = 0
+        self.misses = 0
+    
+    def get(self, key: str) -> Optional[str]:
+        if key in self.cache:
+            entry = self.cache[key]
+            if datetime.now() - entry['timestamp'] < timedelta(hours=24):
+                self.hits += 1
+                return entry['response']
+            else:
+                del self.cache[key]
+        self.misses += 1
+        return None
+    
+    def set(self, key: str, response: str):
+        if len(self.cache) >= self.max_size:
+            oldest = min(self.cache.items(), key=lambda x: x[1]['timestamp'])
+            del self.cache[oldest[0]]
+        
+        self.cache[key] = {
+            'response': response,
+            'timestamp': datetime.now()
+        }
+
+response_cache = ChatCache()
 
 class Preferences(BaseModel):
     interests: List[str] = Field(..., description="List of travel interests")
@@ -60,6 +97,9 @@ class Preferences(BaseModel):
 class RecommendationRequest(BaseModel):
     query: str = Field(..., description="Natural language query")
     preferences: Preferences
+
+class ChatRequest(BaseModel):
+    text: str = Field(..., description="Natural language input text")
 
 @app.post("/recommendations/")
 def get_recommendations(request: RecommendationRequest) -> JSONResponse:
@@ -156,7 +196,6 @@ def get_html_recommendations(request: RecommendationRequest) -> HTMLResponse:
     except Exception as e:
         logger.error(f"Error processing HTML recommendation request: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-    
 
 @app.post("/recommendations/full")
 async def full_recommendations_endpoint(request: NLPRequest) -> HTMLResponse:
@@ -164,6 +203,255 @@ async def full_recommendations_endpoint(request: NLPRequest) -> HTMLResponse:
     Endpoint que combina el análisis de texto en lenguaje natural y la generación de HTML
     """
     return await get_full_recommendations(request)
+
+@app.post("/recommendations/chat")
+async def chat_recommendations(request: ChatRequest) -> HTMLResponse:
+    """
+    Endpoint mejorado que maneja recomendaciones conversacionales con análisis avanzado de intenciones.
+    """
+    try:
+        logger.info(f"Procesando solicitud de chat: {request.text}")
+        
+        # Verificar caché
+        cache_key = f"chat_{request.text.lower().strip()}"
+        cached_response = response_cache.get(cache_key)
+        if cached_response:
+            return HTMLResponse(content=cached_response)
+        
+        # Analizar intención con el nuevo analizador
+        intent_analyzer = IntentAnalyzer()
+        intent_result = intent_analyzer.analyze_intent(request.text)
+        
+        # Corregir esta línea
+        logger.info(
+            f"Intención detectada: {intent_result.primary_intent.value}, "
+            f"confianza: {intent_result.confidence}"
+        )
+        
+        # Manejar según el tipo de intención
+        if intent_result.primary_intent == IntentType.IDENTITY:
+            response = await _handle_identity_question(request.text)
+            
+        elif intent_result.primary_intent == IntentType.GREETING:
+            response = await _handle_greeting(request.text)
+            
+        elif intent_result.primary_intent == IntentType.MIXED:
+            response = await _handle_mixed_intent(request.text)
+            
+        elif intent_result.primary_intent == IntentType.RECOMMENDATION:
+            response = await _handle_recommendation(request.text)
+            
+        else:
+            response = await _handle_general_query(request.text)
+        
+        # Guardar en caché si es apropiado
+        if _should_cache_response({
+            'primary_intent': intent_result.primary_intent,
+            'confidence': intent_result.confidence
+        }):
+            response_cache.set(cache_key, response.body.decode('utf-8'))
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error en chat_recommendations: {str(e)}", exc_info=True)
+        return HTMLResponse(content=_format_error_response("general"))
+    
+async def _handle_identity_question(text: str) -> HTMLResponse:
+    """Maneja preguntas sobre la identidad del asistente."""
+    try:
+        system_message = (
+            "Eres un guía turístico experto y amigable de Curazao. Al presentarte, "
+            "menciona que eres un asistente virtual especializado en ayudar a los "
+            "visitantes a descubrir las maravillas de Curazao, incluyendo su cultura, "
+            "gastronomía, actividades y lugares de interés. Mantén un tono profesional "
+            "pero cálido."
+        )
+        
+        response = openai_helper.generate_tour_guide_response(text, system_message)
+        return HTMLResponse(content=_format_chat_response(response))
+    except Exception as e:
+        logger.error(f"Error en manejo de pregunta de identidad: {str(e)}")
+        return HTMLResponse(content=_format_error_response("openai"))
+
+async def _handle_greeting(text: str) -> HTMLResponse:
+    """Maneja saludos iniciales."""
+    try:
+        system_message = (
+            "Eres un guía turístico amigable de Curazao. "
+            "Responde al saludo y pregunta sobre sus intereses. "
+            "Mantén un tono conversacional y ofrece tu ayuda para descubrir la isla."
+        )
+        
+        response = openai_helper.generate_tour_guide_response(text, system_message)
+        return HTMLResponse(content=_format_chat_response(response))
+    except Exception as e:
+        logger.error(f"Error en manejo de saludo: {str(e)}")
+        return HTMLResponse(content=_format_error_response("openai"))
+
+async def _handle_mixed_intent(text: str) -> HTMLResponse:
+    """Maneja casos que combinan múltiples intenciones."""
+    try:
+        # Intentar obtener recomendaciones
+        try:
+            recommendations = await get_full_recommendations(NLPRequest(text=text))
+            recommendations_str = recommendations.body.decode('utf-8')
+            has_recommendations = "No se encontraron recomendaciones" not in recommendations_str
+        except Exception:
+            has_recommendations = False
+            recommendations_str = ""
+        
+        # Generar respuesta conversacional
+        system_message = (
+            "Eres un guía turístico experto en Curazao. "
+            f"{'Complementa las recomendaciones con ' if has_recommendations else 'Proporciona '}"
+            "información relevante y mantén un tono conversacional."
+        )
+        
+        chat_response = openai_helper.generate_tour_guide_response(text, system_message)
+        
+        if has_recommendations:
+            return HTMLResponse(content=_format_mixed_response(chat_response, recommendations_str))
+        else:
+            return HTMLResponse(content=_format_chat_response(chat_response))
+            
+    except Exception as e:
+        logger.error(f"Error en manejo de intención mixta: {str(e)}")
+        return HTMLResponse(content=_format_error_response("mixed"))
+
+async def _handle_recommendation(text: str) -> HTMLResponse:
+    """Maneja solicitudes específicas de recomendaciones."""
+    try:
+        recommendations = await get_full_recommendations(NLPRequest(text=text))
+        recommendations_str = recommendations.body.decode('utf-8')
+        
+        if "No se encontraron recomendaciones" in recommendations_str:
+            return await _generate_alternative_recommendations(text)
+            
+        return HTMLResponse(content=recommendations_str)
+        
+    except Exception as e:
+        logger.error(f"Error procesando recomendación: {str(e)}")
+        return HTMLResponse(content=_format_error_response("recommendation"))
+
+async def _handle_general_query(text: str) -> HTMLResponse:
+    """Maneja consultas generales o no clasificadas."""
+    try:
+        system_message = (
+            "Eres un guía turístico experto en Curazao. "
+            "Proporciona información útil y relevante sobre la isla, "
+            "y pregunta más detalles si es necesario para entender "
+            "mejor los intereses del usuario."
+        )
+        
+        response = openai_helper.generate_tour_guide_response(text, system_message)
+        return HTMLResponse(content=_format_chat_response(response))
+    except Exception as e:
+        logger.error(f"Error en consulta general: {str(e)}")
+        return HTMLResponse(content=_format_error_response("general"))
+
+async def _generate_alternative_recommendations(text: str) -> HTMLResponse:
+    """Genera recomendaciones alternativas cuando no hay coincidencias exactas."""
+    try:
+        response = openai_helper.generate_tour_guide_response(
+            text,
+            "Eres un guía turístico experto en Curazao. No encontramos recomendaciones " +
+            "exactas para esta solicitud. Sugiere alternativas relevantes y explica " +
+            "por qué podrían ser interesantes para el usuario."
+        )
+        return HTMLResponse(content=_format_chat_response(response))
+    except Exception as e:
+        logger.error(f"Error generando alternativas: {str(e)}")
+        return HTMLResponse(content=_format_error_response("openai"))
+
+def _format_chat_response(response: str) -> str:
+    """
+    Formatea la respuesta del chat en HTML para mantener consistencia visual.
+    """
+    return f"""
+    <div class="message message-bot">
+        <div class="message-content">
+            <p style="font-size: 1.2em; color: #333; margin-bottom: 16px;">
+                {response}
+            </p>
+        </div>
+    </div>
+    """
+
+def _format_mixed_response(chat_response: str, recommendations_str: str) -> str:
+    """
+    Formatea una respuesta que combina chat y recomendaciones.
+    """
+    return f"""
+    <div class="mixed-response">
+        <div class="message message-bot">
+            <div class="message-content">
+                <p style="font-size: 1.2em; color: #333; margin-bottom: 16px;">
+                    {chat_response}
+                </p>
+            </div>
+        </div>
+        <div class="recommendations-section">
+            {recommendations_str}
+        </div>
+    </div>
+    """
+
+def _format_error_response(error_type: str) -> str:
+    """
+    Formatea mensajes de error en HTML.
+    """
+    error_messages = {
+        "openai": """
+            Lo siento, estoy teniendo problemas para procesar tu solicitud en este momento.
+            ¿Te gustaría ver algunas de nuestras recomendaciones populares mientras tanto?
+        """,
+        "recommendation": """
+            Disculpa, no pude encontrar recomendaciones específicas para tu solicitud.
+            Permíteme sugerirte algunas alternativas interesantes.
+        """,
+        "mixed": """
+            Parece que hubo un problema procesando tu solicitud completa.
+            ¿Podrías especificar qué parte te interesa más: las recomendaciones o la información general?
+        """,
+        "general": """
+            Lo siento, hubo un problema al procesar tu solicitud.
+            ¿Podrías reformularla de otra manera?
+        """
+    }
+    
+    message = error_messages.get(error_type, error_messages["general"])
+    return f"""
+    <div class="message message-bot error-message">
+        <div class="message-content">
+            <p style="font-size: 1.2em; color: #333; margin-bottom: 16px;">
+                {message}
+            </p>
+        </div>
+    </div>
+    """
+
+def _should_cache_response(intent_info: Dict[str, Any]) -> bool:
+    """
+    Determina si una respuesta debe ser cacheada basado en la información de la intención.
+    """
+    # No cachear respuestas con baja confianza
+    if intent_info['confidence'] < 0.5:
+        return False
+    
+    # No cachear ciertos tipos de intenciones
+    if intent_info['primary_intent'] in {IntentType.GREETING, IntentType.IDENTITY}:
+        return False
+    
+    # Cachear recomendaciones y respuestas a preguntas específicas
+    if intent_info['primary_intent'] in {IntentType.RECOMMENDATION, IntentType.SPECIFIC_QUESTION}:
+        return True
+    
+    # Para casos mixtos, cachear solo si la confianza es alta
+    if intent_info['primary_intent'] == IntentType.MIXED:
+        return intent_info['confidence'] > 0.7
+    
+    return False
 
 @app.get("/health")
 async def health_check() -> Dict[str, str]:
