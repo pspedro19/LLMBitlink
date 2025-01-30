@@ -1,0 +1,280 @@
+{
+    "annual_festivals": {
+      "carnival_season": {
+        "name": "Curaçao Carnival",
+        "period": {
+          "start": "January",
+          "end": "March",
+          "duration": "Several weeks"
+        },
+        "main_events": [
+          {
+            "name": "Tumba Festival",
+            "type": "Music competition",
+            "dates": "Late January",
+            "location": {
+              "venue": "World Trade Center",
+              "coordinates": {
+                "latitude": 12.1171,
+                "longitude": -68.9307
+              }
+            },
+            "details": {
+              "description": "Music competition to select carnival's official song",
+              "schedule": {
+                "preliminaries": "3 days",
+                "finals": "1 day"
+              },
+              "tickets": {
+                "price_range": {
+                  "preliminaries": "$15-25",
+                  "finals": "$30-50"
+                },
+                "where_to_buy": ["Online", "WTC Box Office"]
+              }
+            }
+          },
+          {
+            "name": "Grand Carnival Parade",
+            "type": "Street parade",
+            "dates": "Sunday before Ash Wednesday",
+            "route": {
+              "start": "Santa Maria",
+              "end": "Otrobanda",
+              "key_viewing_points": [
+                "Sta. Rosaweg",
+                "Rooseveltweg",
+                "Otrobanda waterfront"
+              ]
+            },
+            "visitor_info": {
+              "duration": "8-10 hours",
+              "best_spots": "Along Sta. Rosaweg",
+              "tips": [
+                "Arrive early for good spots",
+                "Bring water and sunscreen",
+                "Follow local guidance"
+              ]
+            }
+          }
+        ]
+      },
+      "harvest_festival": {
+        "name": "Seú Harvest Festival",
+        "date": "Easter Monday",
+        "location": "Throughout Willemstad",
+        "details": {
+          "description": "Traditional harvest celebration parade",
+          "cultural_significance": "Agricultural heritage celebration",
+          "activities": [
+            {
+              "name": "Harvest Parade",
+              "schedule": "Morning to afternoon",
+              "highlights": [
+                "Traditional music",
+                "Folk dances",
+                "Colorful costumes"
+              ]
+            }
+          ],
+          "visitor_information": {
+            "best_viewing_spots": [
+              "Punda main streets",
+              "Pietermaai District"
+            ],
+            "photography_tips": [
+              "Morning light best for costumes",
+              "Dance performances at key intersections"
+            ]
+          }
+        }
+      }
+    },
+    "music_festivals": {
+      "curacao_north_sea_jazz": {
+        "name": "Curaçao North Sea Jazz Festival",
+        "period": {
+          "month": "August/September",
+          "duration": "3 days"
+        },
+        "location": {
+          "venue": "World Trade Center",
+          "area": "Piscadera"
+        },
+        "details": {
+          "genre": ["Jazz", "R&B", "Latin", "Pop"],
+          "stages": {
+            "main_stage": {
+              "capacity": 5000,
+              "type": "International headliners"
+            },
+            "sam_cooke_stage": {
+              "capacity": 3000,
+              "type": "Mixed genres"
+            }
+          },
+          "tickets": {
+            "types": [
+              {
+                "name": "Day pass",
+                "price_range": "$200-250"
+              },
+              {
+                "name": "Weekend pass",
+                "price_range": "$450-500"
+              }
+            ],
+            "purchase_options": [
+              "Official website",
+              "Local ticket offices"
+            ]
+          }
+        }
+      }
+    },
+    "cultural_events": {
+      "flag_day": {
+        "name": "Dia di Bandera",
+        "date": "July 2",
+        "significance": "Curaçao Flag Day",
+        "celebrations": {
+          "official_ceremonies": {
+            "location": "Fort Amsterdam",
+            "time": "Morning"
+          },
+          "cultural_activities": [
+            "Folk performances",
+            "Local music concerts",
+            "Traditional food fairs"
+          ]
+        }
+      }
+    },
+    "sports_events": {
+      "curacao_marathon": {
+        "name": "KLM Curaçao Marathon",
+        "period": {
+          "month": "November",
+          "specific_date": "Last Sunday"
+        },
+        "categories": [
+          {
+            "type": "Full Marathon",
+            "distance": "42.2 km",
+            "start_time": "4:30 AM"
+          },
+          {
+            "type": "Half Marathon",
+            "distance": "21.1 km",
+            "start_time": "5:00 AM"
+          }
+        ],
+        "route": {
+          "start": "Santa Barbara Beach",
+          "key_points": [
+            "Spanish Water",
+            "Jan Thiel",
+            "Willemstad"
+          ]
+        },
+        "registration": {
+          "website": "curacaomarathon.com",
+          "fees": {
+            "early_bird": "$60",
+            "regular": "$75",
+            "late": "$90"
+          }
+        }
+      }
+    },
+    "food_festivals": {
+      "curacao_restaurant_week": {
+        "name": "Curaçao Restaurant Week",
+        "period": {
+          "month": "October",
+          "duration": "1 week"
+        },
+        "details": {
+          "description": "Fixed price menus at top restaurants",
+          "participating_venues": "30+ restaurants",
+          "price_ranges": {
+            "lunch": "$25",
+            "dinner": "$45"
+          }
+        }
+      }
+    },
+    "holiday_events": {
+      "christmas_season": {
+        "period": {
+          "start": "December 5",
+          "end": "January 6"
+        },
+        "events": [
+          {
+            "name": "Sinterklaas Arrival",
+            "date": "December 5",
+            "location": "Willemstad Harbor",
+            "details": "Dutch Christmas tradition"
+          },
+          {
+            "name": "New Year's Fireworks",
+            "date": "December 31",
+            "location": "Various locations",
+            "best_viewing_spots": [
+              "Queen Emma Bridge",
+              "Punda Waterfront",
+              "Caracasbaai"
+            ]
+          }
+        ]
+      }
+    },
+    "art_events": {
+      "art_week": {
+        "name": "Curaçao Art Week",
+        "period": {
+          "month": "May",
+          "duration": "7 days"
+        },
+        "activities": [
+          {
+            "type": "Gallery exhibitions",
+            "locations": ["Pietermaai", "Punda"],
+            "times": "Various"
+          },
+          {
+            "type": "Artist workshops",
+            "booking": "Required",
+            "price_range": "$30-50"
+          }
+        ]
+      }
+    },
+    "seasonal_considerations": {
+      "high_season": {
+        "period": {
+          "start": "December",
+          "end": "April"
+        },
+        "characteristics": {
+          "weather": "Dry and sunny",
+          "crowds": "Peak tourist presence",
+          "prices": "Higher rates for accommodations",
+          "booking_advice": "Reserve 3-6 months ahead"
+        }
+      },
+      "low_season": {
+        "period": {
+          "start": "May",
+          "end": "November"
+        },
+        "characteristics": {
+          "weather": "Some rain, still mostly sunny",
+          "crowds": "Fewer tourists",
+          "prices": "Better rates available",
+          "booking_advice": "1-2 months ahead sufficient"
+        }
+      }
+    }
+  }

@@ -1,0 +1,48 @@
+{
+    "annual_events": [
+      {
+        "id": "curacao_carnival",
+        "name": "Curaçao Carnival",
+        "period": {
+          "start_month": 1,
+          "end_month": 3,
+          "duration_days": 60
+        },
+        "locations": ["willemstad_streets", "otrobanda", "punda"],
+        "description": "Vibrant carnival celebration with parades, music and cultural performances",
+        "activities": [
+          {
+            "name": "Grand Carnival Parade",
+            "type": "parade",
+            "highlights": ["costumes", "music", "dance"],
+            "participation": "spectator/participant"
+          },
+          {
+            "name": "Tumba Festival",
+            "type": "music_festival",
+            "cultural_significance": "Traditional carnival music competition"
+          }
+        ],
+        "related_experiences": [
+          {
+            "type": "dance_workshops",
+            "locations": ["carnival_village"],
+            "availability": "seasonal"
+          }
+        ]
+      }
+    ],
+    "cultural_venues": [
+      {
+        "id": "landhuis_bloemhof",
+        "name": "Landhuis Bloemhof",
+        "type": "cultural_center",
+        "events": {
+          "regular": ["art_exhibitions", "workshops"],
+          "special": ["artist_residencies", "cultural_festivals"]
+        },
+        "facilities": ["gallery", "workshop_space", "garden"],
+        "cultural_significance": "Historic plantation house turned art center"
+      }
+    ]
+  }

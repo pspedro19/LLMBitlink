@@ -1,0 +1,99 @@
+{
+    "conversation_starters": {
+      "welcome": {
+        "es": "Bienvenido a Curaçao. Soy tu guía experto. ¿Qué tipo de experiencias te interesan?",
+        "en": "Welcome to Curaçao. I'm your expert guide. What kind of experiences interest you?"
+      },
+      "preference_gathering": {
+        "es": [
+          "¿Prefieres actividades culturales, de aventura o relajación?",
+          "¿Hay alguna zona específica de la isla que te interese explorar?",
+          "¿Tienes alguna preferencia culinaria o restricción dietética?"
+        ],
+        "en": [
+          "Do you prefer cultural, adventure, or relaxation activities?",
+          "Is there any specific area of the island you'd like to explore?",
+          "Do you have any culinary preferences or dietary restrictions?"
+        ]
+      }
+    },
+    "recommendation_templates": {
+      "activity": {
+        "template": "Based on your interest in {interests}, I recommend {activity_name}. {description} Located in {location}, this {duration} activity offers {highlights}. Best time to visit: {best_time}. Price range: {price_range}.",
+        "required_fields": [
+          "interests",
+          "activity_name",
+          "description",
+          "location",
+          "duration",
+          "highlights",
+          "best_time",
+          "price_range"
+        ]
+      },
+      "restaurant": {
+        "template": "For {cuisine_type} dining, try {restaurant_name} in {location}. Known for {specialties}, this {ambiance} restaurant offers {price_range} dining. {additional_info}",
+        "required_fields": [
+          "cuisine_type",
+          "restaurant_name",
+          "location",
+          "specialties",
+          "ambiance",
+          "price_range"
+        ]
+      },
+      "tour": {
+        "template": "The {tour_name} is a perfect way to explore {locations}. During this {duration} tour, you'll experience {highlights}. Includes: {inclusions}. {additional_info}",
+        "required_fields": [
+          "tour_name",
+          "locations",
+          "duration",
+          "highlights",
+          "inclusions"
+        ]
+      }
+    },
+    "follow_up_questions": {
+      "activity_refinement": [
+        "Would you prefer a guided experience or self-guided exploration?",
+        "Are you interested in combining this with other nearby activities?",
+        "What time of day would work best for you?"
+      ],
+      "dining_preferences": [
+        "Do you have any dietary restrictions I should know about?",
+        "What's your preferred price range for dining?",
+        "Would you like suggestions for local specialties to try?"
+      ],
+      "tour_customization": [
+        "How much time would you like to spend on this tour?",
+        "Are you interested in photography opportunities?",
+        "Would you like to include transportation in the tour?"
+      ]
+    },
+    "response_enrichment": {
+      "cultural_context": {
+        "template": "This {type} has historical significance because {historical_context}. Locals particularly appreciate {local_perspective}.",
+        "required_fields": [
+          "type",
+          "historical_context",
+          "local_perspective"
+        ]
+      },
+      "practical_tips": {
+        "template": "Pro tip: {main_tip}. Best to {timing_advice}. Don't forget to {important_reminder}.",
+        "required_fields": [
+          "main_tip",
+          "timing_advice",
+          "important_reminder"
+        ]
+      },
+      "weather_considerations": {
+        "template": "This activity is best during {best_season}. If visiting in {current_season}, keep in mind {weather_tips}.",
+        "required_fields": [
+          "best_season",
+          "current_season",
+          "weather_tips"
+        ]
+      }
+    }
+  }

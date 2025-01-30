@@ -1,0 +1,307 @@
+{
+    "willemstad_districts": {
+      "punda": {
+        "name": {
+          "local": "Punda",
+          "meaning": "The Point",
+          "unesco_status": "World Heritage Site"
+        },
+        "location": {
+          "coordinates": {
+            "latitude": 12.1091,
+            "longitude": -68.9316
+          },
+          "boundaries": {
+            "north": "Waaigat",
+            "south": "Caribbean Sea",
+            "east": "Schottegat",
+            "west": "Sint Anna Bay"
+          }
+        },
+        "historical_significance": {
+          "founded": 1634,
+          "original_purpose": "Dutch trading post",
+          "architectural_style": "Dutch Colonial",
+          "key_developments": [
+            {
+              "year": 1635,
+              "event": "Fort Amsterdam construction",
+              "significance": "Military and administrative center"
+            },
+            {
+              "year": 1750,
+              "event": "Commercial district development",
+              "significance": "Trading hub establishment"
+            }
+          ]
+        },
+        "attractions": {
+          "landmarks": [
+            {
+              "name": "Handelskade",
+              "type": "Waterfront",
+              "description": "Iconic row of colorful Dutch colonial buildings",
+              "photo_spots": [
+                {
+                  "location": "Queen Emma Bridge",
+                  "best_time": "Sunset",
+                  "tip": "Best angle for famous waterfront shot"
+                },
+                {
+                  "location": "Mathey Wharf",
+                  "best_time": "Morning",
+                  "tip": "Clear view of entire waterfront"
+                }
+              ],
+              "visitor_info": {
+                "best_times": ["Early morning", "Late afternoon"],
+                "photography_tips": ["Use polarizing filter", "HDR recommended"],
+                "nearby_facilities": ["Cafes", "Souvenir shops"]
+              }
+            },
+            {
+              "name": "Fort Amsterdam",
+              "type": "Historical Fort",
+              "description": "17th-century fort, now government offices",
+              "visitor_access": {
+                "hours": "9:00-17:00",
+                "guided_tours": true,
+                "restrictions": ["Government areas off-limits"],
+                "photo_permission": "Required inside buildings"
+              }
+            }
+          ],
+          "shopping": {
+            "main_streets": ["Heerenstraat", "Breedestraat"],
+            "specialties": {
+              "luxury_goods": {
+                "locations": ["Renaissance Mall"],
+                "items": ["Jewelry", "Watches", "Designer brands"]
+              },
+              "local_crafts": {
+                "locations": ["Old Market"],
+                "items": ["Local art", "Handicrafts", "Souvenirs"]
+              }
+            },
+            "shopping_hours": {
+              "weekdays": "9:00-18:00",
+              "saturday": "9:00-17:00",
+              "sunday": "Closed (except cruise ship days)"
+            }
+          }
+        },
+        "transportation": {
+          "access": {
+            "walking": {
+              "from_cruise_terminal": "5 minutes",
+              "from_otrobanda": "10 minutes via Queen Emma Bridge"
+            },
+            "public_transport": {
+              "bus_terminal": "Punda Bus Station",
+              "main_routes": ["Punda-Otrobanda", "Punda-Mambo Beach"]
+            },
+            "parking": {
+              "locations": [
+                {
+                  "name": "Punda Parking Lot",
+                  "type": "Public",
+                  "capacity": 200,
+                  "rate": "2 USD/hour"
+                }
+              ]
+            }
+          },
+          "walking_tours": [
+            {
+              "name": "Historical Punda Walk",
+              "duration": "2 hours",
+              "distance": "2 km",
+              "highlights": [
+                "Fort Amsterdam",
+                "Mikve Israel-Emanuel Synagogue",
+                "Penha Building"
+              ],
+              "starting_point": "Fort Amsterdam",
+              "guide_available": true
+            }
+          ]
+        }
+      },
+      "otrobanda": {
+        "name": {
+          "local": "Otrobanda",
+          "meaning": "The Other Side",
+          "unesco_status": "World Heritage Site"
+        },
+        "location": {
+          "coordinates": {
+            "latitude": 12.1097,
+            "longitude": -68.9378
+          },
+          "boundaries": {
+            "north": "Schottegat",
+            "south": "Caribbean Sea",
+            "east": "Sint Anna Bay",
+            "west": "Residential areas"
+          }
+        },
+        "historical_significance": {
+          "founded": 1707,
+          "original_purpose": "Residential extension of Willemstad",
+          "architectural_style": "Mix of Dutch Colonial and Caribbean",
+          "notable_periods": [
+            {
+              "era": "18th Century",
+              "development": "Merchant houses construction",
+              "significance": "Commercial expansion"
+            }
+          ]
+        },
+        "attractions": {
+          "cultural": [
+            {
+              "name": "Kura Hulanda Museum",
+              "type": "Museum",
+              "focus": "Slave trade history",
+              "visitor_info": {
+                "hours": "10:00-17:00",
+                "guided_tours": true,
+                "languages": ["English", "Dutch", "Spanish"]
+              }
+            }
+          ],
+          "architectural": [
+            {
+              "name": "Rif Fort",
+              "type": "Historical Fort",
+              "current_use": "Shopping and dining complex",
+              "history": {
+                "built": 1828,
+                "original_purpose": "Harbor defense",
+                "renovation": 2009
+              }
+            }
+          ]
+        }
+      },
+      "pietermaai": {
+        "name": "Pietermaai District",
+        "description": "Trendy neighborhood with restored mansions",
+        "highlights": {
+          "architecture": {
+            "style": "Dutch Colonial with Caribbean influence",
+            "notable_features": ["Colorful facades", "Ornate details"],
+            "restoration": {
+              "period": "2000-present",
+              "focus": "Historic preservation with modern use"
+            }
+          },
+          "nightlife": {
+            "venues": [
+              {
+                "type": "Bars",
+                "atmosphere": "Trendy, historic setting",
+                "music": ["Live jazz", "Latin"]
+              },
+              {
+                "type": "Restaurants",
+                "cuisine": ["International", "Fusion", "Local"]
+              }
+            ]
+          }
+        }
+      }
+    },
+    "outer_districts": {
+      "westpunt": {
+        "name": {
+          "local": "Westpunt",
+          "english": "West Point"
+        },
+        "location": {
+          "coordinates": {
+            "latitude": 12.3667,
+            "longitude": -69.1500
+          },
+          "distance_from_willemstad": "35 km"
+        },
+        "characteristics": {
+          "landscape": "Rugged coastline",
+          "attractions": ["Beaches", "Diving spots", "Nature areas"],
+          "activities": {
+            "water_sports": [
+              {
+                "type": "Diving",
+                "locations": ["Playa Kalki", "Playa Forti"],
+                "features": ["Coral reefs", "Marine life"]
+              },
+              {
+                "type": "Snorkeling",
+                "best_spots": ["Blue Room", "Small Knip"]
+              }
+            ]
+          }
+        }
+      },
+      "banda_abou": {
+        "name": {
+          "local": "Banda Abou",
+          "meaning": "Upper Region"
+        },
+        "characteristics": {
+          "landscape": "Rural countryside",
+          "attractions": {
+            "natural": ["Christoffel National Park", "Shete Boka"],
+            "cultural": {
+              "landhuis": [
+                {
+                  "name": "Landhuis Ascension",
+                  "type": "Historic plantation house",
+                  "visitor_access": "By appointment"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "general_info": {
+      "climate": {
+        "type": "Tropical savanna",
+        "average_temperature": {
+          "celsius": 28,
+          "fahrenheit": 82
+        },
+        "rainy_season": {
+          "period": "October to January",
+          "characteristics": "Brief afternoon showers"
+        }
+      },
+      "transportation": {
+        "public_transport": {
+          "buses": {
+            "types": ["Large buses", "Mini buses (konvoi)"],
+            "coverage": "Main districts and tourist areas",
+            "frequency": "Variable",
+            "payment": "Cash only"
+          },
+          "taxis": {
+            "availability": "Throughout island",
+            "rates": "Fixed by zone",
+            "booking": "Hotels or taxi stands"
+          }
+        },
+        "rental": {
+          "car": {
+            "recommended": true,
+            "requirements": ["Valid license", "21+ years", "Credit card"],
+            "tips": ["Reserve in advance", "Insurance recommended"]
+          },
+          "scooter": {
+            "availability": "Major tourist areas",
+            "requirements": ["Valid license", "18+ years"]
+          }
+        }
+      }
+    }
+  }

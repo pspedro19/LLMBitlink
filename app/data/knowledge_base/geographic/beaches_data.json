@@ -1,0 +1,331 @@
+{
+    "public_beaches": {
+      "west_coast": {
+        "playa_knip": {
+          "names": {
+            "local": "Playa Kenepa",
+            "other_names": ["Grote Knip", "Big Knip"]
+          },
+          "location": {
+            "coordinates": {
+              "latitude": 12.3641,
+              "longitude": -69.1520
+            },
+            "distance_from_willemstad": "35 km",
+            "access": {
+              "car": {
+                "parking": true,
+                "parking_fee": 0,
+                "capacity": "50 vehicles"
+              },
+              "public_transport": {
+                "available": true,
+                "bus_line": "West Coast Line",
+                "frequency": "Every 2 hours"
+              }
+            }
+          },
+          "characteristics": {
+            "type": "Natural bay",
+            "sand": "White sand",
+            "water": "Turquoise blue",
+            "length": "100 meters",
+            "width": "30 meters",
+            "crowd_level": {
+              "weekdays": "Moderate",
+              "weekends": "Crowded",
+              "peak_hours": "12:00-16:00"
+            }
+          },
+          "facilities": {
+            "amenities": {
+              "restrooms": true,
+              "showers": true,
+              "changing_rooms": true,
+              "lockers": false,
+              "beach_chairs": {
+                "available": true,
+                "rental_cost": "5 USD/day"
+              },
+              "umbrellas": {
+                "available": true,
+                "rental_cost": "5 USD/day"
+              }
+            },
+            "food_drinks": {
+              "restaurants": [
+                {
+                  "name": "Knip Beach Bar",
+                  "type": "Beach bar",
+                  "cuisine": ["Local", "Snacks"],
+                  "price_range": "moderate"
+                }
+              ],
+              "vendors": "Occasional local vendors"
+            }
+          },
+          "activities": {
+            "swimming": {
+              "safety_level": "Good",
+              "conditions": "Usually calm waters",
+              "best_spots": "Near the cliffs"
+            },
+            "snorkeling": {
+              "quality": "Excellent",
+              "marine_life": ["Tropical fish", "Coral reefs"],
+              "best_spots": "Around rocky areas",
+              "rental_available": true,
+              "rental_cost": "10 USD/day"
+            },
+            "photography": {
+              "best_spots": [
+                {
+                  "location": "Cliff overlook",
+                  "best_time": "Sunset",
+                  "subject": "Bay panorama"
+                }
+              ]
+            }
+          },
+          "best_time_to_visit": {
+            "time_of_day": {
+              "morning": "Less crowded, calmer waters",
+              "afternoon": "Best light for photos",
+              "sunset": "Spectacular views"
+            },
+            "season": {
+              "high_season": "December-April",
+              "low_season": "May-November",
+              "best_months": ["March", "April", "May"]
+            }
+          }
+        },
+        "cas_abao": {
+          "names": {
+            "local": "Cas Abao Beach",
+            "other_names": ["Cas Abou"]
+          },
+          "location": {
+            "coordinates": {
+              "latitude": 12.2333,
+              "longitude": -69.0927
+            },
+            "distance_from_willemstad": "40 km",
+            "access": {
+              "car": {
+                "parking": true,
+                "parking_fee": 5,
+                "capacity": "100 vehicles"
+              },
+              "entrance_fee": {
+                "amount": "10 USD",
+                "includes": ["Parking", "Beach facilities"]
+              }
+            }
+          },
+          "characteristics": {
+            "type": "Private beach",
+            "sand": "White coral sand",
+            "water": "Crystal clear",
+            "length": "300 meters",
+            "special_features": ["Palm trees", "Natural shade"]
+          },
+          "facilities": {
+            "amenities": {
+              "restrooms": true,
+              "showers": true,
+              "changing_rooms": true,
+              "beach_chairs": {
+                "available": true,
+                "rental_cost": "7 USD/day"
+              },
+              "massage": {
+                "available": true,
+                "booking": "On-site",
+                "price_range": "50-100 USD"
+              }
+            },
+            "food_drinks": {
+              "restaurants": [
+                {
+                  "name": "Cas Abao Beach Bar & Restaurant",
+                  "cuisine": ["Caribbean", "International"],
+                  "price_range": "moderate to high",
+                  "specialties": ["Fresh seafood", "Tropical drinks"]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "south_coast": {
+        "mambo_beach": {
+          "names": {
+            "local": "Seaquarium Beach",
+            "other_names": ["Mambo"]
+          },
+          "location": {
+            "coordinates": {
+              "latitude": 12.0849,
+              "longitude": -68.8964
+            },
+            "distance_from_willemstad": "5 km",
+            "access": {
+              "car": {
+                "parking": true,
+                "parking_fee": 2,
+                "capacity": "200+ vehicles"
+              },
+              "public_transport": {
+                "available": true,
+                "bus_line": "Mambo Beach Line",
+                "frequency": "Every 30 minutes"
+              }
+            }
+          },
+          "characteristics": {
+            "type": "Man-made beach",
+            "sand": "Imported white sand",
+            "water": "Calm, clear blue",
+            "length": "500 meters",
+            "special_features": ["Beach boulevard", "Shopping area"]
+          },
+          "facilities": {
+            "amenities": {
+              "restrooms": true,
+              "showers": true,
+              "changing_rooms": true,
+              "lockers": true,
+              "wifi": {
+                "available": true,
+                "cost": "Free"
+              },
+              "beach_chairs": {
+                "available": true,
+                "rental_cost": "10 USD/day"
+              }
+            },
+            "entertainment": {
+              "beach_clubs": [
+                {
+                  "name": "Mambo Beach Club",
+                  "features": ["Live music", "DJ sets"],
+                  "events": "Weekend beach parties"
+                }
+              ],
+              "shopping": {
+                "boulevard": true,
+                "stores": ["Beach wear", "Souvenirs", "Water sports equipment"]
+              }
+            }
+          }
+        }
+      }
+    },
+    "hidden_beaches": {
+      "playa_jeremi": {
+        "names": {
+          "local": "Playa Jeremi",
+          "other_names": ["Jeremy Beach"]
+        },
+        "location": {
+          "coordinates": {
+            "latitude": 12.3333,
+            "longitude": -69.1500
+          },
+          "access": {
+            "difficulty": "Moderate",
+            "parking": "Limited street parking",
+            "best_route": "Follow signs from main road"
+          }
+        },
+        "characteristics": {
+          "type": "Natural cove",
+          "sand": "Coral and pebbles",
+          "atmosphere": "Secluded, quiet",
+          "crowd_level": "Usually empty"
+        },
+        "activities": {
+          "snorkeling": {
+            "quality": "Excellent",
+            "marine_life": ["Reef fish", "Occasional turtles"],
+            "conditions": "Can be rough, check weather"
+          }
+        }
+      }
+    },
+    "beach_safety": {
+      "general_guidelines": [
+        "Swim in designated areas",
+        "Watch for flag warnings",
+        "Use reef-safe sunscreen"
+      ],
+      "emergency_contacts": {
+        "coast_guard": "+599 9 463-7700",
+        "beach_security": Varies by location,
+        "medical_emergency": "912"
+      },
+      "flag_system": {
+        "green": "Safe to swim",
+        "yellow": "Caution required",
+        "red": "Dangerous conditions",
+        "double_red": "Beach closed"
+      }
+    },
+    "marine_life_protection": {
+      "coral_reefs": {
+        "protection_rules": [
+          "No touching or standing on coral",
+          "Use reef-safe sunscreen only",
+          "Maintain distance from marine life"
+        ],
+        "best_practices": {
+          "snorkeling": [
+            "Float horizontally",
+            "Don't chase fish",
+            "No collecting of marine life"
+          ],
+          "swimming": [
+            "Use designated entry points",
+            "Avoid shallow reef areas",
+            "No anchoring on reef"
+          ]
+        }
+      }
+    },
+    "seasonal_information": {
+      "weather_patterns": {
+        "dry_season": {
+          "months": ["January", "February", "March", "April", "May"],
+          "characteristics": {
+            "water": "Calmest and clearest",
+            "temperature": "Perfect for swimming"
+          }
+        },
+        "rainy_season": {
+          "months": ["October", "November", "December"],
+          "considerations": [
+            "Brief afternoon showers",
+            "Slightly rougher seas possible",
+            "More cloud cover"
+          ]
+        }
+      },
+      "marine_life_seasons": {
+        "turtle_nesting": {
+          "peak": "May to September",
+          "locations": ["Playa Jeremi", "Grote Knip"],
+          "viewing_guidelines": [
+            "Maintain distance",
+            "No flash photography",
+            "Follow guide instructions"
+          ]
+        },
+        "whale_watching": {
+          "season": "January to April",
+          "species": ["Humpback whales"],
+          "best_spots": ["West coast beaches"]
+        }
+      }
+    }
+  }

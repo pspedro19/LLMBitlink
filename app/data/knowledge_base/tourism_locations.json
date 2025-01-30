@@ -1,0 +1,55 @@
+{
+    "locations": [
+      {
+        "id": "willemstad_downtown",
+        "name": "Downtown Willemstad",
+        "type": "district",
+        "description": "UNESCO World Heritage site featuring Dutch colonial architecture",
+        "coordinates": {"lat": 12.1091, "lon": -68.9316},
+        "categories": ["historic", "cultural", "shopping"],
+        "landmarks": [
+          {
+            "id": "handelskade",
+            "name": "Handelskade",
+            "description": "Iconic waterfront with colorful Dutch colonial buildings",
+            "highlights": ["architecture", "photography", "history"],
+            "visitor_info": {
+              "best_time": "morning",
+              "duration": "1-2 hours",
+              "accessibility": "wheelchair friendly"
+            }
+          }
+        ],
+        "connections": [
+          {
+            "target": "punda",
+            "relation": "contains",
+            "walking_distance": "5 minutes"
+          },
+          {
+            "target": "otrobanda",
+            "relation": "connected_by",
+            "connection_type": "Queen Emma Bridge"
+          }
+        ],
+        "local_cuisine": [
+          {
+            "name": "Plasa Bieu",
+            "type": "local_market",
+            "specialties": ["keshi yena", "stoba", "funchi"],
+            "price_range": "low"
+          }
+        ]
+      }
+    ],
+    "thematic_routes": [
+      {
+        "id": "colonial_heritage",
+        "name": "Colonial Heritage Walk",
+        "duration": "3 hours",
+        "points_of_interest": ["handelskade", "fort_amsterdam", "mikve_synagogue"],
+        "themes": ["history", "architecture", "culture"],
+        "description": "Explore Willemstad's rich colonial history through its iconic buildings"
+      }
+    ]
+  }

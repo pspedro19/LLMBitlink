@@ -1,0 +1,318 @@
+{
+    "social_etiquette": {
+      "greetings": {
+        "casual": {
+          "standard": [
+            {
+              "phrase": "Bon dia",
+              "usage": "Good morning",
+              "time": "Until 12:00",
+              "context": "General greeting",
+              "formality_level": "Casual to formal"
+            },
+            {
+              "phrase": "Bon tardi",
+              "usage": "Good afternoon",
+              "time": "12:00-18:00",
+              "context": "General greeting"
+            },
+            {
+              "phrase": "Bon nochi",
+              "usage": "Good evening/night",
+              "time": "After 18:00",
+              "context": "General greeting"
+            }
+          ],
+          "physical_customs": {
+            "handshake": {
+              "context": "Business and first meetings",
+              "description": "Firm but brief",
+              "gender_considerations": "Common between all genders"
+            },
+            "kiss_greeting": {
+              "context": "Between friends and family",
+              "description": "Three kisses on cheeks",
+              "note": "More common among women or between women and men"
+            }
+          }
+        },
+        "formal": {
+          "business": {
+            "first_meeting": "Handshake and use of titles",
+            "titles": {
+              "Mr": "Señor/Meneer",
+              "Mrs": "Señora/Mevrouw",
+              "Ms": "Señorita/Mejuffrouw"
+            },
+            "business_cards": {
+              "exchange": "Present with both hands",
+              "language": "Dutch and English preferred"
+            }
+          }
+        }
+      },
+      "dining_customs": {
+        "meal_times": {
+          "breakfast": "7:00-9:00",
+          "lunch": "12:00-14:00",
+          "dinner": "18:00-21:00"
+        },
+        "restaurant_etiquette": {
+          "reservations": {
+            "recommended": true,
+            "advance_notice": "24 hours for upscale restaurants",
+            "casual_dining": "Walk-ins usually accepted"
+          },
+          "tipping": {
+            "standard_rate": "10-15%",
+            "included_service": "Check if service charge is included",
+            "additional_tip": "Optional if service charge exists"
+          },
+          "dress_code": {
+            "upscale": {
+              "men": ["Collared shirt", "Long trousers", "Closed shoes"],
+              "women": ["Smart casual", "Dresses", "Covered shoulders"],
+              "not_allowed": ["Beachwear", "Flip-flops", "Athletic wear"]
+            },
+            "casual": {
+              "acceptable": ["Clean casual wear", "Smart shorts", "Sandals"],
+              "note": "Still expect neat and tidy appearance"
+            }
+          }
+        },
+        "home_dining": {
+          "invitation_customs": {
+            "arrival": "On time or up to 15 minutes late",
+            "gifts": {
+              "appropriate": ["Wine", "Dessert", "Flowers"],
+              "inappropriate": ["Nothing too expensive or personal"]
+            },
+            "etiquette": [
+              "Wait to be seated",
+              "Compliment the food",
+              "Offer to help clean up"
+            ]
+          }
+        }
+      },
+      "dress_code": {
+        "daily_wear": {
+          "general": {
+            "acceptable": [
+              "Light, breathable clothing",
+              "Casual but neat attire",
+              "Sandals and light shoes"
+            ],
+            "inappropriate": [
+              "Very revealing clothing in town",
+              "Beachwear away from beach areas"
+            ]
+          },
+          "beaches": {
+            "acceptable": [
+              "Swimwear",
+              "Cover-ups",
+              "Beach dresses"
+            ],
+            "note": "Cover up when leaving beach area"
+          }
+        },
+        "religious_sites": {
+          "churches": {
+            "requirements": [
+              "Covered shoulders",
+              "Knees covered",
+              "No beachwear"
+            ]
+          },
+          "synagogues": {
+            "requirements": [
+              "Conservative dress",
+              "Head covering for men",
+              "Modest attire for women"
+            ]
+          }
+        }
+      }
+    },
+    "cultural_awareness": {
+      "language": {
+        "official_languages": [
+          {
+            "name": "Papiamentu",
+            "usage": "Most common local language",
+            "context": "Daily interactions"
+          },
+          {
+            "name": "Dutch",
+            "usage": "Official government language",
+            "context": "Official documents"
+          },
+          {
+            "name": "English",
+            "usage": "Widely understood",
+            "context": "Tourism and business"
+          }
+        ],
+        "useful_phrases": [
+          {
+            "local": "Por favor",
+            "english": "Please",
+            "pronunciation": "por fah-VOR"
+          },
+          {
+            "local": "Danki",
+            "english": "Thank you",
+            "pronunciation": "dahn-KEY"
+          },
+          {
+            "local": "Di nada",
+            "english": "You're welcome",
+            "pronunciation": "dee NAH-dah"
+          }
+        ]
+      },
+      "religious_customs": {
+        "respect": {
+          "general_guidelines": [
+            "Respect religious ceremonies",
+            "Ask permission before photographing",
+            "Observe silence in places of worship"
+          ]
+        },
+        "holidays": {
+          "christian": {
+            "easter": {
+              "customs": ["Church services", "Family gatherings"],
+              "public_impact": "Many businesses closed"
+            },
+            "christmas": {
+              "customs": ["Midnight mass", "Family celebrations"],
+              "public_impact": "Limited services available"
+            }
+          },
+          "jewish": {
+            "shabbat": {
+              "timing": "Friday sunset to Saturday sunset",
+              "considerations": "Some businesses may close"
+            }
+          }
+        }
+      }
+    },
+    "business_customs": {
+      "meetings": {
+        "scheduling": {
+          "best_times": "10:00-15:00",
+          "advance_notice": "1 week recommended",
+          "punctuality": "Expected but flexible"
+        },
+        "protocol": {
+          "dress_code": {
+            "men": "Light business suit or shirt with tie",
+            "women": "Business suit or conservative dress"
+          },
+          "communication": {
+            "style": "Direct but polite",
+            "language": "Dutch or English preferred",
+            "business_cards": "Present with both hands"
+          }
+        }
+      },
+      "negotiations": {
+        "style": {
+          "approach": "Relationship-focused",
+          "pace": "Moderate, decisions may take time",
+          "important_aspects": [
+            "Building trust",
+            "Personal relationships",
+            "Long-term perspective"
+          ]
+        }
+      }
+    },
+    "shopping_customs": {
+      "bargaining": {
+        "where_appropriate": ["Local markets", "Street vendors"],
+        "not_appropriate": ["Established stores", "Restaurants"],
+        "tips": [
+          "Start at 50-70% of asking price",
+          "Be friendly and respectful",
+          "Walk away if price isn't right"
+        ]
+      },
+      "store_hours": {
+        "general": {
+          "weekdays": "9:00-18:00",
+          "saturday": "9:00-13:00",
+          "sunday": "Mostly closed"
+        },
+        "variations": {
+          "tourist_areas": "Extended hours possible",
+          "markets": "Early morning until sold out"
+        }
+      }
+    },
+    "social_customs": {
+      "photography": {
+        "general_guidelines": {
+          "acceptable": [
+            "Public buildings exterior",
+            "Street scenes",
+            "Natural landscapes"
+          ],
+          "permission_required": [
+            "People close-up",
+            "Private property",
+            "Religious ceremonies"
+          ],
+          "prohibited": [
+            "Military installations",
+            "Government buildings interior",
+            "Airport security areas"
+          ]
+        }
+      },
+      "tipping": {
+        "service_workers": {
+          "taxi_drivers": "10-15%",
+          "tour_guides": "15-20%",
+          "hotel_staff": "1-2 dollars per bag",
+          "housekeeping": "2-5 dollars per day"
+        }
+      },
+      "public_behavior": {
+        "acceptable": [
+          "Casual conversation",
+          "Public displays of affection (moderate)",
+          "Taking photos in public places"
+        ],
+        "avoid": [
+          "Loud or disruptive behavior",
+          "Public intoxication",
+          "Littering"
+        ]
+      }
+    },
+    "environmental_customs": {
+      "conservation": {
+        "practices": [
+          "Water conservation awareness",
+          "Reef protection measures",
+          "Waste reduction"
+        ],
+        "visitor_guidelines": {
+          "beaches": [
+            "Use reef-safe sunscreen",
+            "Don't touch coral",
+            "Properly dispose of trash"
+          ],
+          "hiking": [
+            "Stay on marked trails",
+            "Don't remove plants or rocks",
+            "Respect wildlife"
+          ]
+        }
+      }
+    }
+  }

@@ -1,0 +1,99 @@
+{
+    "local_cuisine": {
+      "traditional_dishes": [
+        {
+          "name": "Keshi Yena",
+          "description": "Stuffed cheese dish with meat or chicken",
+          "cultural_significance": "Originally created during colonial times",
+          "best_places": [
+            {
+              "restaurant": "Gouverneur de Rouville",
+              "location": "Willemstad",
+              "price_range": "moderate",
+              "rating": 4.5
+            }
+          ]
+        },
+        {
+          "name": "Stoba",
+          "description": "Traditional Curaçaoan stew",
+          "variations": ["goat", "beef", "fish"],
+          "best_places": [
+            {
+              "restaurant": "Plasa Bieu",
+              "location": "Punda",
+              "price_range": "low",
+              "rating": 4.7
+            }
+          ]
+        }
+      ],
+      "dining_experiences": [
+        {
+          "name": "Local Market Food Tour",
+          "description": "Explore traditional ingredients and local flavors",
+          "locations": ["Floating Market", "Old Market"],
+          "duration": "3 hours",
+          "includes": [
+            "Food tastings",
+            "Cultural insights",
+            "Recipe cards"
+          ]
+        }
+      ]
+    },
+    "restaurants": {
+      "fine_dining": [
+        {
+          "name": "Saint Tropez Ocean Club",
+          "cuisine": "Mediterranean-Caribbean fusion",
+          "location": "Pietermaai District",
+          "price_range": "high",
+          "specialties": [
+            {
+              "dish": "Fresh Catch of the Day",
+              "description": "Local fish with Caribbean spices",
+              "price": "market price"
+            }
+          ],
+          "ambiance": ["romantic", "ocean view", "upscale"],
+          "reservations": "recommended"
+        }
+      ],
+      "casual_dining": [
+        {
+          "name": "Plasa Bieu",
+          "cuisine": "Local",
+          "location": "Punda",
+          "description": "Historic market with local food stalls",
+          "price_range": "low",
+          "best_for": "authentic local experience",
+          "popular_times": {
+            "lunch": "11:30-14:00",
+            "busy_days": ["weekdays"]
+          }
+        }
+      ]
+    },
+    "dietary_options": {
+      "vegetarian": [
+        {
+          "restaurant": "Hofi Cas Cora",
+          "location": "Santa Catharina",
+          "description": "Farm-to-table vegetarian cuisine",
+          "specialties": ["Fresh salads", "Local vegetables"],
+          "price_range": "moderate"
+        }
+      ],
+      "seafood": [
+        {
+          "restaurant": "Fish & Joy",
+          "location": "Caracasbaai",
+          "description": "Fresh local seafood",
+          "specialties": ["Grilled fish", "Seafood soup"],
+          "price_range": "moderate",
+          "best_time": "dinner"
+        }
+      ]
+    }
+  }

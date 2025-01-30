@@ -1,0 +1,86 @@
+{
+    "districts": [
+      {
+        "name": "Punda",
+        "type": "historic_district",
+        "description": "Historic heart of Willemstad, known for colorful Dutch colonial architecture",
+        "highlights": [
+          {
+            "name": "Handelskade",
+            "type": "landmark",
+            "description": "Iconic waterfront with vibrant colonial buildings",
+            "best_photo_spots": [
+              {
+                "location": "Queen Emma Bridge",
+                "time": "sunset",
+                "tips": "Best angle for capturing colorful facades"
+              }
+            ]
+          },
+          {
+            "name": "Fort Amsterdam",
+            "type": "historic_site",
+            "description": "17th-century fort and UNESCO World Heritage site",
+            "visitor_info": {
+              "hours": "9:00-17:00",
+              "admission": "free",
+              "guided_tours": true
+            }
+          }
+        ],
+        "walking_routes": [
+          {
+            "name": "Colonial Architecture Trail",
+            "duration": "2 hours",
+            "difficulty": "easy",
+            "points_of_interest": [
+              "Handelskade",
+              "Fort Amsterdam",
+              "Mikve Israel-Emanuel Synagogue"
+            ]
+          }
+        ]
+      }
+    ],
+    "beaches": [
+      {
+        "name": "Playa Porto Mari",
+        "type": "beach",
+        "description": "White sand beach with excellent snorkeling",
+        "activities": [
+          {
+            "name": "snorkeling",
+            "description": "Double reef system with abundant marine life",
+            "equipment_rental": true,
+            "skill_level": "beginner-intermediate"
+          }
+        ],
+        "facilities": {
+          "parking": true,
+          "restaurant": true,
+          "restrooms": true,
+          "loungers": true
+        }
+      }
+    ],
+    "natural_areas": [
+      {
+        "name": "Christoffel National Park",
+        "type": "national_park",
+        "description": "Largest national park with diverse flora and fauna",
+        "activities": [
+          {
+            "name": "hiking",
+            "trails": [
+              {
+                "name": "Christoffel Mountain Trail",
+                "difficulty": "challenging",
+                "duration": "2-3 hours",
+                "best_time": "early morning"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }

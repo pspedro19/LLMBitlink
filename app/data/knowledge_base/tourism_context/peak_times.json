@@ -1,0 +1,124 @@
+{
+    "peak_times": {
+      "tourism_seasons": {
+        "high_season": {
+          "period": {
+            "start": "December",
+            "end": "April"
+          },
+          "characteristics": {
+            "crowds": "Peak tourist influx",
+            "pricing": "Premium accommodation rates",
+            "events": [
+              "Carnival Season (Jan-Mar)",
+              "Curaçao Art Week (May)",
+              "Flag Day (July 2)"
+            ],
+            "recommendations": [
+              "Book flights and hotels 3-6 months in advance",
+              "Visit beaches early to avoid crowds"
+            ]
+          }
+        },
+        "shoulder_season": {
+          "period": {
+            "start": "May",
+            "end": "June"
+          },
+          "characteristics": {
+            "crowds": "Moderate",
+            "pricing": "Discounted rates",
+            "advantages": [
+              "Ideal weather for diving (visibility 20-30m)",
+              "Lower humidity with trade winds"
+            ]
+          }
+        },
+        "low_season": {
+          "period": {
+            "start": "July",
+            "end": "November"
+          },
+          "characteristics": {
+            "crowds": "Minimal",
+            "pricing": "Best deals",
+            "events": [
+              "North Sea Jazz Festival (Aug/Sep)",
+              "Restaurant Week (Oct)"
+            ],
+            "considerations": [
+              "Brief afternoon showers possible",
+              "Check hurricane advisories (low risk)"
+            ]
+          }
+        }
+      },
+      "event_driven_peaks": {
+        "carnival": {
+          "period": "January-March",
+          "impact": {
+            "accommodation": "90-100% occupancy",
+            "transportation": "Increased demand for rentals",
+            "tips": [
+              "Secure parade viewing spots by 7:00 AM",
+              "Purchase Tumba Festival tickets online"
+            ]
+          }
+        },
+        "marathon": {
+          "period": "November",
+          "impact": {
+            "route_closure": "Partial closures near Santa Barbara Beach",
+            "recommended_lodging": "Hotels along Spanish Water or Willemstad"
+          }
+        },
+        "new_year": {
+          "period": "December 31",
+          "hotspots": [
+            "Queen Emma Bridge",
+            "Punda Waterfront"
+          ],
+          "advice": "Arrive by 10:00 PM for fireworks viewing"
+        }
+      },
+      "activity_optimization": {
+        "diving": {
+          "best_months": ["February", "March", "April"],
+          "locations": [
+            "North Coast (winter surge)",
+            "South Coast (calm year-round)"
+          ]
+        },
+        "windsurfing": {
+          "peak_wind": "January-June",
+          "top_spot": "Spanish Water (15-20 knots)"
+        },
+        "hiking": {
+          "ideal_times": {
+            "season": "December-March",
+            "time_of_day": "5:00-9:00 AM"
+          },
+          "trail_recommendations": [
+            "Christoffel Park (early access)",
+            "Shete Boka National Park"
+          ]
+        }
+      },
+      "strategic_tips": {
+        "avoiding_crowds": {
+          "beaches": "Visit Playa Lagun or Cas Abao mid-week",
+          "tours": "Book private guides in low season"
+        },
+        "cost_saving": {
+          "flights": "Track prices for May/September departures",
+          "bundles": "Look for dive-and-stay packages in August"
+        },
+        "last_minute": {
+          "opportunities": [
+            "Rainy-season hotel promotions",
+            "Same-day ferry tickets to Klein Curaçao"
+          ]
+        }
+      }
+    }
+  }

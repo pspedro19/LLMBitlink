@@ -1,0 +1,155 @@
+{
+    "water_activities": [
+      {
+        "name": "Beach Hopping Tour",
+        "type": "guided_tour",
+        "description": "Visit multiple scenic beaches in one day",
+        "itinerary": [
+          {
+            "location": "Playa Porto Mari",
+            "duration": "2 hours",
+            "activities": ["snorkeling", "swimming"]
+          },
+          {
+            "location": "Cas Abao Beach",
+            "duration": "2 hours",
+            "activities": ["relaxation", "lunch"]
+          }
+        ],
+        "includes": [
+          "transportation",
+          "snorkel gear",
+          "refreshments"
+        ],
+        "price_range": "moderate"
+      }
+    ],
+    "cultural_experiences": [
+      {
+        "name": "Local Cuisine Workshop",
+        "type": "culinary_experience",
+        "description": "Learn to prepare traditional Curaçaoan dishes",
+        "highlights": [
+          {
+            "dish": "Keshi Yena",
+            "description": "Traditional stuffed cheese dish",
+            "difficulty": "intermediate",
+            "duration": "45 minutes"
+          },
+          {
+            "dish": "Stoba",
+            "description": "Local stew",
+            "difficulty": "beginner",
+            "duration": "60 minutes"
+          }
+        ],
+        "session_details": {
+          "duration": "3 hours",
+          "max_participants": 8,
+          "includes": [
+            "ingredients",
+            "recipe booklet",
+            "lunch",
+            "beverages"
+          ],
+          "price_range": "moderate"
+        }
+      },
+      {
+        "name": "Historical Walking Tour",
+        "type": "guided_tour",
+        "description": "Explore Willemstad's rich history and architecture",
+        "routes": [
+          {
+            "name": "UNESCO Heritage Sites",
+            "duration": "2.5 hours",
+            "stops": [
+              {
+                "location": "Fort Amsterdam",
+                "duration": "30 minutes",
+                "highlights": [
+                  "Governor's palace",
+                  "Historic church",
+                  "Colonial architecture"
+                ]
+              },
+              {
+                "location": "Handelskade",
+                "duration": "45 minutes",
+                "highlights": [
+                  "Colorful Dutch buildings",
+                  "Maritime history",
+                  "Photography opportunities"
+                ]
+              }
+            ]
+          }
+        ],
+        "availability": {
+          "days": ["Monday", "Wednesday", "Friday"],
+          "times": ["9:00", "14:00"],
+          "languages": ["English", "Dutch", "Spanish"]
+        }
+      }
+    ],
+    "adventure_activities": [
+      {
+        "name": "Mountain Biking Tour",
+        "type": "outdoor_adventure",
+        "description": "Explore Curaçao's rugged terrain by mountain bike",
+        "routes": [
+          {
+            "name": "Christoffel Park Trail",
+            "difficulty": "intermediate",
+            "distance": "15km",
+            "duration": "3 hours",
+            "highlights": [
+              "Scenic viewpoints",
+              "Native flora",
+              "Wildlife spotting"
+            ]
+          }
+        ],
+        "equipment_provided": [
+          "Mountain bike",
+          "Helmet",
+          "Water bottle",
+          "Basic repair kit"
+        ],
+        "requirements": {
+          "fitness_level": "moderate",
+          "min_age": 14,
+          "max_participants": 8
+        }
+      }
+    ],
+    "wellness_activities": [
+      {
+        "name": "Beach Yoga Session",
+        "type": "wellness",
+        "description": "Practice yoga with ocean views and sea breeze",
+        "sessions": [
+          {
+            "type": "Sunrise Yoga",
+            "time": "6:30",
+            "duration": "75 minutes",
+            "location": "Cas Abao Beach",
+            "style": "Vinyasa Flow"
+          },
+          {
+            "type": "Sunset Meditation",
+            "time": "17:30",
+            "duration": "60 minutes",
+            "location": "Porto Mari Beach",
+            "style": "Mindfulness & Relaxation"
+          }
+        ],
+        "includes": [
+          "Yoga mat",
+          "Fresh fruit",
+          "Water",
+          "Beach towel"
+        ]
+      }
+    ]
+  }

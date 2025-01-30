@@ -1,0 +1,237 @@
+{
+    "annual_climate": {
+      "overview": {
+        "climate_type": "Tropical savanna",
+        "average_temperature": {
+          "celsius": 28,
+          "fahrenheit": 82
+        },
+        "characteristics": [
+          "Consistent warm temperatures",
+          "Semi-arid conditions",
+          "Trade winds year-round"
+        ]
+      },
+      "seasons": {
+        "dry_season": {
+          "period": {
+            "start": "January",
+            "end": "June"
+          },
+          "characteristics": {
+            "rainfall": {
+              "average_mm": 45,
+              "frequency": "Occasional brief showers",
+              "pattern": "Early morning or late afternoon"
+            },
+            "temperature": {
+              "average_high_c": 31,
+              "average_low_c": 25,
+              "average_high_f": 88,
+              "average_low_f": 77
+            },
+            "humidity": {
+              "average": "75%",
+              "perceived": "Moderate due to trade winds"
+            },
+            "wind": {
+              "speed": "15-20 knots",
+              "direction": "East to Northeast",
+              "characteristics": "Steady trade winds"
+            }
+          },
+          "tourist_activities": {
+            "recommended": [
+              "Beach activities",
+              "Snorkeling",
+              "Diving",
+              "Outdoor tours"
+            ],
+            "considerations": [
+              "Peak UV index during midday",
+              "Best time for water activities"
+            ]
+          }
+        },
+        "rainy_season": {
+          "period": {
+            "start": "October",
+            "end": "December"
+          },
+          "characteristics": {
+            "rainfall": {
+              "average_mm": 100,
+              "frequency": "Short afternoon showers",
+              "pattern": "Brief but intense"
+            },
+            "temperature": {
+              "average_high_c": 32,
+              "average_low_c": 26,
+              "average_high_f": 90,
+              "average_low_f": 79
+            },
+            "humidity": {
+              "average": "85%",
+              "perceived": "Higher but moderated by winds"
+            },
+            "wind": {
+              "speed": "12-18 knots",
+              "direction": "Variable",
+              "characteristics": "Occasional gusty conditions"
+            }
+          }
+        }
+      }
+    },
+    "monthly_conditions": {
+      "january": {
+        "overview": {
+          "description": "Prime tourist season with ideal weather",
+          "average_temperature": {
+            "celsius": 27,
+            "fahrenheit": 81
+          }
+        },
+        "water_conditions": {
+          "temperature": {
+            "celsius": 26,
+            "fahrenheit": 79
+          },
+          "visibility": "Excellent",
+          "wave_height": "0.5-1.5m",
+          "suitable_for": ["Swimming", "Snorkeling", "Diving"]
+        },
+        "outdoor_activities": {
+          "best_times": {
+            "beach": "8:00-16:00",
+            "hiking": "Early morning",
+            "water_sports": "Morning to mid-afternoon"
+          }
+        }
+      }
+    },
+    "marine_conditions": {
+      "general_patterns": {
+        "currents": {
+          "strength": "Moderate",
+          "direction": "Westward",
+          "variations": {
+            "season": "Stronger during winter months",
+            "location": "Stronger around points and passages"
+          }
+        },
+        "waves": {
+          "average_height": "1-2m",
+          "pattern": "Larger on north and east coasts",
+          "best_conditions": {
+            "surfing": "North coast during winter",
+            "swimming": "South coast year-round"
+          }
+        }
+      },
+      "diving_conditions": {
+        "visibility": {
+          "average": "20-30m",
+          "best_season": "February to May",
+          "factors": [
+            "Less plankton activity",
+            "Calmer seas",
+            "Less rainfall"
+          ]
+        },
+        "seasonal_variations": {
+          "summer": {
+            "visibility": "15-25m",
+            "temperature": "28°C",
+            "conditions": "Generally calm"
+          },
+          "winter": {
+            "visibility": "20-30m",
+            "temperature": "26°C",
+            "conditions": "Occasional surge"
+          }
+        }
+      }
+    },
+    "weather_phenomena": {
+      "trade_winds": {
+        "description": "Constant easterly winds",
+        "benefits": [
+          "Natural cooling",
+          "Reduced humidity",
+          "Perfect for windsurfing"
+        ],
+        "seasonal_variations": {
+          "strongest": "December to April",
+          "weakest": "September to November"
+        }
+      },
+      "tropical_systems": {
+        "hurricane_season": {
+          "period": "June to November",
+          "risk_level": "Low (outside main hurricane belt)",
+          "preparedness": {
+            "monitoring": "National Meteorological Service",
+            "communications": "Regular updates via local media",
+            "tourist_advisories": "Available through hotels and tourism offices"
+          }
+        }
+      }
+    },
+    "activity_recommendations": {
+      "beach_activities": {
+        "optimal_conditions": {
+          "wind_speed": "Below 15 knots",
+          "wave_height": "Below 1m",
+          "time_of_day": "8:00-16:00"
+        },
+        "best_months": ["March", "April", "May"]
+      },
+      "water_sports": {
+        "diving": {
+          "best_conditions": {
+            "visibility": "20m+",
+            "current": "Minimal",
+            "season": "December to April"
+          }
+        },
+        "windsurfing": {
+          "best_conditions": {
+            "wind_speed": "15-20 knots",
+            "location": "Spanish Water",
+            "season": "January to June"
+          }
+        }
+      },
+      "outdoor_tours": {
+        "hiking": {
+          "best_conditions": {
+            "time": "Early morning",
+            "temperature": "Below 28°C",
+            "season": "December to March"
+          },
+          "precautions": [
+            "Carry water",
+            "Use sun protection",
+            "Check weather forecast"
+          ]
+        }
+      }
+    },
+    "weather_impact_on_transport": {
+      "air_travel": {
+        "typical_conditions": "Good visibility, minimal delays",
+        "potential_disruptions": {
+          "cause": "Occasional thunderstorms",
+          "frequency": "Rare",
+          "duration": "Short-term"
+        }
+      },
+      "sea_transport": {
+        "ferry_services": {
+          "normal_operations": "Year-round",
+          "weather_impacts": "Rare cancellations during storms"
+        }
+      }
+    }
+  }

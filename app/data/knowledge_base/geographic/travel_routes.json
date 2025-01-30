@@ -1,0 +1,252 @@
+{
+    "recommended_routes": {
+      "historical_routes": {
+        "willemstad_heritage_walk": {
+          "name": "UNESCO Heritage Walking Route",
+          "type": "Walking tour",
+          "duration": "3 hours",
+          "distance": "2.5 km",
+          "difficulty": "Easy",
+          "starting_point": {
+            "name": "Fort Amsterdam",
+            "coordinates": {
+              "latitude": 12.1091,
+              "longitude": -68.9316
+            },
+            "meeting_point": "Fort entrance",
+            "public_transport": ["Bus terminal nearby", "Water taxi stop"]
+          },
+          "route_segments": [
+            {
+              "segment": 1,
+              "name": "Fort Amsterdam to Handelskade",
+              "distance": "300m",
+              "duration": "20 min",
+              "points_of_interest": [
+                {
+                  "name": "Fort Amsterdam",
+                  "type": "Historical site",
+                  "visit_duration": "30 min",
+                  "highlights": ["Governor's Palace", "Fort Church"],
+                  "photo_spots": ["Main courtyard", "Harbor view"]
+                },
+                {
+                  "name": "Handelskade",
+                  "type": "Waterfront",
+                  "visit_duration": "20 min",
+                  "highlights": ["Colorful buildings", "Harbor views"],
+                  "best_photo_time": "Sunset"
+                }
+              ]
+            },
+            {
+              "segment": 2,
+              "name": "Punda Shopping District",
+              "distance": "500m",
+              "duration": "45 min",
+              "points_of_interest": [
+                {
+                  "name": "Synagogue Mikvé Israel-Emanuel",
+                  "type": "Religious site",
+                  "visit_duration": "30 min",
+                  "notes": "Oldest synagogue in Western Hemisphere"
+                }
+              ],
+              "facilities": ["Cafes", "Shops", "Restrooms"]
+            }
+          ],
+          "accessibility": {
+            "wheelchair_friendly": true,
+            "rest_stops": ["Every 500m"],
+            "terrain": "Paved streets",
+            "challenges": ["Some cobblestones in old town"]
+          }
+        }
+      },
+      "coastal_routes": {
+        "west_coast_beach_tour": {
+          "name": "West Coast Beach Route",
+          "type": "Driving tour",
+          "total_distance": "45 km",
+          "recommended_duration": "Full day",
+          "transport_options": {
+            "car": {
+              "recommended": true,
+              "rental_info": {
+                "cost_range": "$40-60/day",
+                "booking_notice": "Reserve in advance"
+              }
+            },
+            "guided_tour": {
+              "available": true,
+              "cost_range": "$75-100/person",
+              "includes": ["Transport", "Guide", "Refreshments"]
+            }
+          },
+          "stops": [
+            {
+              "name": "Playa Porto Mari",
+              "distance_from_start": "25 km",
+              "suggested_time": "2 hours",
+              "highlights": ["Double reef", "White sand beach"],
+              "facilities": {
+                "parking": true,
+                "restaurant": true,
+                "restrooms": true
+              }
+            },
+            {
+              "name": "Playa Knip",
+              "distance_from_start": "35 km",
+              "suggested_time": "2 hours",
+              "highlights": ["Crystal clear water", "Snorkeling"],
+              "facilities": {
+                "parking": true,
+                "snack_bar": true,
+                "rental_equipment": ["Chairs", "Umbrellas"]
+              }
+            }
+          ]
+        }
+      },
+      "nature_routes": {
+        "christoffel_park_trail": {
+          "name": "Christoffel Mountain Trail",
+          "type": "Hiking",
+          "difficulty": "Challenging",
+          "best_time": "Early morning (before 10 AM)",
+          "duration": "2-3 hours",
+          "distance": "2.8 km",
+          "elevation_gain": "372m",
+          "trail_conditions": {
+            "terrain": ["Rocky", "Steep sections"],
+            "markers": "Well-marked trail",
+            "challenges": ["Heat", "Steep climbs"]
+          },
+          "requirements": {
+            "fitness_level": "Good",
+            "equipment": [
+              "Hiking shoes",
+              "Water (2L minimum)",
+              "Sun protection"
+            ]
+          }
+        }
+      }
+    },
+    "transport_connections": {
+      "airport_transfers": {
+        "to_willemstad": {
+          "distance": "12 km",
+          "options": {
+            "taxi": {
+              "cost": "35-45 USD",
+              "duration": "15-20 min",
+              "availability": "24/7",
+              "booking": "Airport taxi stand"
+            },
+            "shuttle": {
+              "cost": "20 USD/person",
+              "duration": "25-30 min",
+              "schedule": "Matches flight arrivals",
+              "booking": "Required in advance"
+            }
+          }
+        }
+      },
+      "inter_district": {
+        "public_buses": {
+          "routes": [
+            {
+              "number": "1",
+              "name": "Punda-Otrobanda",
+              "frequency": "Every 15 min",
+              "operating_hours": "6:00-20:00",
+              "cost": "2 USD"
+            },
+            {
+              "number": "4",
+              "name": "Willemstad-Westpunt",
+              "frequency": "Every 2 hours",
+              "operating_hours": "7:00-18:00",
+              "cost": "5 USD"
+            }
+          ]
+        }
+      }
+    },
+    "scenic_drives": {
+      "west_coast_route": {
+        "name": "West Coast Scenic Drive",
+        "distance": "50 km",
+        "duration": "1 day",
+        "road_conditions": {
+          "type": "Paved, some narrow sections",
+          "difficulty": "Easy to moderate",
+          "vehicle_recommendation": "Any car suitable"
+        },
+        "viewpoints": [
+          {
+            "name": "Playa Kalki Lookout",
+            "coordinates": {
+              "latitude": 12.3751,
+              "longitude": -69.1577
+            },
+            "highlights": ["Coastline views", "Sunset spot"],
+            "facilities": ["Parking", "No restrooms"]
+          }
+        ]
+      }
+    },
+    "walking_bridges": {
+      "queen_emma_bridge": {
+        "name": "Queen Emma Pontoon Bridge",
+        "type": "Floating pedestrian bridge",
+        "connects": ["Punda", "Otrobanda"],
+        "length": "167 meters",
+        "operating_hours": {
+          "pedestrian_crossing": "24/7",
+          "bridge_swings": "Schedule varies for boat traffic"
+        },
+        "features": {
+          "historical": "Built in 1888",
+          "nickname": "Swinging Old Lady",
+          "lighting": "Illuminated at night"
+        },
+        "tips": [
+          "Best photos at sunset",
+          "Wait for bridge swings for unique experience",
+          "Free to cross"
+        ]
+      }
+    },
+    "emergency_routes": {
+      "hospital_routes": {
+        "from_tourist_areas": [
+          {
+            "from": "Willemstad center",
+            "to": "Curaçao Medical Center",
+            "distance": "5 km",
+            "estimated_time": "10 min",
+            "route_type": "Urban roads"
+          }
+        ]
+      },
+      "emergency_contacts": {
+        "police": "911",
+        "ambulance": "912",
+        "tourist_police": "+599 9 461-6060"
+      }
+    },
+    "accessibility_info": {
+      "wheelchair_friendly_routes": [
+        {
+          "name": "Punda Shopping District",
+          "suitability": "High",
+          "surface": "Smooth pavement",
+          "facilities": ["Ramps", "Accessible restrooms"],
+          "challenges": ["Some historic areas have limited access"]
+        }
+      ]
+    }
+  }
