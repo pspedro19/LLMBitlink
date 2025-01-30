@@ -23,23 +23,29 @@ class OpenAIHelper:
             logger.error(f"Error generating tour guide intro: {str(e)}")
             return self._generate_fallback_intro(preferences)
             
-    def generate_tour_guide_response(self, 
-                                   user_text: str, 
-                                   system_message: Optional[str] = None) -> str:
+    def generate_tour_guide_response(
+        self, 
+        user_text: str, 
+        system_message: Optional[str] = None,
+        lang: str = 'es'
+    ) -> str:
         """
         Genera una respuesta conversacional para consultas turísticas.
         
         Args:
             user_text: Texto del usuario
             system_message: Mensaje de sistema personalizado
-            
+            lang: Código de idioma ('es' o 'en')
+                
         Returns:
             str: Respuesta generada por OpenAI
         """
         try:
             if not system_message:
                 system_message = "Eres un guía turístico experto en Curaçao"
-                
+                if lang == 'en':
+                    system_message = "You are an expert tour guide in Curaçao"
+                    
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
@@ -54,7 +60,8 @@ class OpenAIHelper:
             
         except Exception as e:
             logger.error(f"Error generating tour guide response: {str(e)}")
-            return "Lo siento, no pude procesar tu solicitud en este momento. ¿Podrías intentarlo de nuevo?"
+            default_error = "Lo siento, no pude procesar tu solicitud en este momento. ¿Podrías intentarlo de nuevo?"
+            return "Sorry, I couldn't process your request at this time. Could you try again?" if lang == 'en' else default_error
             
     def _generate_completion(self, prompt: str, system_message: str) -> str:
         """

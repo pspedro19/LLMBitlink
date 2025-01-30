@@ -27,3 +27,5 @@ peft
 # Storage
 minio
 fuzzywuzzy
+langdetect
+beautifulsoup4

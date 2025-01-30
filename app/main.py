@@ -9,6 +9,7 @@ from core.recommender.recommendation_engine import RecommendationEngine
 from core.analyzer.nlp.routes import router as nlp_router
 from core.recommender.full_service import get_full_recommendations, NLPRequest
 from core.analyzer.nlp.intent_analyzer import IntentAnalyzer, IntentType, IntentResult
+from core.recommender.enhanced_recommender import EnhancedRecommender
 from fastapi.responses import HTMLResponse
 from core.recommender.formatter import HTMLFormatter
 import os
@@ -196,7 +197,54 @@ def get_html_recommendations(request: RecommendationRequest) -> HTMLResponse:
     except Exception as e:
         logger.error(f"Error processing HTML recommendation request: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
+    
+@app.post("/recommendations/html-pro")
+async def get_enhanced_html_recommendations(request: RecommendationRequest) -> HTMLResponse:
+    """
+    Enhanced endpoint that combines NER and OpenAI to provide rich, contextual recommendations
+    """
+    try:
+        if not OPENAI_API_KEY:
+            raise HTTPException(
+                status_code=500,
+                detail="OpenAI API key not configured"
+            )
+            
+        # Get base recommendations using existing logic
+        response = engine.get_recommendations(
+            request.query,
+            request.preferences.dict()
+        )
+        
+        if response["status"] != "success":
+            raise HTTPException(
+                status_code=404 if response["status"] == "no_results" else 500,
+                detail=response.get("message", "Error generating recommendations")
+            )
+            
+        # Format base recommendations to HTML
+        formatter = HTMLFormatter()
+        base_html_content = formatter.format_to_html(
+            response["recommendations"],
+            request.preferences.dict()
+        )
+        
+        # Initialize enhanced recommender
+        enhanced_recommender = EnhancedRecommender(openai_helper)
+        
+        # Process and enhance the recommendations
+        enhanced_html = await enhanced_recommender.process_recommendations(
+            html_content=base_html_content,
+            user_query=request.query,
+            preferences=request.preferences.dict()
+        )
+        
+        return HTMLResponse(content=enhanced_html)
+        
+    except Exception as e:
+        logger.error(f"Error processing enhanced HTML recommendation request: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
 @app.post("/recommendations/full")
 async def full_recommendations_endpoint(request: NLPRequest) -> HTMLResponse:
     """
