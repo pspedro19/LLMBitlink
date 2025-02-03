@@ -1,10 +1,12 @@
 # Ignorar entornos virtuales
 myenv/
 venv/
+env/
 *.pyc
 __pycache__/
 airflow/logs/
 */_pycache_/
+.python-version
 
 # Ignorar archivos de configuración de IDE
 .vscode/
@@ -43,7 +45,9 @@ docker-compose.override.yml.tmp
 
 # Ignorar ficheros de configuración específicos del usuario
 .env
-
+.env.local
+.env*.local
+*.pkl
 
 **/__pycache__
 *.pyc
