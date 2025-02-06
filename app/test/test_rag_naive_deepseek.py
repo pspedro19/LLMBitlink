@@ -6,45 +6,39 @@ import argparse
 import pickle
 import numpy as np
 import pdfplumber
-import requests  # Cambiamos openai por requests para llamadas API
 from sentence_transformers import SentenceTransformer
 import faiss
+from llama_cpp import Llama  # Nueva dependencia
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("DeepseekRAG")
+logger = logging.getLogger("ImprovedNaiveRAG")
 
-class DeepseekRAG:
+class ImprovedNaiveRAG:
     def __init__(self, document_dir, 
                  model_name="sentence-transformers/all-MiniLM-L6-v2",
-                 deepseek_model="deepseek-chat",
+                 local_model_path="lmstudio-community/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/model.q8_0.gguf",
                  embedding_cache="embeddings.pkl",
-                 deepseek_api_key=None,
+                 n_ctx=2048,  # Tamaño del contexto del modelo
+                 n_gpu_layers=0,  # Capas a ejecutar en GPU (0 = solo CPU)
                  password=None):
         """
-        RAG adaptado para Deepseek:
-        - Manejo mejorado de PDFs
-        - Búsqueda eficiente con FAISS
-        - Generación de respuestas usando Deepseek API
-        - Cache de embeddings
-        
-        Args:
-            document_dir: Directorio con documentos PDF.
-            model_name: Modelo de embeddings de SentenceTransformer.
-            deepseek_model: Modelo de Deepseek a utilizar.
-            embedding_cache: Archivo para cache de embeddings.
-            deepseek_api_key: API Key de Deepseek.
-            password: Contraseña para PDFs protegidos (opcional).
+        Args modificados:
+            local_model_path: Ruta al modelo GGUF
+            n_ctx: Tamaño del contexto del modelo
+            n_gpu_layers: Capas a ejecutar en GPU (0=solo CPU)
+            password: Contraseña para PDFs protegidos (por defecto None)
         """
         self.document_dir = document_dir
-        self.password = password
         self.embedding_cache = embedding_cache
-        self.deepseek_model = deepseek_model
-        self.api_base_url = "https://api.deepseek.com/v1"  # URL de la API de Deepseek
+        self.password = password
 
-        # Configurar la API Key
-        self.deepseek_api_key = deepseek_api_key or os.environ.get("DEEPSEEK_API_KEY")
-        if not self.deepseek_api_key:
-            raise ValueError("Se requiere una API Key de Deepseek. Proporciónala como argumento o en la variable de entorno DEEPSEEK_API_KEY.")
+        # Cargar modelo local
+        self.llm = Llama(
+            model_path=local_model_path,
+            n_ctx=n_ctx,
+            n_gpu_layers=n_gpu_layers,
+            verbose=False
+        )
 
         # Configurar el modelo de embeddings
         self.embedding_model = SentenceTransformer(model_name)
@@ -69,8 +63,9 @@ class DeepseekRAG:
         for filepath in file_list:
             try:
                 with pdfplumber.open(filepath, password=self.password) as pdf:
-                    text = "\n".join([self._clean_text(page.extract_text()) 
-                                      for page in pdf.pages if page.extract_text()])
+                    text = "\n".join(
+                        [self._clean_text(page.extract_text()) for page in pdf.pages if page.extract_text()]
+                    )
                 if text.strip():
                     documents.append((os.path.basename(filepath), text))
                     logger.info(f"Cargado: {filepath} ({len(text)} caracteres)")
@@ -84,11 +79,13 @@ class DeepseekRAG:
         """Realiza una limpieza básica del texto extraído."""
         if not text:
             return ""
+        # Elimina múltiples espacios y saltos de línea
         text = re.sub(r'\s+', ' ', text).strip()
+        # Elimina caracteres no imprimibles
         return re.sub(r'[^\x20-\x7E]', '', text)
 
     def _compute_embeddings(self):
-        """Calcula o carga embeddings desde caché usando FAISS."""
+        """Calcula o carga embeddings desde caché usando FAISS para búsquedas eficientes."""
         if os.path.exists(self.embedding_cache):
             logger.info("Cargando embeddings desde caché...")
             with open(self.embedding_cache, "rb") as f:
@@ -103,12 +100,15 @@ class DeepseekRAG:
         embeddings = []
         for i in range(0, len(texts), batch_size):
             batch = texts[i:i+batch_size]
-            embeddings.append(self.embedding_model.encode(batch, convert_to_tensor=True).cpu().numpy())
+            embeddings.append(
+                self.embedding_model.encode(batch, convert_to_tensor=True).cpu().numpy()
+            )
         self.doc_embeddings = np.concatenate(embeddings)
-        
+        # Crear índice FAISS para búsqueda rápida
         self.faiss_index = faiss.IndexFlatIP(self.doc_embeddings.shape[1])
         self.faiss_index.add(self.doc_embeddings.astype(np.float32))
 
+        # Guardar en caché
         with open(self.embedding_cache, "wb") as f:
             pickle.dump({
                 'embeddings': self.doc_embeddings,
@@ -128,86 +128,181 @@ class DeepseekRAG:
         if top_k <= 0:
             return []
 
-        query_embedding = self.embedding_model.encode([query], convert_to_tensor=True).cpu().numpy().astype(np.float32)
+        query_embedding = self.embedding_model.encode(
+            [query], convert_to_tensor=True
+        ).cpu().numpy().astype(np.float32)
         scores, indices = self.faiss_index.search(query_embedding, top_k)
-        results = [(self.documents[i][0], self.documents[i][1], scores[0][j]) 
-                   for j, i in enumerate(indices[0])]
+        results = [
+            (self.documents[i][0], self.documents[i][1], scores[0][j])
+            for j, i in enumerate(indices[0])
+        ]
         return results
 
-    def generate_response(self, query, retrieved_docs, max_tokens=500):
+#     def generate_response(self, query, retrieved_docs, max_tokens=500):
+#         """
+#         Genera respuesta usando el modelo local.
+#         """
+#         if not retrieved_docs:
+#             return "No se encontró información relevante."
+
+#         context = "\n\n".join(
+#             [f"Documento {doc[0]}:\n{doc[1]}" for doc in retrieved_docs]
+#         )
+        
+#         prompt = f"""### Instrucción:
+# Responde como un asistente turístico experto usando SOLO la información del contexto.
+
+# ### Contexto:
+# {context}
+
+# ### Consulta:
+# {query}
+
+# ### Respuesta:
+# """
+#         try:
+#             # Llamada directa al modelo local con el prompt completo
+#             response = self.llm(
+#                 prompt,
+#                 temperature=0.7,
+#                 top_p=0.9,
+#                 max_tokens=max_tokens,
+#                 stop=["###"]
+#             )
+#             return response['choices'][0]['text'].strip()
+#         except Exception as e:
+#             logger.error(f"Error en generación: {str(e)}")
+#             return "Error generando respuesta"
+
+    # def generate_response(self, query, retrieved_docs, max_tokens=500, max_context_chars_per_doc=1500):
+    #     """
+    #     Genera respuesta usando el modelo local.
+    #     Args:
+    #         query: Consulta de búsqueda.
+    #         retrieved_docs: Lista de documentos recuperados.
+    #         max_tokens: Número máximo de tokens para la respuesta.
+    #         max_context_chars_per_doc: Número máximo de caracteres a incluir por documento en el contexto.
+    #     Returns:
+    #         Respuesta generada por el modelo.
+    #     """
+    #     if not retrieved_docs:
+    #         return "No se encontró información relevante."
+
+    #     # Truncar el contenido de cada documento para evitar superar el límite de contexto
+    #     trimmed_docs = []
+    #     for doc in retrieved_docs:
+    #         # Trunca el texto si es demasiado largo
+    #         text = doc[1]
+    #         if len(text) > max_context_chars_per_doc:
+    #             text = text[:max_context_chars_per_doc] + " [...]"
+    #         trimmed_docs.append((doc[0], text, doc[2]))
+
+    #     context = "\n\n".join(
+    #         [f"Documento {doc[0]}:\n{doc[1]}" for doc in trimmed_docs]
+    #     )
+      
+    #     prompt = f"""### Instrucción:
+    #         Respond as an expert tourist assistant using ONLY contextual information.
+
+    #         ### Context:
+    #         {context}
+
+    #         ### Consultation:
+    #         {query}
+
+    #         ### Response:
+    #     """
+    #     try:
+    #         # Llamada directa al modelo local con el prompt completo
+    #         response = self.llm(
+    #             prompt,
+    #             temperature=0.7,
+    #             top_p=0.9,
+    #             max_tokens=max_tokens,
+    #             stop=["###"]
+    #         )
+    #         return response['choices'][0]['text'].strip()
+    #     except Exception as e:
+    #         logger.error(f"Error en generación: {str(e)}")
+    #         return "Error generando respuesta"
+    
+    def generate_response(self, query, retrieved_docs, max_tokens=500, max_context_chars_per_doc=1500):
         """
-        Genera una respuesta utilizando la API de Deepseek.
+        Genera respuestas en pasos separados para cada documento relevante.
+
         Args:
-            query: Consulta original.
-            retrieved_docs: Documentos recuperados.
-            max_tokens: Número máximo de tokens para la respuesta.
+            query: Consulta del usuario.
+            retrieved_docs: Lista de documentos recuperados [(nombre, contenido, score)].
+            max_tokens: Máximo de tokens permitidos en la respuesta.
+            max_context_chars_per_doc: Máximo de caracteres del documento a incluir.
+
+        Returns:
+            Respuesta combinada con información concisa de cada documento relevante.
         """
         if not retrieved_docs:
             return "No se encontró información relevante."
 
-        context = "\n\n".join([f"Documento {doc[0]}:\n{doc[1]}" for doc in retrieved_docs])
-        prompt = f"""Responde de manera útil y precisa a la siguiente consulta usando solo el contexto proporcionado.
+        respuestas = []
+        
+        for doc_name, doc_text, score in retrieved_docs:
+            # Truncar contenido si es demasiado largo
+            text = doc_text[:max_context_chars_per_doc] + " [...]" if len(doc_text) > max_context_chars_per_doc else doc_text
 
-Consulta: {query}
+            prompt = f"""### Instrucción:
+                Responde de manera clara usando SOLO la información proporcionada en el documento.
 
-Contexto:
-{context}
+                ### Documento: {doc_name}
+                {text}
 
-Respuesta:"""
+                ### Consulta:
+                {query}
 
-        try:
-            headers = {
-                "Authorization": f"Bearer {self.deepseek_api_key}",
-                "Content-Type": "application/json"
-            }
-            
-            payload = {
-                "model": self.deepseek_model,
-                "messages": [
-                    {"role": "system", "content": "Eres un asistente turístico experto."},
-                    {"role": "user", "content": prompt}
-                ],
-                "temperature": 0.7,
-                "max_tokens": max_tokens,
-                "top_p": 0.9
-            }
+                ### Respuesta:
+            """
+            try:
+                response = self.llm(
+                    prompt,
+                    temperature=0.7,
+                    top_p=0.9,
+                    max_tokens=max_tokens,
+                    stop=["###"]
+                )
+                respuesta_generada = response['choices'][0]['text'].strip()
+                respuestas.append(f"\n**{doc_name}**:\n{respuesta_generada}")
 
-            response = requests.post(
-                f"{self.api_base_url}/chat/completions",
-                headers=headers,
-                json=payload
-            )
+            except Exception as e:
+                logger.error(f"Error en generación con {doc_name}: {str(e)}")
+                respuestas.append(f"\n**{doc_name}**: Error generando respuesta.")
 
-            if response.status_code == 200:
-                return response.json()['choices'][0]['message']['content'].strip()
-            else:
-                logger.error(f"Error en la API: {response.status_code} - {response.text}")
-                return "Error al generar la respuesta."
+        # Unir todas las respuestas generadas en una sola
+        return "\n".join(respuestas)
 
-        except Exception as e:
-            logger.error(f"Error en generación de respuesta: {str(e)}")
-            return "Hubo un error al generar la respuesta."
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Sistema RAG con Deepseek")
+    parser = argparse.ArgumentParser(description="Sistema RAG con modelo local")
     parser.add_argument("--document_dir", default="curacao_information",
                         help="Directorio con documentos PDF")
     parser.add_argument("--top_k", type=int, default=2,
                         help="Número de documentos a recuperar")
     parser.add_argument("--cache_file", default="embeddings.pkl",
                         help="Archivo de caché para embeddings")
-    parser.add_argument("--deepseek_api_key", default=None,
-                        help="API Key de Deepseek (variable: DEEPSEEK_API_KEY)")
+    parser.add_argument("--model_path", 
+                        default="models/deepseek-qwen-1.5b.q8_0.gguf",
+                        help="Ruta al modelo GGUF")
     args = parser.parse_args()
 
-    rag = DeepseekRAG(
+    rag = ImprovedNaiveRAG(
         document_dir=args.document_dir,
         embedding_cache=args.cache_file,
-        deepseek_api_key=args.deepseek_api_key
+        local_model_path=args.model_path,
+        n_ctx=4096,
+        n_gpu_layers=20
     )
 
-    query = "¿Qué actividades turísticas puedo realizar en Curazao?"
+    query = "What tourist activities can I do in Curaçao?"
     retrieved_docs = rag.retrieve(query, top_k=args.top_k)
+    
     print("\nDocumentos recuperados:")
     for doc in retrieved_docs:
         print(f"\n► {doc[0]} (Score: {doc[2]:.4f})")
