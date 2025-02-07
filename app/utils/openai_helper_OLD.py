@@ -1,6 +1,4 @@
-# app/utils/openai_helper.py
-
-import openai
+from openai import OpenAI
 from typing import List, Dict, Optional
 import logging
 
@@ -8,8 +6,7 @@ logger = logging.getLogger(__name__)
 
 class OpenAIHelper:
     def __init__(self, api_key: str):
-        # Configura la API key de OpenAI de forma global
-        openai.api_key = api_key
+        self.client = OpenAI(api_key=api_key)
         
     def generate_tour_guide_intro(self, recommendations: List[Dict], preferences: Dict) -> str:
         """Genera una introducción para las recomendaciones turísticas."""
@@ -49,7 +46,7 @@ class OpenAIHelper:
                 if lang == 'en':
                     system_message = "You are an expert tour guide in Curaçao"
                     
-            response = openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": system_message},
@@ -77,7 +74,7 @@ class OpenAIHelper:
         Returns:
             str: Respuesta generada por OpenAI
         """
-        response = openai.ChatCompletion.create(
+        response = self.client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": system_message},

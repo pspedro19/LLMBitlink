@@ -1,8 +1,8 @@
 # core/rag/db_manager.py
-import logging
 from typing import Dict, List
+import logging
 import psycopg2
-from psycopg2.extras import execute_batch, RealDictCursor
+from psycopg2.extras import execute_batch, RealDictCursor, Json  # <-- Agregamos Json
 from psycopg2.pool import ThreadedConnectionPool
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -29,7 +29,7 @@ class DatabaseManager:
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10), reraise=True)
     def insert_document(self, title: str, content: str, metadata: Dict) -> str:
         """
-        Inserta un documento en la tabla 'documents' y retorna su doc_id.
+        Inserta un nuevo documento en la tabla 'documents' y retorna el doc_id.
         """
         conn = self.get_connection()
         try:
@@ -38,7 +38,7 @@ class DatabaseManager:
                     INSERT INTO documents (title, original_content, metadata)
                     VALUES (%s, %s, %s)
                     RETURNING doc_id
-                """, (title, content, metadata))
+                """, (title, content, Json(metadata)))  # <-- Aquí usamos Json(metadata)
                 doc_id = cur.fetchone()[0]
             conn.commit()
             logger.info(f"Documento insertado con doc_id={doc_id}")

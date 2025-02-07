@@ -11,7 +11,7 @@ def test_process_document():
     Test para verificar la ingesta de un documento mediante el pipeline RAG.
     """
     # Configuración de prueba (ajusta los parámetros según tu entorno de test)
-    config = Config(DB_PASSWORD="mi_contraseña", DB_NAME="rag_db")
+    config = Config(DB_PASSWORD="mypassword", DB_NAME="mydatabase", DB_USER="myuser")
     rag = RAGRetriever(config)
 
     # Ejemplo de contenido y metadatos para la prueba

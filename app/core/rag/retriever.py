@@ -15,6 +15,24 @@ from core.rag.metrics import RAGMetrics
 
 logger = logging.getLogger(__name__)
 
+def measure_time(histogram_getter):
+    """
+    Decorador para medir el tiempo de ejecución de funciones críticas.
+    Recibe como parámetro una función (histogram_getter) que, dado 'self',
+    retorna el histograma sobre el cual registrar el tiempo transcurrido.
+    """
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(self, *args, **kwargs):
+            start_time = time.time()
+            result = fn(self, *args, **kwargs)
+            elapsed = time.time() - start_time
+            histogram = histogram_getter(self)
+            histogram.observe(elapsed)
+            return result
+        return wrapper
+    return decorator
+
 class RAGRetriever:
     def __init__(self, config: Config):
         self.config = config
@@ -23,22 +41,7 @@ class RAGRetriever:
         self.faiss_manager = FAISSManager(config)
         self.metrics = RAGMetrics()
 
-    def measure_time(self, histogram):
-        """
-        Decorador para medir el tiempo de ejecución de funciones críticas.
-        """
-        def decorator(fn):
-            @wraps(fn)
-            def wrapper(*args, **kwargs):
-                start_time = time.time()
-                result = fn(*args, **kwargs)
-                elapsed = time.time() - start_time
-                histogram.observe(elapsed)
-                return result
-            return wrapper
-        return decorator
-
-    @measure_time.__get__(object, object)  # Permite aplicar el decorador en el método
+    @measure_time(lambda self: self.metrics.processing_time)
     def process_document(self, doc_input: DocumentInput) -> str:
         """
         Pipeline de ingesta:

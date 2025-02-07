@@ -1,6 +1,6 @@
 from typing import Dict, List, Any
 import logging
-from openai import OpenAI
+import openai
 import os
 
 logger = logging.getLogger(__name__)
@@ -9,8 +9,8 @@ class HTMLFormatter:
     def __init__(self):
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         if self.openai_api_key:
-            self.client = OpenAI(api_key=self.openai_api_key)
-           
+            openai.api_key = self.openai_api_key
+            self.client = openai
         self.template = """
             <div class="recommendation-card" style="border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin: 16px; max-width: 400px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);">
                 <img src="{image_url}" alt="Imagen de {name}" style="width: 100%; border-radius: 8px 8px 0 0;">
@@ -27,7 +27,7 @@ class HTMLFormatter:
                 </div>
             </div>
         """
-       
+
     def format_to_html(self, recommendations: List[Dict], preferences: Dict) -> str:
         intro_text = self._generate_ai_intro(recommendations, preferences) if self.openai_api_key else self._generate_intro(preferences)
         cards = [self._format_card(rec) for rec in recommendations]
@@ -50,15 +50,12 @@ class HTMLFormatter:
             - Intereses: {', '.join(preferences['interests'])}
             - Presupuesto: ${preferences.get('budget_per_day', 0)} por día"""
 
-            response = self.client.chat.completions.create(
+            response = self.client.ChatCompletion.create(
                 model="gpt-3.5-turbo",
-                messages=[{
-                    "role": "system",
-                    "content": "Eres un experto guía turístico de Curaçao."
-                }, {
-                    "role": "user",
-                    "content": prompt
-                }],
+                messages=[
+                    {"role": "system", "content": "Eres un experto guía turístico de Curaçao."},
+                    {"role": "user", "content": prompt}
+                ],
                 max_tokens=200,
                 temperature=0.7
             )
@@ -93,8 +90,8 @@ class HTMLFormatter:
             
         if facilities:
             return '<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee;">' + \
-                    '<p style="margin: 0 0 8px; color: #555;">' + \
-                    ' | '.join(facilities) + '</p></div>'
+                   '<p style="margin: 0 0 8px; color: #555;">' + \
+                   ' | '.join(facilities) + '</p></div>'
         return ""
 
     def _get_image_url(self, rec: Dict) -> str:
