@@ -17,6 +17,11 @@ class CSVDatabaseManager:
         self.load_csv_data()
 
     def load_csv_data(self) -> None:
+        # Si la variable de entorno SKIP_CSV_LOAD está activada, se omite la carga
+        if os.getenv("SKIP_CSV_LOAD", "false").lower() == "true":
+            logger.info("SKIP_CSV_LOAD activado: omitiendo carga de archivos Excel.")
+            return
+
         try:
             # Check if files exist and log their absolute paths
             missing_files = []
@@ -577,4 +582,4 @@ class CSVDatabaseManager:
 
         except Exception as e:
             logger.error(f"Error searching data: {str(e)}")
-            return {} 
+            return {}

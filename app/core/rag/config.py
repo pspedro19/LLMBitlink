@@ -1,36 +1,44 @@
 # core/rag/config.py
-from dataclasses import dataclass
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 
-@dataclass
 class Config:
-    # Datos de conexión a la Base de Datos
-    DB_HOST: str = "localhost"
-    DB_PORT: int = 5432
-    DB_NAME: str = "rag_db"
-    DB_USER: str = "postgres"
-    DB_PASSWORD: str = "your_password"
-
-    # Parámetros para el chunking del documento
-    CHUNK_SIZE: int = 500
-    CHUNK_OVERLAP: int = 50
-
-    # Configuración del modelo de embeddings
-    MODEL_NAME: str = "all-MiniLM-L6-v2"
-    VECTOR_SIZE: int = 384  # Ajusta según el modelo
-
-    # Configuración del índice FAISS
-    FAISS_INDEX_PATH: str = "data/faiss_index.bin"
-    N_LISTS: int = 100  # Número de listas para el índice IVF
-
-    # Configuración del pool de conexiones
-    MAX_CONNECTIONS: int = 50
-
-    @property
-    def db_url(self) -> str:
-        return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
-
-
-# Ejemplo de configuración escalable:
-class ScalableConfig(Config):
-    SHARD_SIZE: int = 1_000_000   # Cantidad de vectores por shard en FAISS
-    CACHE_SIZE: int = 10_000      # Tamaño del caché (ej. con Redis)
+    """Configuración simplificada para RAG"""
+    
+    def __init__(self):
+        # Directorio base de la aplicación
+        self.BASE_DIR = Path(__file__).resolve().parent.parent.parent
+        # Directorio padre donde está el .env
+        self.PROJECT_ROOT = self.BASE_DIR.parent
+        
+        # Cargar variables de entorno desde el directorio padre
+        self._load_env()
+        
+        self.INDICES_DIR = self.BASE_DIR / "data/indices"
+        
+        # FAISS
+        self.VECTOR_SIZE = 384  # Dimensión de vectores para miniLM
+        self.N_LISTS = 100      # Número de listas para IVF
+        
+        # Database        
+        self.DB_HOST = os.getenv("DB_HOST", "localhost")
+        self.DB_PORT = int(os.getenv("DB_PORT", "5432"))
+        self.DB_NAME = os.getenv("DB_NAME", "mydatabase")
+        self.DB_USER = os.getenv("DB_USER", "myuser")
+        self.DB_PASSWORD = os.getenv("DB_PASSWORD", "mypassword")
+        
+        # Crear directorio de índices
+        self.INDICES_DIR.mkdir(parents=True, exist_ok=True)
+    
+    def _load_env(self):
+        """Carga las variables de entorno desde el directorio padre"""
+        env_path = self.PROJECT_ROOT / ".env"
+        if env_path.exists():
+            load_dotenv(env_path)
+        else:
+            raise FileNotFoundError(f"Archivo .env no encontrado en {env_path}")
+    
+    @classmethod
+    def get_instance(cls):
+        return cls()

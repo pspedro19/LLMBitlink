@@ -8,9 +8,9 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, ".."))
 sys.path.insert(0, project_root)
 
-from core.rag.config import Config
-from core.rag.retriever import RAGRetriever
-from core.rag.document_processor import DocumentInput
+from app.core.rag.config import Config
+from app.core.rag.retriever import RAGRetriever
+from app.core.rag.document_processor import DocumentInput
 
 logging.basicConfig(level=logging.INFO)
 
