@@ -26,6 +26,8 @@ CREATE TABLE chunks (
     end_char INTEGER,
     page_number INTEGER,
     token_count INTEGER,
+    needs_indexing BOOLEAN DEFAULT TRUE,
+    is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(doc_id, chunk_number)
 );
@@ -49,3 +51,23 @@ CREATE INDEX idx_embeddings_vector
     ON embeddings
     USING ivfflat (embedding vector_cosine_ops)
     WITH (lists = 100);
+
+
+-- Crea o reemplaza la función que marca needs_indexing en TRUE.
+CREATE OR REPLACE FUNCTION mark_needs_indexing()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.needs_indexing := TRUE;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Elimina el trigger si existe para evitar duplicados.
+DROP TRIGGER IF EXISTS trigger_mark_needs_indexing ON chunks;
+
+-- Crea el trigger que se ejecuta antes de insertar en document_chunks.
+CREATE TRIGGER trigger_mark_needs_indexing
+BEFORE INSERT ON chunks
+FOR EACH ROW
+EXECUTE FUNCTION mark_needs_indexing();
+

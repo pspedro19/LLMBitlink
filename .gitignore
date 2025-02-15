@@ -55,3 +55,4 @@ docker-compose.override.yml.tmp
 *.pyd
 logs/
 real_estate_logs/
+miniconda.exe

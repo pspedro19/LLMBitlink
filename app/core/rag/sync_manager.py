@@ -17,7 +17,7 @@ class SyncManager:
         self.pool = None
         
     async def _get_pool(self):
-        """Obtiene o crea el pool de conexiones."""
+        """Obtiene o crea el pool de conexiones usando el event loop actual."""
         if self.pool is None:
             async def init_connection(conn):
                 await conn.set_type_codec(
@@ -33,7 +33,8 @@ class SyncManager:
                 database=self.config.DB_NAME,
                 host=self.config.DB_HOST,
                 port=self.config.DB_PORT,
-                init=init_connection
+                init=init_connection,
+                loop=asyncio.get_running_loop()
             )
         return self.pool
 
@@ -74,6 +75,7 @@ class SyncManager:
                     e.embedding_id,
                     e.embedding,
                     e.faiss_index_id,
+                    c.chunk_id,
                     c.content,
                     d.title
                 FROM embeddings e
@@ -91,6 +93,7 @@ class SyncManager:
                         'embedding_id': row['embedding_id'],
                         'embedding': embedding_array,
                         'faiss_index_id': row['faiss_index_id'],
+                        'chunk_id': row['chunk_id'],
                         'content': row['content'],
                         'title': row['title']
                     })
@@ -99,6 +102,17 @@ class SyncManager:
                     continue
             
             return embeddings
+
+    async def _update_chunks_indexed(self, chunk_ids: List[str]):
+        """Actualiza la tabla chunks, marcando los registros especificados como indexados (needs_indexing = FALSE)."""
+        pool = await self._get_pool()
+        async with pool.acquire() as conn:
+            await conn.executemany("""
+                UPDATE chunks 
+                SET needs_indexing = FALSE 
+                WHERE chunk_id = $1
+            """, [(cid,) for cid in chunk_ids])
+            logger.info(f"Marcados {len(chunk_ids)} chunks como indexados")
 
     async def synchronize(self) -> Tuple[int, int]:
         """Sincroniza los embeddings entre PostgreSQL y FAISS de forma completa."""
@@ -130,6 +144,10 @@ class SyncManager:
                     for emb, faiss_id in zip(embeddings, faiss_ids)
                 ]
                 await self._update_faiss_ids(id_mappings)
+                
+                # Actualizamos los chunks correspondientes para marcar que ya se indexaron
+                chunk_ids = [emb['chunk_id'] for emb in embeddings]
+                await self._update_chunks_indexed(chunk_ids)
                 
                 processed = len(embeddings)
                 logger.info(f"Sincronización exitosa: {processed} embeddings procesados")
