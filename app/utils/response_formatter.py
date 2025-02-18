@@ -1,3 +1,4 @@
+# app\utils\response_formatter.py
 """Utilidad para formatear respuestas HTML."""
 
 def _format_chat_response(response: str) -> str:

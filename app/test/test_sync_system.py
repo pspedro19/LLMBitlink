@@ -28,19 +28,21 @@ from core.rag.sync_manager import SyncManager
 @pytest_asyncio.fixture(scope="function")
 async def setup_sync_env():
     config = Config()
-    test_indices_dir = Path(__file__).parent / "test_indices"
-    test_indices_dir.mkdir(parents=True, exist_ok=True)
-    config.INDICES_DIR = test_indices_dir
+    # Usamos la carpeta de índices real: "data/indices"
+    indices_dir = Path("data/indices")
+    indices_dir.mkdir(parents=True, exist_ok=True)
+    config.INDICES_DIR = indices_dir
 
+    # Si ya existe el archivo faiss_index.bin, se elimina para crear uno nuevo.
+    faiss_index_path = indices_dir / "faiss_index.bin"
+    if faiss_index_path.exists():
+        faiss_index_path.unlink()  # Elimina el archivo existente
+        logger.info(f"Archivo existente {faiss_index_path} eliminado para crear uno nuevo.")
+
+    # Creamos el PersistentFAISSManager con la configuración actualizada.
     faiss_manager = PersistentFAISSManager(config)
     sync_manager = SyncManager(config, faiss_manager)
     yield sync_manager
-
-    # Limpieza final de índices
-    import shutil
-    if test_indices_dir.exists():
-        shutil.rmtree(test_indices_dir)
-        logger.info("Limpieza de índices completada")
 
 # Fixture para asegurar que existe un documento dummy (requerido por la llave foránea en chunks).
 @pytest_asyncio.fixture(scope="function")

@@ -75,3 +75,9 @@ class DatabaseManager:
                 INSERT INTO embeddings (chunk_id, model_name, embedding, faiss_index_id)
                 VALUES ($1, $2, $3, $4)
             """, chunk_id, model_name, vector.tolist(), faiss_index_id)
+            
+    async def get_all_embeddings(self) -> List[Dict]:
+        pool = await self._get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("SELECT embedding_id, embedding FROM embeddings")
+            return [{"embedding_id": row["embedding_id"], "embedding": np.array(row["embedding"])} for row in rows]

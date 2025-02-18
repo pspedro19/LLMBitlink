@@ -1,10 +1,12 @@
 # core/rag/retriever.py
 import time
 import logging
+import asyncio  # Para poder llamar a funciones asíncronas
+import numpy as np
 from functools import wraps
 from typing import Dict, List, Optional
 
-from psycopg2.extras import RealDictCursor
+# No usamos psycopg2 ya que trabajaremos de forma asíncrona con asyncpg
 
 from core.rag.config import Config
 from core.rag.db_manager import DatabaseManager
@@ -79,47 +81,96 @@ class RAGRetriever:
         logger.info(f"Documento procesado correctamente: doc_id={doc_id}")
         return doc_id
 
-    def search(self, query: str, top_k: int = 5, model_name: str = 'miniLM', filters: Optional[dict] = None) -> List[Dict]:
+    async def search_async(
+        self, query: str, top_k: int = 5, model_name: str = 'miniLM', filters: Optional[dict] = None
+    ) -> List[Dict]:
         """
-        Pipeline de búsqueda:
+        Pipeline de búsqueda asíncrona:
           1. Generación del embedding de la query.
           2. Búsqueda en FAISS.
           3. Consulta a la base de datos con filtros (si se requieren).
         """
         start_time = time.time()
+        # Generar el vector de la query
         query_vector = self.embeddings_manager.generate_embeddings([query], model_name=model_name)[0]
         distances, faiss_ids = self.faiss_manager.search(query_vector, k=top_k)
 
         results = []
-        conn = self.db.get_connection()
-        try:
-            with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                for i, faiss_id in enumerate(faiss_ids[0]):
-                    where_clauses = ["e.faiss_index_id = %s"]
-                    params = [int(faiss_id)]
-                    if filters:
-                        for key, value in filters.items():
-                            where_clauses.append("d.metadata->>%s = %s")
-                            params.extend([key, str(value)])
-                    query_sql = f"""
-                        SELECT 
-                            d.doc_id,
-                            d.title,
-                            d.metadata,
-                            c.content,
-                            c.chunk_number,
-                            e.faiss_index_id
-                        FROM embeddings e
-                        JOIN chunks c ON e.chunk_id = c.chunk_id
-                        JOIN documents d ON c.doc_id = d.doc_id
-                        WHERE {' AND '.join(where_clauses)}
-                    """
-                    cur.execute(query_sql, params)
-                    row = cur.fetchone()
-                    if row:
-                        row['similarity'] = float(distances[0][i])
-                        results.append(row)
-        finally:
-            self.db.return_connection(conn)
+        # Si la búsqueda en FAISS no encontró vecinos, retorna lista vacía
+        if faiss_ids.size == 0:
+            logger.warning("El índice está vacío. Retornando resultados vacíos.")
+            self.metrics.search_latency.observe(time.time() - start_time)
+            return results
+
+        # Obtener el pool de conexiones asíncronas
+        pool = await self.db._get_pool()
+        async with pool.acquire() as conn:
+            for i, faiss_id in enumerate(faiss_ids[0]):
+                # Construir la cláusula WHERE y los parámetros de forma dinámica
+                where_clauses = [f"e.faiss_index_id = $1"]
+                params = [int(faiss_id)]
+                if filters:
+                    idx = 2
+                    for key, value in filters.items():
+                        where_clauses.append(f"d.metadata->>'{key}' = ${idx}")
+                        params.append(str(value))
+                        idx += 1
+                query_sql = f"""
+                    SELECT 
+                        d.doc_id,
+                        d.title,
+                        d.metadata,
+                        c.content,
+                        c.chunk_number,
+                        e.faiss_index_id
+                    FROM embeddings e
+                    JOIN chunks c ON e.chunk_id = c.chunk_id
+                    JOIN documents d ON c.doc_id = d.doc_id
+                    WHERE {' AND '.join(where_clauses)}
+                """
+                row = await conn.fetchrow(query_sql, *params)
+                if row:
+                    row = dict(row)
+                    row['similarity'] = float(distances[0][i])
+                    results.append(row)
         self.metrics.search_latency.observe(time.time() - start_time)
         return results
+
+    def search(
+        self, query: str, top_k: int = 5, model_name: str = 'miniLM', filters: Optional[dict] = None
+    ) -> List[Dict]:
+        """
+        Método síncrono que envuelve la búsqueda asíncrona.
+        """
+        return asyncio.run(self.search_async(query, top_k, model_name, filters))
+
+    def update_index_from_db(self):
+        """
+        Actualiza el índice FAISS con embeddings no sincronizados desde la base de datos.
+        Si no hay embeddings pendientes y el índice está vacío, se reconstruye el índice
+        consultando todos los embeddings existentes en la base de datos.
+        """
+        unsynced = asyncio.run(self.db.get_unsynchronized_embeddings())
+        if unsynced:
+            vectors = np.array([item['embedding'] for item in unsynced])
+            faiss_ids = self.faiss_manager.add_vectors(vectors)
+            id_pairs = [(item['embedding_id'], faiss_id) for item, faiss_id in zip(unsynced, faiss_ids)]
+            asyncio.run(self.db.update_faiss_ids(id_pairs))
+            logger.info(f"Sincronizados {len(id_pairs)} embeddings nuevos al índice FAISS.")
+        else:
+            index_info = self.faiss_manager.get_index_info()
+            if index_info.get('total_vectors', 0) == 0:
+                logger.info("FAISS index vacío. Intentando reconstruirlo con todos los embeddings de la DB.")
+                # Se asume que agregas este método en DatabaseManager:
+                # async def get_all_embeddings(self) -> List[Dict]:
+                all_embeddings = asyncio.run(self.db.get_all_embeddings())
+                if all_embeddings:
+                    vectors = np.array([item['embedding'] for item in all_embeddings])
+                    faiss_ids = self.faiss_manager.add_vectors(vectors)
+                    id_pairs = [(item['embedding_id'], faiss_id) for item, faiss_id in zip(all_embeddings, faiss_ids)]
+                    asyncio.run(self.db.update_faiss_ids(id_pairs))
+                    logger.info(f"Reconstruido el índice FAISS con {len(id_pairs)} embeddings.")
+                else:
+                    logger.info("No se encontraron embeddings en la base de datos para reconstruir el índice.")
+            else:
+                logger.info("No hay embeddings pendientes de sincronización.")
