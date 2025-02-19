@@ -1,0 +1,36 @@
+required_preferences:
+  - family_size:
+      question: "👨‍👩‍👧‍👦 How many people will be traveling?"
+      pattern: "\b\d+\b"
+      validation: "1-20"
+      error_message: "Please indicate a number between 1 and 20 people"
+      
+  - budget:
+      question: "💵 What is your approximate budget? (USD)"
+      pattern: "\b\d+\b"
+      validation: "100-100000"
+      error_message: "Please provide a budget between $100 and $100,000 USD"
+      
+  - days:
+      question: "📅 How many days do you plan to stay?"
+      pattern: "\b\d+\b"
+      validation: "1-30"
+      error_message: "Please indicate between 1 and 30 days"
+      
+  - travel_date:
+      question: "🗓️ When are you planning to visit?"
+      pattern: "(\\d{2}/\\d{2}/\\d{4}|\\w+ \\d{4})"
+      validation: "future_date"
+      error_message: "Please provide a future date"
+      
+  - interests:
+      question: "🎯 What activities interest you most? (beaches, culture, food, adventure)"
+      pattern: ".*"
+      validation: "non_empty"
+      error_message: "Please share some of your interests"
+      
+  - food_preferences:
+      question: "🍽️ Do you have any dietary restrictions?"
+      pattern: ".*"
+      validation: "optional"
+      error_message: ""

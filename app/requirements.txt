@@ -29,3 +29,17 @@ minio
 fuzzywuzzy
 langdetect
 beautifulsoup4
+
+langchain
+langchain-community
+pydantic
+pytest
+pytest-asyncio
+openai
+faiss-cpu
+fastapi>=0.68.0
+langchain-community
+langgraph
+sentence-transformers
+python-Levenshtein
+langchain-huggingface

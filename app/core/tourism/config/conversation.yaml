@@ -1,0 +1,99 @@
+DEFAULT: |
+  Hello! 👋 I'm your Curaçao tourism assistant.
+  {recommendations}
+  
+  What else can I help you with?
+
+INITIAL_INQUIRY_POSITIVE: |
+  Welcome to Curaçao! 🌴 
+  I'm glad you're interested in visiting our beautiful island.
+  
+  {recommendations}
+  
+  Would you like to know more details about any of these options?
+
+INITIAL_INQUIRY_NEGATIVE: |
+  I understand your concern 😊 
+  Let me help you find the best options:
+  
+  {recommendations}
+  
+  Which aspect would you like to explore further?
+
+INITIAL_INQUIRY_NEUTRAL: |
+  Thank you for your interest in Curaçao! 🏖️
+  
+  {recommendations}
+  
+  What would you like to know first?
+
+SPECIFIC_QUESTION_POSITIVE: |
+  Excellent question! 🎯
+  
+  {recommendations}
+  
+  Would you like more details about any option?
+
+SPECIFIC_QUESTION_NEGATIVE: |
+  I understand your concern 🤔
+  
+  {recommendations}
+  
+  Does this answer your question?
+
+SPECIFIC_QUESTION_NEUTRAL: |
+  Based on your inquiry:
+  
+  {recommendations}
+  
+  Is there anything else you'd like to know?
+
+BOOKING_INTENT_POSITIVE: |
+  Fantastic choice! 🎉
+  
+  {recommendations}
+  
+  Shall I proceed with the booking?
+
+BOOKING_INTENT_NEUTRAL: |
+  Perfect, I'll help you with the booking:
+  
+  {recommendations}
+  
+  Shall we continue with the process?
+
+BOOKING_INTENT_NEGATIVE: |
+  I understand your concerns about the booking.
+  
+  {recommendations}
+  
+  How can I help make this work better for you?
+
+COMPLAINT_NEGATIVE: |
+  I sincerely apologize for the inconvenience 😔
+  
+  {recommendations}
+  
+  How can we improve your experience?
+
+GRATITUDE_POSITIVE: |
+  You're very welcome! 😊
+  
+  {recommendations}
+  
+  Is there anything else you'd like to know?
+
+PREFERENCE_PROVIDING_NEUTRAL: |
+  Thank you for sharing that information!
+  
+  {recommendations}
+  
+  What other preferences would you like to share?
+
+OBJECTION_NEGATIVE: |
+  I understand your concerns.
+  Let me help find alternatives that better match your expectations:
+  
+  {recommendations}
+  
+  Would any of these options work better for you?

@@ -21,8 +21,7 @@ langchain-community
 huggingface_hub
 openai
 python-dotenv
-
-
+langgraph
 
 
 

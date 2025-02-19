@@ -4,8 +4,8 @@ import spacy
 from bs4 import BeautifulSoup
 import logging
 from typing import List, Dict, Any, Optional, Tuple
-from utils.logger import get_logger
-from utils.openai_helper import OpenAIHelper
+from app.utils.logger import get_logger
+from app.utils.openai_helper import OpenAIHelper
 from functools import lru_cache
 from datetime import datetime, timedelta
 from langdetect import detect

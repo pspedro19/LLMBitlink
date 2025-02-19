@@ -4,10 +4,10 @@ import statistics
 from collections import defaultdict
 import logging
 
-from core.analyzer.nlp_processor import ImprovedNLPProcessor
-from core.recommender.validator import RecommendationValidator
-from core.data.database import CSVDatabaseManager
-from core.utils.validators import DataValidator
+from app.core.analyzer.nlp_processor import ImprovedNLPProcessor
+from app.core.recommender.validator import RecommendationValidator
+from app.core.data.database import CSVDatabaseManager
+from app.core.utils.validators import DataValidator
 
 logger = logging.getLogger(__name__)
 

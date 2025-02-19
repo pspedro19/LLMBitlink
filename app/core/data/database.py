@@ -6,8 +6,8 @@ import os
 import pandas as pd
 from typing import List, Dict, Any, Optional
 from pandasql import sqldf
-from utils.logger import get_logger
-from utils.config import DATABASE_PATHS
+from app.utils.logger import get_logger
+from app.utils.config import DATABASE_PATHS
 
 logger = get_logger(__name__)
 
