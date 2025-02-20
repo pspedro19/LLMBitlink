@@ -2,11 +2,14 @@
 python-dotenv
 fastapi
 uvicorn
+python-multipart
 
+# Core dependencies
 pydantic
 requests
 aiosqlite
 aiohttp
+asyncpg>=0.27.0
 
 # Database
 psycopg2-binary
@@ -19,6 +22,11 @@ transformers
 scikit-learn
 torch
 sentence-transformers
+faiss-cpu>=1.7.4
+llama-cpp-python>=0.2.0
+pdfplumber>=0.9.0
+numpy>=1.21.0
+python-multipart
 
 # Document processing
 PyMuPDF
@@ -29,3 +37,6 @@ minio
 fuzzywuzzy
 langdetect
 beautifulsoup4
+
+# Utilities
+pathlib

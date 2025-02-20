@@ -7,13 +7,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     python3-dev \
     curl \
+    git \
+    cmake \
+    ninja-build \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Crear estructura de directorios
-RUN mkdir -p /app/chat-interface /app/images /app/data/database /app/logs /app/real_estate_logs
+RUN mkdir -p /app/chat-interface /app/images /app/data/database /app/logs /app/real_estate_logs /app/models /app/data/documents /app/data/embeddings
+
+# 2.1. Configurar pip para mayor timeout y mirror más rápido
+RUN pip config set global.timeout 1000 && \
+    pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
 # 3. Gestión de dependencias Python
-RUN pip install --no-cache-dir --upgrade pip
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
 # Instalar dependencias principales primero
 RUN pip install --no-cache-dir \
@@ -50,7 +57,7 @@ RUN if ls /app/data/database/*.xlsx 1> /dev/null 2>&1; then \
 COPY . .
 
 # 9. Configuración final
-RUN chmod -R 755 /app/data/database /app/logs /app/real_estate_logs
+RUN chmod -R 755 /app/data/database /app/logs /app/real_estate_logs /app/data /app/models
 ENV PYTHONPATH=/app \
     MEDIA_DIR=/app/images \
     DB_PATH=/app/chat-interface/db.sqlite3 \

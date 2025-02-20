@@ -56,3 +56,4 @@ docker-compose.override.yml.tmp
 logs/
 real_estate_logs/
 miniconda.exe
+*.gguf
