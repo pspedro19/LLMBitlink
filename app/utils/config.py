@@ -1,19 +1,18 @@
 # app/utils/config.py
 
 import os
+# app/utils/config.py should have paths like this:
 from pathlib import Path
 
-# Base paths
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR /  'data'
+BASE_DIR = Path(__file__).parent.parent  # gets the app directory
+DATABASE_DIR = BASE_DIR / 'data' / 'database'
 
-# Database paths
 DATABASE_PATHS = {
-    "activities": DATA_DIR / "database" / "activities.xlsx",
-    "tourist_spots": DATA_DIR / "database" / "tourist_spots.xlsx",
-    "restaurants": DATA_DIR / "database" / "restaurants.xlsx",
-    "nightclubs": DATA_DIR / "database" / "nightclubs.xlsx",
-    "tourism_packages": DATA_DIR / "database" / "tourism_packages.xlsx"
+    'activities': DATABASE_DIR / 'activities.xlsx',
+    'tourist_spots': DATABASE_DIR / 'tourist_spots.xlsx',
+    'restaurants': DATABASE_DIR / 'restaurants.xlsx',
+    'nightclubs': DATABASE_DIR / 'nightclubs.xlsx',
+    'tourism_packages': DATABASE_DIR / 'tourism_packages.xlsx'
 }
 
 # Model paths

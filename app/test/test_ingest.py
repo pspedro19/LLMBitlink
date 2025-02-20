@@ -2,10 +2,9 @@ import os
 import glob
 import logging
 import pytest
-
-from core.rag.config import Config
-from core.rag.retriever import RAGRetriever
-from core.rag.document_processor import DocumentInput
+from app.core.rag.config import Config
+from app.core.rag.retriever import RAGRetriever
+from app.core.rag.document_processor import DocumentInput
 
 logging.basicConfig(level=logging.INFO)
 

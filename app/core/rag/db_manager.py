@@ -1,9 +1,13 @@
 # core/rag/db_manager.py
 import asyncpg
 import logging
-from typing import List, Dict, Any, Optional
-import numpy as np
-from core.rag.config import Config
+from typing import Dict, List
+import psycopg2
+from psycopg2.extras import execute_batch, RealDictCursor
+from psycopg2.pool import ThreadedConnectionPool
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+from app.core.rag.config import Config
 
 logger = logging.getLogger(__name__)
 

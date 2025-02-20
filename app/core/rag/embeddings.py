@@ -2,8 +2,8 @@
 from sentence_transformers import SentenceTransformer
 import numpy as np
 from typing import List
-from core.rag.config import Config
-from core.rag.db_manager import DatabaseManager
+from app.core.rag.config import Config
+from app.core.rag.db_manager import DatabaseManager
 
 class EmbeddingsManager:
     def __init__(self, config: Config):

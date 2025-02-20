@@ -7,22 +7,11 @@ from functools import lru_cache
 import spacy
 from spacy.tokens import Doc
 from fuzzywuzzy import process, fuzz
-import datetime
-from typing import List, Dict, Any
-from utils.logger import get_logger
 from datetime import datetime
 
-
-
-
-
-logger = get_logger(__name__)
-
-
-
-
-from utils.logger import get_logger
-from core.utils.validators import DataValidator  # Cambiar importación
+# App imports
+from app.utils.logger import get_logger
+from app.core.utils.validators import DataValidator
 
 logger = get_logger(__name__)
 

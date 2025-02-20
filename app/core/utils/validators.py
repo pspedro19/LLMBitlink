@@ -1,13 +1,12 @@
 import re
-from typing import Dict, List, Optional, Union, Any
 from functools import lru_cache
 from datetime import date
 from pydantic import BaseModel, Field, validator
 from fuzzywuzzy import process, fuzz
-from utils.logger import get_logger
+from typing import Dict, List, Optional, Any, Set, Union
+from app.utils.logger import get_logger
 
-
-
+logger = get_logger(__name__)
 
 class DataValidator:
     """Enhanced validator with improved normalization and matching"""

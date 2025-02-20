@@ -1,6 +1,6 @@
 from typing import Dict, Any, List
-from .recommendation_engine import IntegratedTourismSystem
-from utils.logger import get_logger
+from .recommendation_engine import RecommendationEngine
+from app.utils.logger import get_logger  # Updated import path
 from datetime import datetime
 
 logger = get_logger(__name__)
@@ -20,11 +20,11 @@ def recommend(query: str, preferences: Dict[str, Any]) -> Dict[str, Any]:
         logger.info(f"Processing recommendation request for query: {query[:100]}...")
         logger.debug(f"Preferences: {preferences}")
 
-        # Initialize the tourism system
-        tourism_system = IntegratedTourismSystem()
+        # Initialize the recommendation engine
+        tourism_system = RecommendationEngine()
         
         # Process the query and get complete response
-        response = tourism_system.process_query(query, preferences)
+        response = tourism_system.get_recommendations(query, preferences)
         
         # Validate recommendations format
         recommendations = response.get("recommendations", [])

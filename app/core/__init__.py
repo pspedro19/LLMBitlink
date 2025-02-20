@@ -1,1 +1,3 @@
-from .analyzer import ImprovedNLPProcessor, QueryProcessor
+from app.core.analyzer import ImprovedNLPProcessor, QueryProcessor
+
+__all__ = ['ImprovedNLPProcessor', 'QueryProcessor']

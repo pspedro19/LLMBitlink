@@ -3,10 +3,10 @@ from datetime import datetime
 import time
 import logging
 
-from core.analyzer.nlp_processor import ImprovedNLPProcessor
-from core.recommender.recommendation_engine import RecommendationEngine
-from utils.config import API_CONFIG
-from utils.logger import get_logger
+from app.core.analyzer.nlp_processor import ImprovedNLPProcessor
+from app.core.recommender.recommendation_engine import RecommendationEngine
+from app.utils.config import API_CONFIG
+from app.utils.logger import get_logger
 recommender = RecommendationEngine()
 logger = get_logger(__name__)
 

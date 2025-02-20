@@ -6,6 +6,7 @@ import logging
 from typing import Tuple, List
 
 logger = logging.getLogger(__name__)
+from app.core.rag.config import Config
 
 class FAISSManager:
     """Gestor simple para índices FAISS."""
