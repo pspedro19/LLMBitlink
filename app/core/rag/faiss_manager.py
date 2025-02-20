@@ -1,7 +1,7 @@
 # core/rag/faiss_manager.py
 import faiss
 import numpy as np
-from core.rag.config import Config
+from app.core.rag.config import Config
 
 class FAISSManager:
     def __init__(self, config: Config):

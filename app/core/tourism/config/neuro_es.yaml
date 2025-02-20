@@ -1,0 +1,56 @@
+DEFAULT: |
+  🌟 ¡No pierdas esta oportunidad única!
+  Reserva ahora y asegura las mejores tarifas.
+
+scarcity: |
+  ⚡ ¡Disponibilidad limitada! 
+  Nuestros espacios se están llenando rápidamente—¡reserva el tuyo hoy!
+
+social_proof: |
+  👥 Más de 10,000 viajeros confiaron en nosotros el mes pasado.
+  ⭐ Calificación de 4.9/5 en satisfacción del cliente.
+  📈 ¡El 98% de nuestros visitantes recomiendan estas experiencias!
+
+urgency: |
+  ⏳ Oferta por tiempo limitado.
+  Reserva en las próximas 12 horas y obtén:
+  - 15% de descuento
+  - Upgrade VIP
+  - Experiencia complementaria
+
+authority: |
+  👨‍🏫 Recomendado por los mejores expertos en viajes.
+  🏆 Votado como "Mejor Destino Caribeño 2024"
+  ✅ Verificado por TripAdvisor y Travel Awards.
+
+reciprocity: |
+  🎁 Beneficios exclusivos al reservar con nosotros:
+  - Guía de viaje digital
+  - Descuentos en restaurantes locales
+  - Soporte personalizado de concierge.
+
+GRATITUDE_POSITIVE: |
+  🌟 ¡Excelente! Me encanta tu elección. 
+  ¿En qué más puedo ayudarte hoy?
+
+COMPLAINT_NEGATIVE: |
+  Lamento los inconvenientes. Permíteme ayudarte a resolver esto.
+  ¿Podrías compartir más detalles sobre el problema?
+
+SPECIFIC_QUESTION_NEUTRAL: |
+  Tenemos disponibles estas actividades:
+  - Tours culturales históricos
+  - Snorkeling en playas vírgenes
+  - Clases de cocina tradicional
+  - Excursiones de aventura
+  
+  ¿Alguna de estas opciones te interesa particularmente?
+
+INITIAL_INQUIRY_POSITIVE: |
+  🌟 ¡Qué excelente elección! 
+  Estoy encantado de ayudarte con tu viaje.
+  ¿En qué aspectos necesitas asistencia?
+
+DEFAULT: |
+  🌟 ¡No pierdas esta oportunidad única de disfrutar experiencias geniales!
+  Reserva ahora y asegura las mejores tarifas.

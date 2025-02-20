@@ -6,7 +6,7 @@ from psycopg2.extras import execute_batch, RealDictCursor
 from psycopg2.pool import ThreadedConnectionPool
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from core.rag.config import Config
+from app.core.rag.config import Config
 
 logger = logging.getLogger(__name__)
 

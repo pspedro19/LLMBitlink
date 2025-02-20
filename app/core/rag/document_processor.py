@@ -3,7 +3,7 @@ from typing import List, Dict
 import tiktoken
 from pydantic import BaseModel, Field
 
-from core.rag.config import Config
+from app.core.rag.config import Config
 
 # Modelo para validar la entrada del documento
 class DocumentInput(BaseModel):

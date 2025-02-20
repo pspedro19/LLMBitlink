@@ -43,3 +43,4 @@ langgraph
 sentence-transformers
 python-Levenshtein
 langchain-huggingface
+pdfplumber

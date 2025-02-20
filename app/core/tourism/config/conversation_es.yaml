@@ -1,0 +1,43 @@
+DEFAULT: |
+  ¡Hola! 👋 Soy tu asistente de turismo en Curazao.
+  {recommendations}
+
+  ¿En qué más puedo ayudarte hoy?
+
+INITIAL_INQUIRY_POSITIVE: |
+  ¡Bienvenido a Curazao! 🌴 
+  Me alegra que estés interesado en visitar nuestra hermosa isla.
+
+  {recommendations}
+
+  ¿Te gustaría conocer más sobre actividades o alojamientos específicos?
+
+INITIAL_INQUIRY_NEGATIVE: |
+  Entiendo tus dudas 😊 
+  Déjame personalizar algunas opciones para ti:
+
+  {recommendations}
+
+  ¿Hay algo específico en lo que pueda ayudarte?
+
+SPECIFIC_QUESTION_POSITIVE: |
+  ¡Excelente pregunta! 🎯
+
+  {recommendations}
+
+  ¿Te gustaría más detalles o explorar alternativas?
+
+BOOKING_INTENT_POSITIVE: |
+  ¡Gran elección! 🎉
+
+  {recommendations}
+
+  ¿Listo para proceder con la reserva? Te guiaré paso a paso.
+
+COMPLAINT_NEGATIVE: |
+  Lamento mucho escuchar eso 😔
+  ¡Tu experiencia es importante para nosotros!
+
+  {recommendations}
+
+  ¿Cómo podemos mejorarla para ti?

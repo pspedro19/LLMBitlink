@@ -6,12 +6,12 @@ from typing import Dict, List, Optional
 
 from psycopg2.extras import RealDictCursor
 
-from core.rag.config import Config
-from core.rag.db_manager import DatabaseManager
-from core.rag.document_processor import DocumentProcessor, DocumentInput
-from core.rag.embeddings import EmbeddingsManager
-from core.rag.faiss_manager import FAISSManager
-from core.rag.metrics import RAGMetrics
+from app.core.rag.config import Config
+from app.core.rag.db_manager import DatabaseManager
+from app.core.rag.document_processor import DocumentProcessor, DocumentInput
+from app.core.rag.embeddings import EmbeddingsManager
+from app.core.rag.faiss_manager import FAISSManager
+from app.core.rag.metrics import RAGMetrics
 
 logger = logging.getLogger(__name__)
 

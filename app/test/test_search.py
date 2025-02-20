@@ -1,7 +1,7 @@
 import logging
 import pytest
-from core.rag.config import Config
-from core.rag.retriever import RAGRetriever
+from app.core.rag.config import Config
+from app.core.rag.retriever import RAGRetriever
 
 logging.basicConfig(level=logging.INFO)
 

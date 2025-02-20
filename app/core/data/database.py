@@ -7,7 +7,7 @@ import pandas as pd
 from typing import List, Dict, Any, Optional
 from pandasql import sqldf
 from app.utils.logger import get_logger
-from app.utils.config import DATABASE_PATHS
+from app.utils.config import DATABASE_PATHS, BASE_DIR, DATABASE_DIR  # Added BASE_DIR and DATABASE_DIR
 
 logger = get_logger(__name__)
 
@@ -18,13 +18,26 @@ class CSVDatabaseManager:
 
     def load_csv_data(self) -> None:
         try:
+            # Log the base directory and database directory
+            logger.info(f"BASE_DIR: {BASE_DIR}")
+            logger.info(f"DATABASE_DIR: {DATABASE_DIR}")
+            logger.info(f"Current working directory: {os.getcwd()}")
+            
+            # Log all configured paths
+            logger.info("Configured DATABASE_PATHS:")
+            for name, path in DATABASE_PATHS.items():
+                logger.info(f"{name}: {path.absolute()}")
+                
+                        # Check if files exist and log their absolute paths
             # Check if files exist and log their absolute paths
             missing_files = []
             for name, path in DATABASE_PATHS.items():
+                logger.info(f"Checking file {name} at path: {path.absolute()}")
                 if not path.exists():
+                    logger.error(f"File not found: {path.absolute()}")
                     missing_files.append(path)
                 else:
-                    logger.info(f"Found file {name} at {path.absolute()}")
+                    logger.info(f"✓ Found file {name} at {path.absolute()}")   
 
             if missing_files:
                 raise FileNotFoundError(
@@ -87,11 +100,13 @@ class CSVDatabaseManager:
             }
 
             # Load each Excel file
+# Inside the excel_files_info loop:
             for table_name, file_info in excel_files_info.items():
                 try:
-                    # Get the file path from DATABASE_PATHS using the correct key
                     file_path = DATABASE_PATHS[file_info["path"]]
-                    logger.info(f"Attempting to load file: {file_path.absolute()}")
+                    logger.info(f"=== Processing {table_name} ===")
+                    logger.info(f"File path: {file_path.absolute()}")
+                    logger.info(f"Expected columns: {file_info['expected_columns']}")
                     
                     # Check if file exists again (redundant but safe)
                     if not file_path.exists():
@@ -108,6 +123,8 @@ class CSVDatabaseManager:
                         )
                     except Exception as excel_error:
                         logger.error(f"Excel reading error for {file_path}: {str(excel_error)}")
+                        logger.error(f"Error type: {type(excel_error).__name__}")
+                        logger.error(f"Stack trace:", exc_info=True)
                         continue
 
                     if df.empty:
@@ -152,8 +169,14 @@ class CSVDatabaseManager:
                     logger.error(f"Error processing {table_name}: {str(e)}")
                     continue
 
+            # At the end of the file loading process
             if not self.dataframes:
-                raise Exception("No Excel files were successfully loaded")
+                error_msg = "No Excel files were successfully loaded"
+                logger.error(error_msg)
+                logger.error(f"Working directory: {os.getcwd()}")
+                logger.error(f"Database directory should be: {DATABASE_DIR}")
+                logger.error(f"Files that should exist: {list(DATABASE_PATHS.values())}")
+                raise Exception(error_msg)
 
             # Log summary of loaded data
             logger.info("Data loading summary:")
