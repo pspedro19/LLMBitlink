@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -16,6 +16,8 @@ import os
 from utils.logger import get_logger
 from utils.openai_helper import OpenAIHelper
 
+from core.rag.services import RAGService, DocumentResponse, QueryResponse
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 print(f"API Key configured: {'Yes' if OPENAI_API_KEY else 'No'}")
 
@@ -29,6 +31,38 @@ engine = RecommendationEngine()
 # Inicializar OpenAI helper
 openai_helper = OpenAIHelper(OPENAI_API_KEY)
 
+# Modelos Pydantic para RAG
+class DocumentResponse(BaseModel):
+    document_name: str = Field(..., description="Name of the document")
+    content: str = Field(..., description="Content of the document")
+    score: float = Field(..., description="Relevance score")
+
+class QueryResponse(BaseModel):
+    query: str = Field(..., description="Original query")
+    documents: List[DocumentResponse] = Field(..., description="Retrieved documents")
+    response: str = Field(..., description="Generated response")
+
+class RAGQueryRequest(BaseModel):
+    query: str = Field(..., description="Query in natural language")
+    top_k: Optional[int] = Field(3, description="Number of documents to retrieve")
+
+class Preferences(BaseModel):
+    interests: List[str] = Field(..., description="List of travel interests")
+    locations: List[str] = Field(..., description="Preferred locations")
+    budget_per_day: Optional[float] = Field(None, description="Daily budget in USD")
+    trip_duration: int = Field(..., description="Trip duration in days")
+    group_size: int = Field(..., description="Number of travelers")
+    activity_types: List[str] = Field(..., description="Preferred activity types")
+    specific_sites: Optional[List[str]] = Field(None, description="Specific sites to visit")
+    cuisine_preferences: Optional[List[str]] = Field(None, description="Food preferences")
+
+class RecommendationRequest(BaseModel):
+    query: str = Field(..., description="Natural language query")
+    preferences: Preferences
+
+class ChatRequest(BaseModel):
+    text: str = Field(..., description="Natural language input text")
+    
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
@@ -69,39 +103,93 @@ class ChatCache:
             'timestamp': datetime.now()
         }
 
+
 response_cache = ChatCache()
-
-class Preferences(BaseModel):
-    interests: List[str] = Field(..., description="List of travel interests")
-    locations: List[str] = Field(..., description="Preferred locations")
-    budget_per_day: Optional[float] = Field(None, description="Daily budget in USD")
-    trip_duration: int = Field(..., description="Trip duration in days")
-    group_size: int = Field(..., description="Number of travelers")
-    activity_types: List[str] = Field(..., description="Preferred activity types")
-    specific_sites: Optional[List[str]] = Field(None, description="Specific sites to visit")
-    cuisine_preferences: Optional[List[str]] = Field(None, description="Food preferences")
-    
-    class Config:
-        schema_extra = {
-            "example": {
-                "interests": ["cultural", "history", "architecture"],
-                "locations": ["Punda", "Otrobanda"],
-                "budget_per_day": 200.0,
-                "trip_duration": 4,
-                "group_size": 2,
-                "activity_types": ["walking_tour", "museum_visits"],
-                "specific_sites": ["Queen Emma Bridge"],
-                "cuisine_preferences": ["local"]
-            }
+   
+ 
+class Config:
+    schema_extra = {
+        "example": {
+            "interests": ["cultural", "history", "architecture"],
+            "locations": ["Punda", "Otrobanda"],
+            "budget_per_day": 200.0,
+            "trip_duration": 4,
+            "group_size": 2,
+            "activity_types": ["walking_tour", "museum_visits"],
+            "specific_sites": ["Queen Emma Bridge"],
+            "cuisine_preferences": ["local"]
         }
+    }
 
-class RecommendationRequest(BaseModel):
-    query: str = Field(..., description="Natural language query")
-    preferences: Preferences
 
-class ChatRequest(BaseModel):
-    text: str = Field(..., description="Natural language input text")
+# Inicializar servicios
+try:
+    engine = RecommendationEngine()
+    openai_helper = OpenAIHelper(os.getenv("OPENAI_API_KEY"))
+    
+    # Inicializar RAG Service con configuración específica
+    rag_service = RAGService(
+        model_name="sentence-transformers/all-MiniLM-L6-v2",
+        local_model_path="/app/models/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf",
+        embedding_cache="/app/data/embeddings.pkl",
+        n_ctx=4096,
+        n_gpu_layers=20
+    )
+    logger.info("Services initialized successfully")
+except Exception as e:
+    logger.error(f"Error initializing services: {str(e)}")
+    raise
 
+
+# Endpoints RAG
+@app.post("/rag/documents/upload")
+async def upload_document(force_reload: bool = False):
+    """
+    Carga todos los documentos de los directorios de conocimiento y crea el índice FAISS.
+    """
+    try:
+        base_path = "/app/data/knowledge_base/curaçao_information"
+        
+        # Verificar que el directorio existe
+        if not os.path.exists(base_path):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Base directory not found: {base_path}"
+            )
+        
+        # Si force_reload es False y ya existe caché, retornar info
+        if not force_reload and os.path.exists(rag_service.embedding_cache):
+            return {
+                "message": "Documents already loaded in cache",
+                "cache_path": str(rag_service.embedding_cache),
+                "document_count": len(rag_service.documents)
+            }
+        
+        # Cargar documentos
+        result = rag_service.bulk_load_documents(base_path)
+        
+        return {
+            "message": "Documents processed successfully",
+            "details": result
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in bulk document loading: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error processing documents: {str(e)}"
+        )
+
+
+@app.post("/rag/query", response_model=QueryResponse)
+async def query_documents(request: RAGQueryRequest):
+    """Query the RAG system with natural language"""
+    try:
+        return rag_service.query(request.query, request.top_k)
+    except Exception as e:
+        logger.error(f"Error in RAG query: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
 @app.post("/recommendations/")
 def get_recommendations(request: RecommendationRequest) -> JSONResponse:
     """Get personalized tourism recommendations"""
@@ -504,7 +592,12 @@ def _should_cache_response(intent_info: Dict[str, Any]) -> bool:
 @app.get("/health")
 async def health_check() -> Dict[str, str]:
     """API health check endpoint"""
-    return {"status": "healthy"}
+    return {
+        "status": "healthy",
+        "rag_service": "active" if rag_service else "not initialized",
+        "recommendation_engine": "active" if engine else "not initialized",
+        "timestamp": datetime.now().isoformat()
+    }
 
 if __name__ == "__main__":
     import uvicorn

@@ -138,94 +138,7 @@ class ImprovedNaiveRAG:
         ]
         return results
 
-#     def generate_response(self, query, retrieved_docs, max_tokens=500):
-#         """
-#         Genera respuesta usando el modelo local.
-#         """
-#         if not retrieved_docs:
-#             return "No se encontró información relevante."
 
-#         context = "\n\n".join(
-#             [f"Documento {doc[0]}:\n{doc[1]}" for doc in retrieved_docs]
-#         )
-        
-#         prompt = f"""### Instrucción:
-# Responde como un asistente turístico experto usando SOLO la información del contexto.
-
-# ### Contexto:
-# {context}
-
-# ### Consulta:
-# {query}
-
-# ### Respuesta:
-# """
-#         try:
-#             # Llamada directa al modelo local con el prompt completo
-#             response = self.llm(
-#                 prompt,
-#                 temperature=0.7,
-#                 top_p=0.9,
-#                 max_tokens=max_tokens,
-#                 stop=["###"]
-#             )
-#             return response['choices'][0]['text'].strip()
-#         except Exception as e:
-#             logger.error(f"Error en generación: {str(e)}")
-#             return "Error generando respuesta"
-
-    # def generate_response(self, query, retrieved_docs, max_tokens=500, max_context_chars_per_doc=1500):
-    #     """
-    #     Genera respuesta usando el modelo local.
-    #     Args:
-    #         query: Consulta de búsqueda.
-    #         retrieved_docs: Lista de documentos recuperados.
-    #         max_tokens: Número máximo de tokens para la respuesta.
-    #         max_context_chars_per_doc: Número máximo de caracteres a incluir por documento en el contexto.
-    #     Returns:
-    #         Respuesta generada por el modelo.
-    #     """
-    #     if not retrieved_docs:
-    #         return "No se encontró información relevante."
-
-    #     # Truncar el contenido de cada documento para evitar superar el límite de contexto
-    #     trimmed_docs = []
-    #     for doc in retrieved_docs:
-    #         # Trunca el texto si es demasiado largo
-    #         text = doc[1]
-    #         if len(text) > max_context_chars_per_doc:
-    #             text = text[:max_context_chars_per_doc] + " [...]"
-    #         trimmed_docs.append((doc[0], text, doc[2]))
-
-    #     context = "\n\n".join(
-    #         [f"Documento {doc[0]}:\n{doc[1]}" for doc in trimmed_docs]
-    #     )
-      
-    #     prompt = f"""### Instrucción:
-    #         Respond as an expert tourist assistant using ONLY contextual information.
-
-    #         ### Context:
-    #         {context}
-
-    #         ### Consultation:
-    #         {query}
-
-    #         ### Response:
-    #     """
-    #     try:
-    #         # Llamada directa al modelo local con el prompt completo
-    #         response = self.llm(
-    #             prompt,
-    #             temperature=0.7,
-    #             top_p=0.9,
-    #             max_tokens=max_tokens,
-    #             stop=["###"]
-    #         )
-    #         return response['choices'][0]['text'].strip()
-    #     except Exception as e:
-    #         logger.error(f"Error en generación: {str(e)}")
-    #         return "Error generando respuesta"
-    
     def generate_response(self, query, retrieved_docs, max_tokens=500, max_context_chars_per_doc=1500):
         """
         Genera respuestas en pasos separados para cada documento relevante.
@@ -288,8 +201,9 @@ if __name__ == "__main__":
     parser.add_argument("--cache_file", default="embeddings.pkl",
                         help="Archivo de caché para embeddings")
     parser.add_argument("--model_path", 
-                        default="models/deepseek-qwen-1.5b.q8_0.gguf",
+                        default="C:/Users/Nabucodonosor/.lmstudio/models/lmstudio-community/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf",
                         help="Ruta al modelo GGUF")
+
     args = parser.parse_args()
 
     rag = ImprovedNaiveRAG(
