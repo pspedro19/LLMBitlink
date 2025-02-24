@@ -1,4 +1,4 @@
-# core/rag/faiss_manager.py
+# app/core/rag/faiss_manager.py
 import faiss
 import numpy as np
 import os

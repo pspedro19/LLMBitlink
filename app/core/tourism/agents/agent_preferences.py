@@ -1,3 +1,4 @@
+# app/core/tourism/agents/agent_preferences.py
 from .base import BaseAgent, ChatState
 from .memory import PreferenceManager
 

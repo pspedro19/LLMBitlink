@@ -1,4 +1,4 @@
-# core/rag/sync_manager.py
+# app/core/rag/sync_manager.py
 import asyncio
 import logging
 import numpy as np

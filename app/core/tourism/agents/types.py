@@ -1,3 +1,4 @@
+# app/core/tourism/agents/types.py
 from typing import TypedDict, Dict, Any, Optional, List
 from pydantic import BaseModel, Field
 

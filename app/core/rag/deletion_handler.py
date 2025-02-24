@@ -1,5 +1,4 @@
-# core/rag/deletion_handler.py
-
+# app/core/rag/deletion_handler.py
 import logging
 from typing import List, Set
 from uuid import UUID

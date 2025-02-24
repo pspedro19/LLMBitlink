@@ -1,4 +1,4 @@
-# core/rag/response_generator.py
+# app/core/rag/response_generator.py
 def generate_paraphrased_response(results):
     """
     Genera una respuesta parafraseada a partir de los resultados de búsqueda.

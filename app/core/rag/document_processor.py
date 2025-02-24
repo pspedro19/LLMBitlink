@@ -1,4 +1,4 @@
-# core/rag/document_processor.py
+# app/core/rag/document_processor.py
 from typing import List, Dict
 import tiktoken
 from pydantic import BaseModel, Field

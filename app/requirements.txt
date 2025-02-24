@@ -2,14 +2,17 @@
 python-dotenv
 fastapi
 uvicorn
-
 pydantic
 requests
 aiosqlite
 aiohttp
+asyncpg
 
 # Database
 psycopg2-binary
+openpyxl
+pandas
+numpy
 
 # NLP and ML
 spacy

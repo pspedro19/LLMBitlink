@@ -1,4 +1,4 @@
-# core/rag/config.py
+# app/core/rag/config.py
 import os
 from pathlib import Path
 from dotenv import load_dotenv

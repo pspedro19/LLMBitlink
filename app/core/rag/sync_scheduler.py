@@ -1,4 +1,4 @@
-# core/rag/sync_scheduler.py
+# app/core/rag/sync_scheduler.py
 
 import asyncio
 import logging
