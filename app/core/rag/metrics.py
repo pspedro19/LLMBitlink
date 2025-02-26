@@ -17,4 +17,4 @@ class RAGMetrics:
         )
 
 # Inicia el servidor de métricas en el puerto 8000 (única instancia)
-start_http_server(8000)
+start_http_server(8001)
