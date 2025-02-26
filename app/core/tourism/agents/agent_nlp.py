@@ -15,8 +15,8 @@ class NLPAgent(BaseAgent):
     La respuesta se almacena en el estado bajo las claves 'formatted_recommendations' y 'response'.
     """
     
-    def __init__(self):
-        super().__init__()
+    def __init__(self, name="NLPAgent"):
+        super().__init__(name)
         self.logger = get_logger(__name__)
     
     async def process(self, state: ChatState) -> ChatState:

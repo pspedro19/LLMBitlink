@@ -31,7 +31,7 @@ class ImprovedNLPProcessor:
 
         self.VALID_CATEGORIES = DataValidator.VALID_CATEGORIES
         
-# Enhanced interest context with broader categories
+        # Enhanced interest context with broader categories
         self.interest_context = {
             'cultural': [
                 'museum', 'history', 'art', 'culture', 'heritage', 'monument', 'architecture',

@@ -1,11 +1,21 @@
 # app/core/tourism/agents/base.py
 from app.utils.logger import get_logger
 from .types import ChatState
+from typing import Dict, Any, Optional
 
 class BaseAgent:
     """Base class for all tourism agents"""
     
-    def __init__(self):
+    def __init__(self, name: str, config: Optional[Dict[str, Any]] = None):
+        """
+        Initialize base agent.
+        
+        Args:
+            name (str): Agent name
+            config (Optional[Dict[str, Any]]): Configuration parameters
+        """
+        self.name = name
+        self.config = config or {}
         self.logger = get_logger(__name__)
 
     def _initialize_state(self, state: ChatState) -> ChatState:
@@ -32,3 +42,16 @@ class BaseAgent:
             self.logger.debug(f"{message} | State: {state.get('stage', 'unknown')}")
         else:
             self.logger.debug(message)
+            
+    async def process(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Process input data.
+        Should be implemented by subclasses.
+        
+        Args:
+            data (Dict[str, Any]): Input data
+            
+        Returns:
+            Dict[str, Any]: Processed result
+        """
+        raise NotImplementedError("Subclasses must implement process method")
