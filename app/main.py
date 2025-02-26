@@ -15,9 +15,9 @@ from core.recommender.formatter import HTMLFormatter
 import os
 from utils.logger import get_logger
 from utils.openai_helper import OpenAIHelper
-
+from core.recommender.text_formatter import get_text_formatted_recommendations, TextFormattedRequest
 from core.rag.services import RAGService, DocumentResponse, QueryResponse
-
+from fastapi.responses import PlainTextResponse
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 print(f"API Key configured: {'Yes' if OPENAI_API_KEY else 'No'}")
 
@@ -588,6 +588,15 @@ def _should_cache_response(intent_info: Dict[str, Any]) -> bool:
         return intent_info['confidence'] > 0.7
     
     return False
+
+app.add_api_route(
+    "/recommendations/text", 
+    get_text_formatted_recommendations, 
+    methods=["POST"],
+    response_class=PlainTextResponse,
+    summary="Get text-formatted tourism recommendations",
+    description="Generates tourism recommendations based on natural language input and returns them in plain text format"
+)
 
 @app.get("/health")
 async def health_check() -> Dict[str, str]:

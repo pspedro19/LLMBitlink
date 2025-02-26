@@ -6,7 +6,6 @@ import os
 import logging
 from typing import List, Optional
 from sentence_transformers import SentenceTransformer
-from llama_cpp import Llama
 import faiss
 import numpy as np
 import pdfplumber
@@ -14,6 +13,8 @@ import pickle
 import re
 from pathlib import Path
 import glob
+import openai
+import json
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO)
@@ -32,22 +33,41 @@ class QueryResponse(BaseModel):
 class RAGService:
     def __init__(self, 
                  model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
-                 local_model_path: str = "models/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf",
+                 local_model_path: str = "/app/models/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf",
                  embedding_cache: str = "data/embeddings.pkl",
                  n_ctx: int = 4096,
-                 n_gpu_layers: int = 20):
+                 n_gpu_layers: int = 0):  # Cambiado a 0 para forzar CPU
         
         self.embedding_cache = Path(embedding_cache)
         self.embedding_cache.parent.mkdir(parents=True, exist_ok=True)
+        self.use_openai = False
 
         # Inicializar modelos
         self.embedding_model = SentenceTransformer(model_name)
-        self.llm = Llama(
-            model_path=local_model_path,
-            n_ctx=n_ctx,
-            n_gpu_layers=n_gpu_layers,
-            verbose=False
-        )
+        
+        # Intentar cargar el modelo local primero
+        try:
+            from llama_cpp import Llama
+            logger.info(f"Intentando cargar modelo local desde: {local_model_path}")
+            self.llm = Llama(
+                model_path=local_model_path,
+                n_ctx=n_ctx,
+                n_gpu_layers=n_gpu_layers,
+                verbose=True
+            )
+            logger.info("Modelo local cargado exitosamente")
+            self.use_openai = False
+        except Exception as e:
+            logger.warning(f"No se pudo cargar el modelo local: {str(e)}")
+            logger.info("Utilizando OpenAI como alternativa")
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+            if not openai_api_key:
+                logger.error("No se encontró la clave API de OpenAI")
+                raise ValueError("Se requiere OPENAI_API_KEY cuando el modelo local no está disponible")
+            
+            # Configurar OpenAI
+            self.openai_client = openai.Client(api_key=openai_api_key)
+            self.use_openai = True
         
         # Inicializar FAISS
         self.documents = []
@@ -209,16 +229,40 @@ class RAGService:
             ### Response:
         """
 
-        response = self.llm(
-            prompt,
-            temperature=0.7,
-            top_p=0.9,
-            max_tokens=500,
-            stop=["###"]
-        )
+        # Usar OpenAI si el modelo local no está disponible
+        if self.use_openai:
+            try:
+                logger.info("Usando OpenAI para generar respuesta")
+                response = self.openai_client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant that answers questions based on the provided documents."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=500,
+                    temperature=0.7
+                )
+                answer = response.choices[0].message.content.strip()
+            except Exception as e:
+                logger.error(f"Error al usar OpenAI: {str(e)}")
+                answer = f"Error al generar respuesta: {str(e)}"
+        else:
+            # Usar el modelo local
+            try:
+                response = self.llm(
+                    prompt,
+                    temperature=0.7,
+                    top_p=0.9,
+                    max_tokens=500,
+                    stop=["###"]
+                )
+                answer = response['choices'][0]['text'].strip()
+            except Exception as e:
+                logger.error(f"Error al usar el modelo local: {str(e)}")
+                answer = f"Error al generar respuesta: {str(e)}"
 
         return QueryResponse(
             query=query_text,
             documents=retrieved_docs,
-            response=response['choices'][0]['text'].strip()
+            response=answer
         )

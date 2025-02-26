@@ -67,7 +67,11 @@ services:
       - DB_PATH=/app/chat-Interface/db.sqlite3
       # - DJANGO_URL=http://django:8800
       # - MONGO_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-adminpassword}@mongodb:27017/${MONGO_DATABASE:-mydatabase}?authSource=admin
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    command: >
+      bash -c "
+        ln -sf /app /app/app &&
+        uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      "
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s

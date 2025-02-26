@@ -3,8 +3,11 @@ import pytest_asyncio
 import os
 import sys
 from pathlib import Path
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock, AsyncMock, patch
 from langchain_openai import ChatOpenAI
+
+with patch('prometheus_client.exposition.start_http_server'):
+    pass 
 
 # Add project root to PYTHONPATH
 project_root = os.path.dirname(

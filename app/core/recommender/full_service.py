@@ -2,12 +2,12 @@ from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field, validator
 from typing import Optional, Dict, List
-from core.analyzer.nlp_processor import ImprovedNLPProcessor
-from core.recommender.recommendation_engine import RecommendationEngine
-from core.recommender.formatter import HTMLFormatter
+from app.core.analyzer.nlp_processor import ImprovedNLPProcessor
+from app.core.recommender.recommendation_engine import RecommendationEngine
+from app.core.recommender.formatter import HTMLFormatter
 import logging
 from datetime import datetime
-from utils.logger import get_logger
+from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
