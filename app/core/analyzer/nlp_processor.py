@@ -31,133 +31,191 @@ class ImprovedNLPProcessor:
 
         self.VALID_CATEGORIES = DataValidator.VALID_CATEGORIES
         
-        # Enhanced interest context with broader categories
+# Enhanced interest context with broader categories
         self.interest_context = {
             'cultural': [
                 'museum', 'history', 'art', 'culture', 'heritage', 'monument', 'architecture',
                 'theater', 'festival', 'ruins', 'temple', 'palace', 'historic_site', 'tradition',
                 'ceremony', 'archaeological_site', 'folk_art', 'customs', 'music', 'dance',
-                'religious_site', 'library', 'cultural_center', 'performing_arts'
+                'religious_site', 'library', 'cultural_center', 'performing_arts',
+                # Spanish terms
+                'museo', 'historia', 'arte', 'cultura', 'patrimonio', 'monumento', 'arquitectura',
+                'teatro', 'festival', 'ruinas', 'templo', 'palacio', 'sitio histórico', 'tradición',
+                'ceremonia', 'sitio arqueológico', 'arte popular', 'costumbres', 'música', 'baile',
+                'sitio religioso', 'biblioteca', 'centro cultural', 'artes escénicas'
             ],
             'adventure': [
                 'hiking', 'climbing', 'adventure', 'trek', 'expedition', 'outdoor',
                 'zipline', 'rappelling', 'canyoning', 'rafting', 'kayaking', 'paragliding',
                 'rock_climbing', 'mountain_biking', 'horseback_riding', 'caving', 'camping',
-                'off_road', 'survival_skills', 'bungee_jumping', 'skydiving', 'orienteering'
+                'off_road', 'survival_skills', 'bungee_jumping', 'skydiving', 'orienteering',
+                # Spanish terms
+                'senderismo', 'escalada', 'aventura', 'trekking', 'expedición', 'aire libre',
+                'tirolina', 'rápel', 'barranquismo', 'rafting', 'kayak', 'parapente',
+                'escalada en roca', 'ciclismo de montaña', 'montar a caballo', 'espeleología', 'acampar',
+                'todoterreno', 'habilidades de supervivencia', 'puenting', 'paracaidismo', 'orientación'
             ],
             'nature': [
                 'park', 'beach', 'nature', 'wildlife', 'flora', 'fauna', 'ecosystem',
                 'forest', 'mountain', 'waterfall', 'lake', 'river', 'desert', 'canyon',
                 'volcano', 'hot_springs', 'wetlands', 'cave', 'reef', 'lagoon', 'valley',
-                'sanctuary', 'reserve', 'botanical_garden', 'geyser', 'natural_bridge'
+                'sanctuary', 'reserve', 'botanical_garden', 'geyser', 'natural_bridge',
+                # Spanish terms
+                'parque', 'playa', 'naturaleza', 'vida silvestre', 'flora', 'fauna', 'ecosistema',
+                'bosque', 'montaña', 'cascada', 'lago', 'río', 'desierto', 'cañón',
+                'volcán', 'aguas termales', 'humedales', 'cueva', 'arrecife', 'laguna', 'valle',
+                'santuario', 'reserva', 'jardín botánico', 'géiser', 'puente natural'
             ],
             'food': [
                 'restaurant', 'dining', 'food', 'cuisine', 'culinary', 'gastronomy', 'taste',
                 'food_tour', 'cooking_class', 'wine_tasting', 'brewery', 'market', 'street_food',
                 'farm_to_table', 'food_festival', 'local_produce', 'seafood', 'vegetarian',
-                'traditional_cooking', 'food_market', 'distillery', 'coffee_shop', 'bakery'
+                'traditional_cooking', 'food_market', 'distillery', 'coffee_shop', 'bakery',
+                # Spanish terms
+                'restaurante', 'comida', 'gastronomía', 'culinario', 'sabor',
+                'tour gastronómico', 'clase de cocina', 'cata de vinos', 'cervecería', 'mercado', 'comida callejera',
+                'de la granja a la mesa', 'festival gastronómico', 'productos locales', 'mariscos', 'vegetariano',
+                'cocina tradicional', 'mercado de comida', 'destilería', 'cafetería', 'panadería'
             ],
             'water_activities': [
                 'diving', 'snorkel', 'swim', 'marine', 'underwater', 'beach',
                 'surfing', 'paddleboarding', 'jet_skiing', 'sailing', 'windsurfing',
                 'fishing', 'boat_tour', 'whale_watching', 'dolphin_watching', 'waterpark',
-                'scuba_diving', 'freediving', 'submarine_tour', 'coral_reef', 'aquarium'
-            ],
-            'arts_crafts': [
-                'gallery', 'exhibition', 'workshop', 'handmade', 'artisan', 'craft',
-                'pottery', 'weaving', 'painting', 'sculpture', 'jewelry_making', 'glassblowing',
-                'woodworking', 'textile_art', 'ceramics', 'printmaking', 'metalworking',
-                'local_crafts', 'art_studio', 'artistic_workshop', 'handicraft_market'
-            ],
-            'special_interests': [
-                'photography', 'birdwatching', 'archaeology', 'architecture',
-                'astronomy', 'geology', 'botany', 'meditation', 'yoga', 'wellness',
-                'spiritual_retreat', 'agricultural_tourism', 'wine_tourism', 'stargazing',
-                'language_learning', 'scientific_tourism', 'volunteering', 'historical_research'
+                'scuba_diving', 'freediving', 'submarine_tour', 'coral_reef', 'aquarium',
+                # Spanish terms
+                'buceo', 'snorkel', 'nadar', 'marino', 'submarino', 'playa',
+                'surf', 'paddle', 'moto acuática', 'navegación', 'windsurf',
+                'pesca', 'paseo en barco', 'avistamiento de ballenas', 'avistamiento de delfines', 'parque acuático',
+                'submarinismo', 'apnea', 'tour submarino', 'arrecife de coral', 'acuario'
             ],
             'local_experiences': [
                 'traditional', 'authentic', 'local', 'cultural', 'indigenous',
                 'homestay', 'village_visit', 'local_festival', 'community_tourism',
                 'traditional_dance', 'folklore', 'local_market', 'artisan_workshop',
                 'farming_experience', 'fishing_village', 'tribal_visit', 'local_guide',
-                'traditional_music', 'cultural_exchange', 'local_ceremonies'
+                'traditional_music', 'cultural_exchange', 'local_ceremonies',
+                # Spanish terms
+                'tradicional', 'auténtico', 'local', 'cultural', 'indígena',
+                'estancia en casa local', 'visita a pueblo', 'festival local', 'turismo comunitario',
+                'baile tradicional', 'folklore', 'mercado local', 'taller artesanal',
+                'experiencia agrícola', 'pueblo pesquero', 'visita tribal', 'guía local',
+                'música tradicional', 'intercambio cultural', 'ceremonias locales'
             ]
         }
 
-        # Enhanced patterns for various extractions
+        # Enhanced patterns for various extractions with multilingual support
         self.enhanced_patterns = {
             'budget': [
+                # English patterns
                 r'(?:USD|\$|€)\s*(\d+(?:\.\d{2})?)\s*(?:per|a|each)?\s*(?:day|person|pax)?',
                 r'budget.*?(\d+)(?:\s*(?:dollars|USD|€))?',
                 r'(?:spend|cost|price).*?(\d+)(?:\s*(?:dollars|USD|€))?',
                 r'around\s*(?:USD|\$|€)?\s*(\d+)',
-                r'(\d+)\s*(?:USD|\$|€)?\s*(?:budget|per day|daily)'
+                r'(\d+)\s*(?:USD|\$|€)?\s*(?:budget|per day|daily)',
+                # Spanish patterns
+                r'(?:USD|\$|€)\s*(\d+(?:\.\d{2})?)\s*(?:por|al|cada)?\s*(?:día|persona|pax)?',
+                r'presupuesto.*?(\d+)(?:\s*(?:dólares|USD|€))?',
+                r'(?:gastar|costo|precio).*?(\d+)(?:\s*(?:dólares|USD|€))?',
+                r'alrededor\s*(?:de)?\s*(?:USD|\$|€)?\s*(\d+)',
+                r'(\d+)\s*(?:USD|\$|€)?\s*(?:presupuesto|por día|diario|diarios)',
+                r'(?:tengo|dispongo de) un presupuesto de\s*(?:USD|\$|€)?\s*(\d+)'
             ],
             'duration': [
+                # English patterns
                 r'(\d+)\s*(?:days?|nights?|evenings?)',
                 r'stay(?:ing)?\s*(?:for)?\s*(\d+)\s*(?:days?|nights?)',
                 r'(?:duration|period|time)\s*(?:of)?\s*(\d+)\s*(?:days?|nights?)',
                 r'(?:plan|trip|vacation|holiday)\s*(?:for)?\s*(\d+)\s*(?:days?|nights?)',
-                r'(\d+)-day(?:\s+trip|\s+tour|\s+vacation)?'
+                r'(\d+)-day(?:\s+trip|\s+tour|\s+vacation)?',
+                # Spanish patterns
+                r'(\d+)\s*(?:días?|noches?|tardes?)',
+                r'estar(?:é|emos)?\s*(?:por|durante)?\s*(\d+)\s*(?:días?|noches?)',
+                r'(?:duración|periodo|tiempo)\s*(?:de)?\s*(\d+)\s*(?:días?|noches?)',
+                r'(?:plan|viaje|vacaciones)\s*(?:por|durante|de)?\s*(\d+)\s*(?:días?|noches?)',
+                r'(\d+)(?:-|\s)?días?(?:\s+de\s+)?(?:viaje|tour|vacaciones)?',
+                r'(?:voy|estaré|quiero estar) (?:por|durante) (\d+) (?:días?|noches?)'
             ],
             'location': [
+                # English patterns
                 r'(?:in|at|near|around|visit(?:ing)?)\s+([\w\s]+?)(?=\s+(?:and|or|,|\.|\b))',
                 r'stay(?:ing)?\s+(?:in|at|near)\s+([\w\s]+?)(?=\s+(?:and|or|,|\.|\b))',
                 r'(?:to|in|at)\s+([\w\s]+?)\s+(?:area|region|district|neighborhood)',
                 r'explore\s+([\w\s]+?)(?=\s+(?:and|or|,|\.|\b))',
-                r'interested\s+in\s+([\w\s]+?)(?=\s+(?:and|or|,|\.|\b))'
+                r'interested\s+in\s+([\w\s]+?)(?=\s+(?:and|or|,|\.|\b))',
+                # Spanish patterns
+                r'(?:en|cerca de|alrededor de|visitar?)\s+([\w\s]+?)(?=\s+(?:y|o|,|\.|\b))',
+                r'(?:alojarse|quedar(?:se)?|hospedar(?:se)?)\s+(?:en|cerca de)\s+([\w\s]+?)(?=\s+(?:y|o|,|\.|\b))',
+                r'(?:a|en)\s+([\w\s]+?)\s+(?:área|región|distrito|barrio|zona)',
+                r'explorar\s+([\w\s]+?)(?=\s+(?:y|o|,|\.|\b))',
+                r'interesad[oa]\s+en\s+([\w\s]+?)(?=\s+(?:y|o|,|\.|\b))',
+                r'(?:quiero|me gustaría) (?:visitar|conocer|ir a) ([\w\s]+?)(?=\s+(?:y|o|,|\.|\b))'
             ]
         }
 
-        # Enhanced intent patterns with weighted keywords
+        # Enhanced intent patterns with weighted keywords and Spanish support
         self.intent_patterns = {
             'activity_search': {
                 'keywords': ['explore', 'visit', 'see', 'do', 'activities', 'experience',
-                           'sightseeing', 'tour', 'discover', 'adventure', 'participate'],
+                           'sightseeing', 'tour', 'discover', 'adventure', 'participate',
+                           # Spanish keywords
+                           'explorar', 'visitar', 'ver', 'hacer', 'actividades', 'experiencia',
+                           'turismo', 'tour', 'descubrir', 'aventura', 'participar'],
                 'weight': 1.5
             },
             'food_search': {
                 'keywords': ['eat', 'restaurant', 'food', 'dining', 'cuisine', 'gastronomy',
-                           'culinary', 'vegetarian', 'meal', 'lunch', 'dinner', 'taste'],
+                           'culinary', 'vegetarian', 'meal', 'lunch', 'dinner', 'taste',
+                           # Spanish keywords
+                           'comer', 'restaurante', 'comida', 'gastronomía', 'cocina',
+                           'culinario', 'vegetariano', 'plato', 'almuerzo', 'cena', 'sabor'],
                 'weight': 1.2
             },
             'cultural_interest': {
                 'keywords': ['culture', 'history', 'museum', 'art', 'heritage', 'traditional',
-                           'local', 'authentic', 'architecture', 'landmark'],
+                           'local', 'authentic', 'architecture', 'landmark',
+                           # Spanish keywords
+                           'cultura', 'historia', 'museo', 'arte', 'patrimonio', 'tradicional',
+                           'local', 'auténtico', 'arquitectura', 'monumento'],
                 'weight': 1.3
             },
             'nature_adventure': {
                 'keywords': ['nature', 'hiking', 'outdoor', 'wildlife', 'park', 'beach',
-                           'mountain', 'trek', 'adventure', 'exploration'],
+                           'mountain', 'trek', 'adventure', 'exploration',
+                           # Spanish keywords
+                           'naturaleza', 'senderismo', 'aire libre', 'fauna', 'parque', 'playa',
+                           'montaña', 'trekking', 'aventura', 'exploración'],
                 'weight': 1.4
             },
             'planning_logistics': {
                 'keywords': ['plan', 'schedule', 'itinerary', 'organize', 'book', 'reserve',
-                           'arrangement', 'timing', 'duration', 'dates'],
+                           'arrangement', 'timing', 'duration', 'dates',
+                           # Spanish keywords
+                           'plan', 'horario', 'itinerario', 'organizar', 'reservar',
+                           'arreglo', 'tiempo', 'duración', 'fechas'],
                 'weight': 1.1
             }
         }
 
-        # Activity patterns with detailed classifications
+        # Activity patterns with detailed classifications and Spanish support
         self.activity_patterns = {
             'walking_tour': {
-                'pattern': r'walk(?:ing)?\s*tour|guided\s*walk|city\s*walk',
+                'pattern': r'walk(?:ing)?\s*tour|guided\s*walk|city\s*walk|tour\s*(?:a\s*)?pie|visita\s*guiada|paseo\s*(?:por\s*la\s*)?ciudad',
                 'category': 'cultural'
             },
             'water_sports': {
-                'pattern': r'div(?:ing|e)|snorkel(?:ing)?|swim(?:ming)?|kayak(?:ing)?',
+                'pattern': r'div(?:ing|e)|snorkel(?:ing)?|swim(?:ming)?|kayak(?:ing)?|buce(?:ar|o)|snorkel(?:ear)?|nad(?:ar|ando)|kayak',
                 'category': 'adventure'
             },
             'cultural_activities': {
-                'pattern': r'museum|gallery|exhibition|monument|heritage|historical',
+                'pattern': r'museum|gallery|exhibition|monument|heritage|historical|museo|galería|exposición|monumento|patrimonio|histórico',
                 'category': 'cultural'
             },
             'nature_activities': {
-                'pattern': r'hik(?:ing|e)|trek(?:king)?|nature\s*walk|wildlife|bird(?:watching)?',
+                'pattern': r'hik(?:ing|e)|trek(?:king)?|nature\s*walk|wildlife|bird(?:watching)?|senderismo|caminata|paseo\s*(?:por\s*la\s*)?naturaleza|vida\s*silvestre|observación\s*de\s*aves',
                 'category': 'nature'
             },
             'food_experiences': {
-                'pattern': r'food.*tour|culinary.*experience|cooking\s*class|tasting',
+                'pattern': r'food.*tour|culinary.*experience|cooking\s*class|tasting|tour.*gastronómic[oa]|experiencia.*culinaria|clase.*cocina|degustación|cata',
                 'category': 'food'
             }
         }
@@ -199,7 +257,9 @@ class ImprovedNLPProcessor:
                 'activity_types': [],
                 'accommodation_preferences': [],
                 'transportation_preferences': [],
-                'dietary_restrictions': []
+                'dietary_restrictions': [],
+                'accessibility_requirements': [],
+                'language_preferences': ['english']  # Default language
             }
 
             # Extract locations
@@ -361,35 +421,35 @@ class ImprovedNLPProcessor:
             preferences (Dict[str, Any]): Preferences dictionary to update
         """
         try:
-            # Dietary restrictions with enhanced patterns
+            # Dietary restrictions with enhanced patterns including Spanish support
             dietary_patterns = {
-                'vegetarian': r'vegetarian|no\s*meat|meat[\s-]free',
-                'vegan': r'vegan|plant[\s-]based|no\s*animal',
-                'gluten_free': r'gluten[\s-]free|no\s*gluten|celiac',
-                'halal': r'halal|muslim\s*friendly|islamic\s*dietary',
-                'kosher': r'kosher|jewish\s*dietary',
-                'dairy_free': r'dairy[\s-]free|lactose[\s-]free|no\s*dairy',
-                'nut_free': r'nut[\s-]free|no\s*nuts|peanut[\s-]free'
+                'vegetarian': r'vegetarian|no\s*meat|meat[\s-]free|vegetariano|sin\s*carne',
+                'vegan': r'vegan|plant[\s-]based|no\s*animal|vegano|a\s*base\s*de\s*plantas',
+                'gluten_free': r'gluten[\s-]free|no\s*gluten|celiac|sin\s*gluten|celiaco',
+                'halal': r'halal|muslim\s*friendly|islamic\s*dietary|halal|comida\s*musulmana',
+                'kosher': r'kosher|jewish\s*dietary|kosher|comida\s*judía',
+                'dairy_free': r'dairy[\s-]free|lactose[\s-]free|no\s*dairy|sin\s*lácteos|sin\s*lactosa',
+                'nut_free': r'nut[\s-]free|no\s*nuts|peanut[\s-]free|sin\s*nueces|sin\s*frutos\s*secos'
             }
 
-            # Accommodation preferences with enhanced patterns
+            # Accommodation preferences with enhanced patterns including Spanish support
             accommodation_patterns = {
-                'luxury': r'luxury|high[\s-]end|upscale|premium',
-                'budget': r'budget|cheap|affordable|economical',
-                'apartment': r'apartment|flat|condo|suite',
-                'hotel': r'hotel|resort|lodging',
-                'beachfront': r'beach[\s-]front|by\s*the\s*beach|ocean[\s-]view',
-                'central': r'central|downtown|city[\s-]center|heart\s*of',
-                'quiet': r'quiet|peaceful|serene|tranquil'
+                'luxury': r'luxury|high[\s-]end|upscale|premium|lujo|alta\s*gama|exclusivo',
+                'budget': r'budget|cheap|affordable|economical|económico|barato|accesible|bajo\s*costo',
+                'apartment': r'apartment|flat|condo|suite|apartamento|piso|condominio|suite',
+                'hotel': r'hotel|resort|lodging|hotel|resort|alojamiento',
+                'beachfront': r'beach[\s-]front|by\s*the\s*beach|ocean[\s-]view|frente\s*a\s*la\s*playa|vista\s*al\s*mar',
+                'central': r'central|downtown|city[\s-]center|heart\s*of|centro|centro\s*de\s*la\s*ciudad|céntrico',
+                'quiet': r'quiet|peaceful|serene|tranquil|tranquilo|pacífico|sereno'
             }
 
-            # Transportation preferences
+            # Transportation preferences including Spanish support
             transportation_patterns = {
-                'car': r'car|driving|rent\s*a\s*car|rental\s*car',
-                'public': r'public\s*transport|bus|train|metro',
-                'taxi': r'taxi|cab|uber|ride[\s-]sharing',
-                'walking': r'walk|walking\s*distance|on\s*foot',
-                'bicycle': r'bike|bicycle|cycling'
+                'car': r'car|driving|rent\s*a\s*car|rental\s*car|coche|conducir|alquilar\s*un\s*coche|carro',
+                'public': r'public\s*transport|bus|train|metro|transporte\s*público|autobús|tren|metro',
+                'taxi': r'taxi|cab|uber|ride[\s-]sharing|taxi|uber|cabify|compartir\s*viaje',
+                'walking': r'walk|walking\s*distance|on\s*foot|caminar|a\s*pie|distancia\s*a\s*pie',
+                'bicycle': r'bike|bicycle|cycling|bici|bicicleta|ciclismo'
             }
 
             # Initialize preference lists if they don't exist
@@ -414,26 +474,26 @@ class ImprovedNLPProcessor:
                 if re.search(pattern, text, re.IGNORECASE):
                     preferences['transportation_preferences'].append(trans_type)
 
-            # Process special accessibility requirements
+            # Process special accessibility requirements with Spanish support
             accessibility_patterns = {
-                'wheelchair': r'wheelchair|accessible|mobility\s*impaired',
-                'hearing': r'hearing\s*impaired|deaf|hard\s*of\s*hearing',
-                'visual': r'visually\s*impaired|blind|sight\s*impaired',
-                'elderly': r'elderly|senior|older\s*adults?',
-                'stroller': r'stroller|baby\s*carriage|pram'
+                'wheelchair': r'wheelchair|accessible|mobility\s*impaired|silla\s*de\s*ruedas|accesible|movilidad\s*reducida',
+                'hearing': r'hearing\s*impaired|deaf|hard\s*of\s*hearing|discapacidad\s*auditiva|sordo|problemas\s*de\s*audición',
+                'visual': r'visually\s*impaired|blind|sight\s*impaired|discapacidad\s*visual|ciego|problemas\s*de\s*visión',
+                'elderly': r'elderly|senior|older\s*adults?|anciano|mayor|tercera\s*edad',
+                'stroller': r'stroller|baby\s*carriage|pram|cochecito|carrito\s*de\s*bebé'
             }
 
             for req_type, pattern in accessibility_patterns.items():
                 if re.search(pattern, text, re.IGNORECASE):
                     preferences['accessibility_requirements'].append(req_type)
 
-            # Process language preferences
+            # Process language preferences with Spanish support
             language_patterns = {
-                'english': r'english|eng',
+                'english': r'english|eng|inglés',
                 'spanish': r'spanish|español|esp',
-                'dutch': r'dutch|nederlands',
+                'dutch': r'dutch|nederlands|holandés',
                 'papiamento': r'papiamento|papiamentu',
-                'portuguese': r'portuguese|português|port'
+                'portuguese': r'portuguese|português|port|portugués'
             }
 
             for lang, pattern in language_patterns.items():
