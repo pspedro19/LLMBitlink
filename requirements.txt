@@ -44,3 +44,8 @@ faiss-cpu
 psycopg2-binary
 prometheus_client
 pytest-asyncio
+asyncpg
+PyPDF2
+argostranslate
+openai>=1.0.0
+anthropic>=0.7.0

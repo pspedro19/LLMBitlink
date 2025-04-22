@@ -1,0 +1,21 @@
+test_name,query,success,preferences_extracted,recommendation_count,processing_time,language
+Viaje romántico,"Viaje romántico a Curaçao para aniversario, 5 días, lugares para parejas, cenas especiales",True,3,0,0.036958,es
+Vacaciones de playa,"Busco playas tranquilas en Curaçao para relajarme durante una semana, presupuesto de $200 por día",True,3,0,0.034999,es
+Viaje familiar,"Vacaciones familiares en Curaçao con 2 niños, actividades para toda la familia, 6 días, presupuesto medio",True,3,0,0.03022,es
+Actividades de aventura,"Quiero hacer senderismo y buceo en Curaçao, lugares recomendados para aventuras, 4 días",True,3,0,0.025229,es
+Tour cultural,"Me interesa la historia y arquitectura de Willemstad, museos y sitios históricos, 3 días en Curaçao",True,3,0,0.031059,es
+Experiencia culinaria,"Gastronomía local de Curaçao, mejores restaurantes, tour gastronómico, 150 dólares por día, 4 días",True,3,0,0.032064,es
+Viaje económico,"Curaçao con presupuesto limitado, 80 dólares diarios, actividades gratuitas o económicas, 5 días",True,4,0,0.046049,es
+Vacaciones de lujo,"Vacaciones de lujo en Curaçao, mejores resorts, restaurantes exclusivos, experiencias premium, 7 días sin límite de presupuesto",True,3,0,0.035595,es
+Fin de semana corto,"Escapada de fin de semana a Curaçao, 2 días, lo imprescindible para ver",True,3,0,0.028351,es
+Ubicaciones específicas,"Quiero visitar Punda, Otrobanda y Jan Thiel durante 4 días en Curaçao, 200 dólares de presupuesto diario",True,3,0,0.034315,es
+Honeymoon trip,"Planning honeymoon in Curacao for 6 days, romantic beaches and special dinners, luxury experience",True,3,0,0.02925,en
+Water activities,"Interested in snorkeling and diving in Curacao, best spots for marine life, 5 day trip with $180 daily budget",True,4,0,0.02112,en
+Family adventure,"Family vacation in Curacao with kids, fun activities for children, safe beaches, 7 days",True,3,0,0.031973,en
+Historical sites,"Exploring historical sites in Willemstad, Curacao, colonial architecture and museums, 4 day cultural trip",True,3,0,0.039537,en
+Food tour,"Food lover seeking local cuisine in Curacao, traditional dishes, food markets and cooking classes, 6 days",True,3,0,0.032635,en
+Nightlife experience,"Looking for best nightlife in Curacao, clubs, bars and music venues, 5 day trip with friends",True,3,0,0.019883,en
+Nature hiking,"Nature hiking in Curacao, national parks, nature reserves and wildlife, 4 day eco-friendly trip",True,3,0,0.026617,en
+Budget backpacking,"Backpacking through Curacao on a tight budget, $70 per day, hostels and cheap eats, 8 day trip",True,4,0,0.02692,en
+Photography tour,"Photography trip to Curacao, most scenic locations for landscape and street photography, 5 days",True,3,0,0.038187,en
+Wellness retreat,"Wellness retreat in Curacao, relaxation, yoga and spa services, peaceful beaches, 7 days, $250 daily",True,4,0,0.050699,en

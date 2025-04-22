@@ -15,7 +15,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./app/core/data/database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      #- ./app/core/data/database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./app2/core/db/init/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   pgadmin:
     image: dpage/pgadmin4:latest
